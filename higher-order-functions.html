@@ -1,0 +1,500 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en" dir="ltr">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<meta http-equiv="Content-Style-Type" content="text/css" />
+		<meta name="keywords" content="Erlang, function, higher order, anonymous, closure, funs, map, fold, filter, scope" />
+		<meta name="description" content="Higher order functions: how to pass functions as parameters to other functions, declare anonymous functions (funs), understanding scopes and the concept of closures." />
+        <meta name="google-site-verification" content="mi1UCmFD_2pMLt2jsYHzi_0b6Go9xja8TGllOSoQPVU" />
+		<link rel="stylesheet" type="text/css" href="static/css/screen.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/sh/shCore.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/sh/shThemeLYSE2.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/print.css" media="print" />
+		<link href="rss" type="application/rss+xml" rel="alternate" title="LYSE news" />
+		<link rel="icon" type="image/png" href="favicon.ico" />
+		<link rel="apple-touch-icon" href="static/img/touch-icon-iphone.png" />
+		<link rel="apple-touch-icon" sizes="72x72" href="static/img/touch-icon-ipad.png" />
+		<link rel="apple-touch-icon" sizes="114x114" href="static/img/touch-icon-iphone4.png" />
+		<title>Higher Order Functions | Learn You Some Erlang for Great Good!</title>
+	</head>
+	<body>
+		<div id="wrapper">
+			<div id="header">
+				<h1>Learn you some Erlang</h1>
+				<span>for great good!</span>
+			</div> <!-- header -->
+			<div id="menu">
+				<ul>
+					<li><a href="content.html" title="Home">Home</a></li>
+					<li><a href="faq.html" title="Frequently Asked Questions">FAQ</a></li>
+					<li><a href="rss" title="Latest News">RSS</a></li>
+					<li><a href="static/erlang/learn-you-some-erlang.zip" title="Source Code">Code</a></li>
+				</ul>
+			</div><!-- menu -->
+			<div id="content">
+            <div class="noscript"><noscript>Hey there, it appears your Javascript is disabled. That's fine, the site works without it. However, you might prefer reading it with syntax highlighting, which requires Javascript!</noscript></div>
+<h2>Higher Order Functions</h2>
+<h3><a class="section" name="get-functional">Let's get functional</a></h3>
+
+<img class="left" src="static/img/lambda.png" width="128" height="172" alt="A lambda symbol with a sexy mustache" title="lambdude!" />
+
+<p>An important part of all functional programming languages is the ability to take a function you defined and then pass it as a parameter to another function. This in turn binds that function parameter to a variable which can be used like any other variable within the function. A function that can accept other functions transported around that way is named a <em>higher order function</em>. Higher order functions are a powerful means of abstraction and one of the best tools to master in Erlang.</p>
+
+<p>Again, this a concept rooted in mathematics, mainly <a class="external" href="http://en.wikipedia.org/wiki/Lambda_calculus" title="Wikipedia to the rescue!">lambda calculus</a>. I won't go into much detail about lambda calculus because some people have a hard time grasping it and it's a bit out of scope. However, I'll define it briefly as a system where everything is a function, even numbers. Because everything is a function, functions must accept other functions as parameters and can operate on them with even more functions!</p>
+
+<p>Alright, this might be a little bit weird, so let's start with an example:</p>
+
+<pre class="brush:erl">
+-module(hhfuns).
+-compile(export_all).
+
+one() -&gt; 1.
+two() -&gt; 2.
+
+add(X,Y) -&gt; X() + Y().
+</pre>
+
+<p>Now open the Erlang shell, compile the module and get going:</p>
+
+<pre class="brush:eshell">
+1&gt; c(hhfuns).
+{ok, hhfuns}
+2&gt; hhfuns:add(one,two).
+** exception error: bad function one
+     in function  hhfuns:add/2
+3&gt; hhfuns:add(1,2).
+** exception error: bad function 1
+     in function  hhfuns:add/2
+4&gt; hhfuns:add(fun hhfuns:one/0, fun hhfuns:two/0).
+3
+</pre>
+
+<p>Confusing? Not so much, once you know how it works (isn't that always the case?) In command 2, the atoms <code>one</code> and <code>two</code> are passed to <code>add/2</code>, which then uses both atoms as function names (<code>X() + Y()</code>). If function names are written without a parameter list then those names are interpreted as atoms, and atoms can not be functions, so the call fails. This is the reason why expression 3 also fails: the values 1 and 2 can not be called as functions either, and functions are what we need!</p>
+
+<p>This is why a new notation has to be added to the language in order to let you pass functions from outside a module. This is what <code>fun Module:Function/Arity</code> is: it tells the VM to use that specific function, and then bind it to a variable.</p>
+
+<p>So what are the gains of using functions in that manner? Well a little example might be needed in order to understand it. We'll add a few functions to <code><a class="source" href="static/erlang/hhfuns.erl" title="final implementation">hhfuns</a></code> that work recursively over a list to add or subtract one from each integer of a list:</p>
+
+<pre class="brush:erl">
+increment([]) -&gt; [];
+increment([H|T]) -&gt; [H+1|increment(T)].
+
+decrement([]) -&gt; [];
+decrement([H|T]) -&gt; [H-1|decrement(T)].
+</pre>
+
+<p>See how similar these functions are? They basically do the same thing: they cycle through a list, apply a function on each element (<code>+</code> or <code>-</code>) and then call themselves again. There is almost nothing changing in that code: only the applied function and the recursive call are different. The core of a recursive call on a list like that is always the same. We'll abstract all the similar parts in a single function (<code>map/2</code>) that will take another function as an argument:</p>
+
+<pre class="brush:erl">
+map(_, []) -&gt; [];
+map(F, [H|T]) -&gt; [F(H)|map(F,T)].
+
+incr(X) -&gt; X + 1.
+decr(X) -&gt; X - 1.
+</pre>
+
+<p>Which can then be tested in the shell:</p>
+
+<pre class="brush:eshell">
+1&gt; c(hhfuns).
+{ok, hhfuns}
+2&gt; L = [1,2,3,4,5].
+[1,2,3,4,5]
+3&gt; hhfuns:increment(L).
+[2,3,4,5,6]
+4&gt; hhfuns:decrement(L).
+[0,1,2,3,4]
+5&gt; hhfuns:map(fun hhfuns:incr/1, L).
+[2,3,4,5,6]
+6&gt; hhfuns:map(fun hhfuns:decr/1, L).
+[0,1,2,3,4]
+</pre>
+
+<p>Here the results are the same, but you have just created a very smart abstraction! Every time you will want to apply a function to each element of a list, you only have to call <code>map/2</code> with your function as a parameter. However, it is a bit annoying to have to put every function we want to pass as a parameter to <code>map/2</code> in a module, name it, export it, then compile it, etc. In fact it's plainly unpractical. What we need are functions that can be declared on the fly...</p>
+
+
+<h3><a class="section" name="anonymous-functions">Anonymous functions</a></h3>
+
+<p>Anonymous functions, or <em>funs</em>, address that problem by letting you declare a special kind of function inline, without naming them. They can do pretty much everything normal functions can do, except calling themselves recursively (how could they do it if they are anonymous?) Their syntax is:</p>
+
+<pre class="brush:erl">
+fun(Args1) -&gt;
+    Expression1, Exp2, ..., ExpN;
+   (Args2) -&gt;
+    Expression1, Exp2, ..., ExpN;
+   (Args3) -&gt;
+    Expression1, Exp2, ..., ExpN
+end
+</pre>
+
+<p>And can be used the following way:</p>
+
+<pre class="brush:eshell">
+7&gt; Fn = fun() -&gt; a end.
+#Fun&lt;erl_eval.20.67289768&gt;
+8&gt; Fn().
+a
+9&gt; hhfuns:map(fun(X) -&gt; X + 1 end, L).
+[2,3,4,5,6]
+10&gt; hhfuns:map(fun(X) -&gt; X - 1 end, L).
+[0,1,2,3,4]
+</pre>
+
+<p>And now you're seeing one of the things that make people like functional programming so much: the ability to make abstractions on a very low level of code. Basic concepts such as looping can thus be ignored, letting you focus on what is done rather than how to do it.</p>
+
+<p>Anonymous functions are already pretty dandy for such abstractions but they still have more hidden powers:</p>
+
+<pre class="brush:eshell">
+11&gt; PrepareAlarm = fun(Room) -&gt;
+11&gt;                      io:format("Alarm set in ~s.~n",[Room]),
+11&gt;                      fun() -&gt; io:format("Alarm tripped in ~s! Call Batman!~n",[Room]) end
+11&gt;                   end.
+#Fun&lt;erl_eval.20.67289768&gt;
+12&gt; AlarmReady = PrepareAlarm("bathroom").
+Alarm set in bathroom.
+#Fun&lt;erl_eval.6.13229925&gt;
+13&gt; AlarmReady().
+Alarm tripped in bathroom! Call Batman!
+ok
+</pre>
+
+
+<p>Hold the phone Batman! What's going on here? Well, first of all, we declare an anonymous function assigned to <var>PrepareAlarm</var>. This function has not run yet: it only gets executed when <code>PrepareAlarm("bathroom").</code> is called. <img class="left" src="static/img/batman.png" width="137" height="224" alt="Batman with a manly mustache" title="le batman" /> At that point, the call to <code>io:format/2</code> is evaluated and the "Alarm set" text is output. The second expression (another anonymous function) is returned to the caller and then assigned to <var>AlarmReady</var>. Note that in this function, the variable <var>Room</var>'s value is taken from the 'parent' function (<var>PrepareAlarm</var>). This is related to a concept called <em>closures</em>.</p>
+
+<p>To understand closures, one must first understand scope. A function's scope can be imagined as the place where all the variables and their values are stored. In the function <code>base(A) -&gt; B = A + 1.</code>, <var>A</var> and <var>B</var> are both defined to be part of <code>base/1</code>'s scope. This means that anywhere inside <code>base/1</code>, you can refer to <var>A</var> and <var>B</var> and expect a value to be bound to them. And when I say 'anywhere', I ain't kidding, kid; this includes anonymous functions too:</p>
+
+<pre class="brush:erl">
+base(A) -&gt;
+    B = A + 1,
+    F = fun() -&gt; A * B end,
+    F().
+</pre>
+
+<p><var>B</var> and <var>A</var> are still bound to <code>base/1</code>'s scope, so the function <var>F</var> can still access them. This is because <var>F</var> inherits <code>base/1</code>'s scope. Like most kinds of real-life inheritance, the parents can't get what the children have:</p>
+
+<pre class="brush:erl">
+base(A) -&gt;
+    B = A + 1,
+    F = fun() -&gt; C = A * B end,
+    F(),
+    C.
+</pre>
+
+<p>In this version of the function, <var>B</var> is still equal to <code>A + 1</code> and <var>F</var> will still execute fine. However, the variable <var>C</var> is only in the scope of the anonymous function in <var>F</var>. When <code>base/1</code> tries to access <var>C</var>'s value on the last line, it only finds an unbound variable. In fact, had you tried to compile this function, the compiler would have thrown a fit. Inheritance only goes one way.</p>
+
+<p>It is important to note that the inherited scope follows the anonymous function wherever it is, even when it is passed to another function:</p>
+
+<pre class="brush:erl">
+a() -&gt;
+    Secret = "pony",
+    fun() -&gt; Secret end.
+
+b(F) -&gt;
+    "a/0's password is "++F().
+</pre>
+
+<p>Then if we compile it:</p>
+
+<pre class="brush:eshell">
+14&gt; c(hhfuns).
+{ok, hhfuns}
+15&gt; hhfuns:b(hhfuns:a()).
+"a/0's password is pony"
+</pre>
+
+<p>Who told <code>a/0</code>'s password? Well, <code>a/0</code> did. While the anonymous function has <code>a/0</code>'s scope when it's declared in there, it can still carry it when executed in <code>b/1</code>, as explained above. This is very useful because it lets us carry around parameters and content out of its original context, where the whole context itself are not needed anymore (exactly like we did with Batman in a previous example).</p>
+
+<p>You're most likely to use anonymous functions to carry state around when you have functions defined that take many arguments, but you have a constant one:</p>
+
+<pre class="brush:eshell">
+16&gt; math:pow(5,2).
+25.0
+17&gt; Base = 2.
+2
+18&gt; PowerOfTwo = fun(X) -&gt; math:pow(Base,X) end.
+#Fun&lt;erl_eval.6.13229925&gt;
+17&gt; hhfuns:map(PowerOfTwo, [1,2,3,4]).
+[2.0,4.0,8.0,16.0]
+</pre>
+
+<p>By wrapping the call to <code>math:pow/2</code> inside an anonymous function with the <var>Base</var> variable bound in its scope, we made it possible to have each of the calls to <var>PowerOfTwo</var> in <code>hhfuns:map/2</code> use the integers from the list as the exponents of our base.</p>
+
+<!-- Secret for you crazy people who read the html comments! Just copy/paste this or something! -->
+<!-- 
+<p>In fact, this [closure] principle alone is enough to let you implement basic classes and simple object-oriented programming. Take this <a class="source" href="http://learnyousomeerlang.com/static/erlang/oop.erl" title="final implementation">oop.erl</a> module as an overused 'dog is an animal' example:</p>
+
+<pre class="brush:erl">
+-module(oop).
+-export([animal/1, dog/1, cat/1]).
+
+%% all the method calls need to be in tuples when they have more than
+%% one argument so we can use functions of arity 1 for every call we make.
+
+animal(Name) -&gt;
+    fun(type) -&gt; "living thing";
+       (name) -&gt; Name;
+       (move) -&gt; Name++" moves around...";
+       ({eat, Item}) -&gt; Name++" eats "++Item;
+       (_) -&gt; "I'm sorry Dave, I can't do that."
+    end.
+
+dog(Name) -&gt;
+    Parent = animal(Name),
+    fun(talk) -&gt; Name++" says: Woof!";
+       ({chase, Animal}) when is_function(Animal) -&gt;
+            Name++" chases a "++Animal(type)++" named "++Animal(name)++" around";
+       (X) -&gt; Parent(X)
+    end.
+
+cat(Name) -&gt;
+    Parent = animal(Name),
+    fun(type) -&gt; "cat";
+       (talk) -&gt; Name++" says: Meow!";
+       (X) -&gt; Parent(X)
+    end.
+</pre>
+
+<p>And to use it:</p>
+
+<pre class="brush:eshell">
+16&gt; c(oop).
+{ok, oop}
+17&gt; Bird = oop:animal("Bird").
+#Fun&lt;oop.0.88943279&gt;
+18&gt; Bird(type).
+"living thing"
+19&gt; Bird({eat, worm}).
+"Bird eats worm"
+20&gt; Dog = oop:dog("Raptor-Dog").
+#Fun&lt;oop.1.133772145&gt;
+21&gt; Dog(talk).
+"Raptor-Dog says: Woof!"
+22&gt; Dog(name).
+"Raptor-Dog"
+23&gt; Cat = oop:cat("Sgt. McMittens").
+#Fun&lt;oop.2.66956814&gt;
+24&gt; Cat(type).
+"cat"
+25&gt; Dog({chase, Cat}).
+"Raptor-Dog chases a cat named Sgt. McMittens around"
+26&gt; Cat({play, "yarn"}).
+"I'm sorry Dave, I can't do that."
+</pre>
+
+<img class="right" src="http://learnyousomeerlang.com/static/img/raptor-dog.png" width="240" height="191" alt="A dog and a raptor: raptor-dog, the best kind of dog." />
+
+<p>Alright, this is not very impressive when we compare it to real OOP languages, but we still managed to cover concepts such as class inheritance, method overriding and constructors (albeit in a terribly basic manner). The important lesson here is that closures can be used to carry state around from function to function. <strong>Note that you should <em>not</em> write new Erlang programs based on that OOP example; nobody does that.</strong> It's an example and nothing more.</p> -->
+
+<p>A little trap you might fall into when writing anonymous functions is when you try to redefine the scope:</p>
+
+<pre class="brush:erl">
+base() -&gt;
+    A = 1,
+    (fun() -&gt; A = 2 end)().
+</pre>
+
+<p>This will declare an anonymous function and then run it. As the anonymous function inherits <code>base/0</code>'s scope, trying to use the <code>=</code> operator compares 2 with the variable <var>A</var> (bound to 1). This is guaranteed to fail. However it is possible to redefine the variable if it's done in the nested function's head:</p>
+
+<pre class="brush:erl">
+base() -&gt;
+    A = 1,
+    (fun(A) -&gt; A = 2 end)(2).
+</pre>
+
+<p>And this works. If you try to compile it, you'll get a warning about <em>shadowing</em> (<em>"Warning: variable 'A' shadowed in 'fun'"</em>). Shadowing is the term used to describe the act of defining a new variable that has the same name as one that was in the parent scope. This is there to prevent some mistakes (usually rightly so), so you might want to consider renaming your variables in these circumstances.</p>
+
+<div class="note update">
+    <p><strong>Update:</strong><br />
+    Starting with version 17.0, the language supports using anonymous functions with an internal name. That's right, <em>anonymous but named functions</em>.</p>
+    <p>The trick is that the name is visible only within the function's scope, not outside of it. The main advantage of this is that it makes it possible to define anonymous recursive functions. For example, we could make an anonymous function that keeps being loud forever:</p>
+
+    <pre class="brush:eshell">
+18&gt; f(PrepareAlarm), f(AlarmReady).
+ok
+19&gt; PrepareAlarm = fun(Room) -&gt;
+19&gt;     io:format("Alarm set in ~s.~n",[Room]),
+19&gt;     fun Loop() -&gt;
+19&gt;         io:format("Alarm tripped in ~s! Call Batman!~n",[Room]),
+19&gt;         timer:sleep(500),
+19&gt;         Loop()
+19&gt;     end
+19&gt; end.
+#Fun&lt;erl_eval.6.71889879&gt;
+20&gt; AlarmReady = PrepareAlarm("bathroom").
+Alarm set in bathroom.
+#Fun&lt;erl_eval.44.71889879&gt;
+21&gt; AlarmReady().
+Alarm tripped in bathroom! Call Batman!
+Alarm tripped in bathroom! Call Batman!
+Alarm tripped in bathroom! Call Batman!
+...
+</pre>
+
+<p>The <var>Loop</var> variable refers to the anonymous function itself, and within that scope, will be usable as any other similar variable pointing to an anonymous function. This should generally make a lot of operations in the shell a lot less painful moving on forward.</p>
+</div>
+
+<p>We'll set the anonymous function theory aside a bit and we'll explore more common abstractions to avoid having to write more recursive functions, like I promised at the end of the previous chapter.</p>
+
+
+<img class="right" src="static/img/erland.png" width="267" height="238" alt="A map of Erland, the mystic Erlang island!" />
+
+<h3><a class="section" name="maps-filters-folds">Maps, filters, folds and more</a></h3>
+
+<p>At the beginning of this chapter, I briefly showed how to abstract away two similar functions to get a <code>map/2</code> function. I also affirmed that such a function could be used for any list where we want to act on each element. The function was the following:</p>
+
+<pre class="brush:erl">
+map(_, []) -&gt; [];
+map(F, [H|T]) -&gt; [F(H)|map(F,T)].
+</pre>
+
+<p>However, there are many other similar abstractions to build from commonly occurring recursive functions. Let's first take a look at these two functions:</p>
+
+<pre class="brush:erl">
+%% only keep even numbers
+even(L) -&gt; lists:reverse(even(L,[])).
+
+even([], Acc) -&gt; Acc;
+even([H|T], Acc) when H rem 2 == 0 -&gt;
+    even(T, [H|Acc]);
+even([_|T], Acc) -&gt;
+    even(T, Acc).
+
+%% only keep men older than 60
+old_men(L) -&gt; lists:reverse(old_men(L,[])).
+
+old_men([], Acc) -&gt; Acc;
+old_men([Person = {male, Age}|People], Acc) when Age &gt; 60 -&gt;
+    old_men(People, [Person|Acc]);
+old_men([_|People], Acc) -&gt;
+    old_men(People, Acc).
+</pre>
+
+<p>The first one takes a list of numbers and returns only those that are even. The second one goes through a list of people of the form <code>{Gender, Age}</code> and only keeps those that are males over 60. The similarities are a bit harder to find here, but we've got some common points. Both functions operate on lists and have the same objective of keeping elements that succeed some test (also a <em>predicate</em>) and then drop the others. From this generalization we can extract all the useful information we need and abstract them away:</p>
+
+<pre class="brush:erl">
+filter(Pred, L) -&gt; lists:reverse(filter(Pred, L,[])).
+
+filter(_, [], Acc) -&gt; Acc;
+filter(Pred, [H|T], Acc) -&gt;
+    case Pred(H) of
+        true  -&gt; filter(Pred, T, [H|Acc]);
+        false -&gt; filter(Pred, T, Acc)
+    end.
+</pre>
+
+<p>To use the filtering function we now only need to get the test outside of the function. Compile the <code><a class="source" href="static/erlang/hhfuns.erl" title="final implementation">hhfuns</a></code> module and try it:</p>
+
+<pre class="brush:eshell">
+1&gt; c(hhfuns).
+{ok, hhfuns}
+2&gt; Numbers = lists:seq(1,10).
+[1,2,3,4,5,6,7,8,9,10]
+3&gt; hhfuns:filter(fun(X) -&gt; X rem 2 == 0 end, Numbers).
+[2,4,6,8,10]
+4&gt; People = [{male,45},{female,67},{male,66},{female,12},{unknown,174},{male,74}].
+[{male,45},{female,67},{male,66},{female,12},{unknown,174},{male,74}]
+5&gt; hhfuns:filter(fun({Gender,Age}) -&gt; Gender == male andalso Age &gt; 60 end, People).
+[{male,66},{male,74}]
+</pre>
+
+<p>These two examples show that with the use of the <code>filter/2</code> function, the programmer only has to worry about producing the predicate and the list. The act of cycling through the list to throw out unwanted items is no longer necessary to think about. This is one important thing about abstracting functional code: try to get rid of what's always the same and let the programmer supply in the parts that change.</p>
+
+<p>In the previous chapter, another kind of recursive manipulation we applied on lists was to look at every element of a list one after the other and reduce them to a single answer. This is called a <em>fold</em> and can be used on the following functions:</p>
+
+<pre class="brush:erl">
+%% find the maximum of a list
+max([H|T]) -&gt; max2(T, H).
+
+max2([], Max) -&gt; Max;
+max2([H|T], Max) when H &gt; Max -&gt; max2(T, H);
+max2([_|T], Max) -&gt; max2(T, Max).
+
+%% find the minimum of a list
+min([H|T]) -&gt; min2(T,H).
+
+min2([], Min) -&gt; Min;
+min2([H|T], Min) when H &lt; Min -&gt; min2(T,H);
+min2([_|T], Min) -&gt; min2(T, Min).
+
+%% sum of all the elements of a list
+sum(L) -&gt; sum(L,0).
+
+sum([], Sum) -&gt; Sum;
+sum([H|T], Sum) -&gt; sum(T, H+Sum).
+</pre>
+
+<img class="right" src="static/img/foldr.png" width="172" height="248" alt="A playing card with 'Joker' replaced by 'Foldr'. The joker has huge glasses, a hook and hairy legs" title="Terrrrrible puns, ladies and gentlemen!" />
+
+<p>To find how the fold should behave, we've got to find all the common points of these actions and then what is different. As mentioned above, we always have a reduction from a list to a single value. Consequently, our fold should only consider iterating while keeping a single item, no list-building needed. Then we need to ignore the guards, because they're not always there: these need to be in the user's function. In this regard, our folding function will probably look a lot like sum.</p>
+
+<p>A subtle element of all three functions that wasn't mentioned yet is that every function needs to have an initial value to start counting with. In the case of <code>sum/2</code>, we use 0 as we're doing addition and given <code>X = X + 0</code>, the value is neutral and we can't mess up the calculation by starting there. If we were doing multiplication we'd use 1 given <code>X = X * 1</code>. The functions <code>min/1</code> and <code>max/1</code> can't have a default starting value: if the list was only negative numbers and we started at 0, the answer would be wrong. As such, we need to use the first element of the list as a starting point. Sadly, we can't always decide this way, so we'll leave that decision to the programmer. By taking all these elements, we can build the following abstraction:</p>
+
+<pre class="brush:erl">
+fold(_, Start, []) -&gt; Start;
+fold(F, Start, [H|T]) -&gt; fold(F, F(H,Start), T).
+</pre>
+
+<p>And when tried:</p>
+
+<pre class="brush:eshell">
+6&gt; c(hhfuns).
+{ok, hhfuns}
+7&gt; [H|T] = [1,7,3,5,9,0,2,3].    
+[1,7,3,5,9,0,2,3]
+8&gt; hhfuns:fold(fun(A,B) when A &gt; B -&gt; A; (_,B) -&gt; B end, H, T).
+9
+9&gt; hhfuns:fold(fun(A,B) when A &lt; B -&gt; A; (_,B) -&gt; B end, H, T).
+0
+10&gt; hhfuns:fold(fun(A,B) -&gt; A + B end, 0, lists:seq(1,6)).
+21
+</pre>
+
+<p>Pretty much any function you can think of that reduces lists to 1 element can be expressed as a fold.</p>
+
+<p>What's funny there is that you can represent an accumulator as a single element (or a single variable), and an accumulator can be a list. Therefore, we can use a fold to build a list. This means fold is universal in the sense that you can implement pretty much any other recursive function on lists with a fold, even map and filter:</p>
+
+<pre class="brush:erl">
+reverse(L) -&gt;
+    fold(fun(X,Acc) -&gt; [X|Acc] end, [], L).
+
+map2(F,L) -&gt;
+    reverse(fold(fun(X,Acc) -&gt; [F(X)|Acc] end, [], L)).
+
+filter2(Pred, L) -&gt;
+    F = fun(X,Acc) -&gt;
+            case Pred(X) of
+                true  -&gt; [X|Acc];
+                false -&gt; Acc
+            end
+        end,
+    reverse(fold(F, [], L)).
+</pre>
+
+<p>And they all work the same as those written by hand before. How's that for powerful abstractions?</p>
+
+<p>Map, filters and folds are only one of many abstractions over lists provided by the Erlang standard library (see <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#map/2" title="unofficial, but cleaner doc">lists:map/2</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#filter/2" title="unofficial, but cleaner doc">lists:filter/2</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#foldl/3" title="unofficial, but cleaner doc">lists:foldl/3</a></code> and <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#foldr/3" title="unofficial, but cleaner doc">lists:foldr/3</a></code>). Other functions include <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#all/2" title="unofficial, but cleaner doc">all/2</a></code> and <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#any/2" title="unofficial, but cleaner doc">any/2</a></code> which both take a predicate and test if all the elements return true or if at least one of them returns true, respectively. Then you have <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#dropwhile/2" title="unofficial, but cleaner doc">dropwhile/2</a></code> that will ignore elements of a list until it finds one that fit a certain predicate, its opposite, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#takewhile/2" title="same doc, still cleaner!">takewhile/2</a></code>, that will keep all elements until there is one that doesn't return true to the predicate. A complimentary function to the two previous ones is <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#partition/2" title="not worth adding more of these">partition/2</a></code>, which will take a list and return two: one that has the terms which satisfy a given predicate, and one list for the others. Other frequently used lists functions include <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#flatten/1" title="here it goes again">flatten/1</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#flatlength/1" title="more function description">flatlength/1</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#flatmap/2" title="flatten &lt;3 map">flatmap/2</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#merge/1" title="Gotta merge em' all, pokelists!">merge/1</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#nth/2" title="woop de bop, still the same as other doc links in this paragraph">nth/2</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#nthtail/2" title="it's nth/2 but not really">nthtail/2</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#split/2" title="thank the lord it's over!">split/2</a></code> and a bunch of others.</p>
+
+<p>You'll also find other functions such as zippers (as seen in last chapter), unzippers, combinations of maps and folds, etc. I encourage you to read the <a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html">documentation on lists</a> to see what can be done. You'll find yourself rarely needing to write recursive functions by using what's already been abstracted away by smart people.</p>
+
+				<ul class="navigation">
+											<li><a href="recursion.html" title="Previous chapter">&lt; Previous</a></li>
+										
+					<li><a href="contents.html" title="Index">Index</a></li>
+					
+											<li><a href="errors-and-exceptions.html" title="Next chapter">Next &gt;</a></li>
+									</ul>
+			</div><!-- content -->
+			<div id="footer">
+				<a href="http://creativecommons.org/licenses/by-nc-nd/3.0/" title="Creative Commons License Details"><img src="static/img/cc.png" width="88" height="31" alt="Creative Commons Attribution Non-Commercial No Derivative License" /></a>
+				<p>Except where otherwise noted, content on this site is licensed under a Creative Commons Attribution Non-Commercial No Derivative License</p>
+			</div> <!-- footer -->
+		</div> <!-- wrapper -->
+		<div id="grass" />
+	<script type="text/javascript" src="static/js/shCore.js"></script>
+	<script type="text/javascript" src="static/js/shBrushErlang2.js%3F11"></script>
+	<script type="text/javascript">
+		SyntaxHighlighter.defaults.gutter = false;
+		SyntaxHighlighter.all();
+	</script>
+	</body>
+</html>

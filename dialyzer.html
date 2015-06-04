@@ -1,0 +1,1130 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en" dir="ltr">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<meta http-equiv="Content-Style-Type" content="text/css" />
+		<meta name="keywords" content="Erlang, Dialyzer, type checker, type inference, PLT, polymorphic, type specification, discrepancies, callback behaviour" />
+		<meta name="description" content="Dialyzer is an Erlang tool to analyze and find discrepancies in Erlang software. More than that, it's also a type inferencer and a type checker. This chapter shows how to use it." />
+        <meta name="google-site-verification" content="mi1UCmFD_2pMLt2jsYHzi_0b6Go9xja8TGllOSoQPVU" />
+		<link rel="stylesheet" type="text/css" href="static/css/screen.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/sh/shCore.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/sh/shThemeLYSE2.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/print.css" media="print" />
+		<link href="rss" type="application/rss+xml" rel="alternate" title="LYSE news" />
+		<link rel="icon" type="image/png" href="favicon.ico" />
+		<link rel="apple-touch-icon" href="static/img/touch-icon-iphone.png" />
+		<link rel="apple-touch-icon" sizes="72x72" href="static/img/touch-icon-ipad.png" />
+		<link rel="apple-touch-icon" sizes="114x114" href="static/img/touch-icon-iphone4.png" />
+		<title>Type Specifications and Erlang | Learn You Some Erlang for Great Good!</title>
+	</head>
+	<body>
+		<div id="wrapper">
+			<div id="header">
+				<h1>Learn you some Erlang</h1>
+				<span>for great good!</span>
+			</div> <!-- header -->
+			<div id="menu">
+				<ul>
+					<li><a href="content.html" title="Home">Home</a></li>
+					<li><a href="faq.html" title="Frequently Asked Questions">FAQ</a></li>
+					<li><a href="rss" title="Latest News">RSS</a></li>
+					<li><a href="static/erlang/learn-you-some-erlang.zip" title="Source Code">Code</a></li>
+				</ul>
+			</div><!-- menu -->
+			<div id="content">
+            <div class="noscript"><noscript>Hey there, it appears your Javascript is disabled. That's fine, the site works without it. However, you might prefer reading it with syntax highlighting, which requires Javascript!</noscript></div>
+<h2>Type Specifications and Erlang</h2>
+
+<h3><a class="section" name="plt">PLTs Are The Best Sandwiches</a></h3>
+
+<img class="right" src="static/img/blt.png" width="260" width="256" alt="a BLT sandwich" />
+
+<p>Back in <a class="chapter" href="types-or-lack-thereof.html#for-type-junkies">Types (or lack thereof)</a>, I introduced Dialyzer, a tool to find type errors in Erlang. This chapter puts its full focus on Dialyzer and how to actually find some type errors with Erlang, and how to use the tool to find other types of discrepancies. We'll start by seeing why Dialyzer was created, then what the guiding principles behind it are and its capabilities to find type-related errors, and finally, a few examples of it in use.</p>
+
+<p>Dialyzer is a very effective tool when it comes to analyzing Erlang code. It's used to find all kinds of discrepancies, such as code that will never be executed, but its main use is usually centered around finding type errors in your Erlang code base.</p>
+
+<p>Before seeing much of it, we'll create Dialyzer's <em>Persistent Lookup Table</em> (<em>PLT</em>), which is a compilation of all the details Dialyzer can identify about the applications and modules that are part of your standard Erlang distribution, and code outside of OTP too. It takes quite a while to compile everything, especially if you're running it on a platform that has no native compilation through HiPE (namely Windows), or on older versions of Erlang. Fortunately things tend to get faster with time, and the newest versions of Erlang in newer releases (R15B02 onward) are getting parallel Dialyzer to make things even faster. Enter the following command into a terminal, and let it run as long as it needs:</p>
+
+<pre class="brush:eshell">
+$ dialyzer --build_plt --apps erts kernel stdlib crypto mnesia sasl common_test eunit
+Compiling some key modules to native code... done in 1m19.99s
+Creating PLT /Users/ferd/.dialyzer_plt ...
+eunit_test.erl:302: Call to missing or unexported function eunit_test:nonexisting_function/0
+Unknown functions:
+compile:file/2
+compile:forms/2
+...
+xref:stop/1
+Unknown types:
+compile:option/0
+done in 6m39.15s
+done (warnings were emitted)
+</pre>
+
+<p>This command builds the PLT by specifying which OTP applications we want to include in it. You can ignore the warnings if you want, as Dialyzer can deal with unknown functions when looking for type errors. We'll see why when we get to discuss how its type inference algorithm works, later in the chapter. Some Windows users will see an error message saying "The HOME environment variable needs to be set so that Dialyzer knows where to find the default PLT". This is because Windows doesn't always come with the <code>HOME</code> environment variable set, and Dialyzer doesn't know where to dump the PLT. Set the variable to wherever you want Dialyzer to place its files.</p>
+
+<p>If you want, you can add applications like <code>ssl</code> or <code>reltool</code> by adding them to the sequence that follows <code>--apps</code>, or if your PLT is already built, by calling:</p>
+
+<pre class="brush:eshell">
+$ dialyzer --add_to_plt --apps ssl reltool
+</pre>
+
+<p>If you want to add your own applications or modules to the PLT, you can do so by using <code>-r Directories</code>, which will look for all <code>.erl</code> or <code>.beam</code> files (as long as they're compiled with <code>debug_info</code>) to add them to the PLT.</p>
+
+<p>Moreover, Dialyzer lets you have many PLTs by specifying them with the <code>--plt Name</code> option in any of the commands you do, and pick a specific PLT. Alternatively, if you built many <em>disjoint PLTs</em> where none of the included modules are shared between PLTs, you can 'merge' them by using <code>--plts Name1 Name2 ... NameN</code>. This is especially useful when you want to have different PLTs in your system for different projects or different Erlang versions. The downside of this is that information obtained from merged PLTs is not as precise as if all information was contained in a single one to begin with.</p>
+
+<p>While the PLT is still building, we should get acquainted with Dialyzer's mechanism to find type errors.</p>
+
+
+<h3><a class="section" name="success-typing">Success Typing</a></h3>
+
+<p>As it is the case with most other dynamic programming languages, Erlang programs are always at risk of suffering from type errors. A programmer passes in some arguments to a function he shouldn't have, and maybe he forgot to test things properly. The program gets deployed, and everything seems to be going okay. Then at four in the morning, your company's operations guy's cell phone starts ringing because your piece of software is repeatedly crashing, enough that the supervisors can't cope with the sheer weight of your mistakes.</p>
+
+<img class="right" src="static/img/atlas.png" width="157" height="255" alt="Atlas lifting a rock with bad practice terms such as 'no tests', 'typos', 'large messages', 'bugs', etc." title="Atlas shrugged, and rewrote the code" />
+
+<p>The next morning, you get at the office, and you find your computer has been reformatted, your car gets keyed, and your commit rights have been revoked, all by the operations guy who has had enough of you accidentally controlling his work schedule.</p>
+
+<p>That entire debacle could have been prevented by a compiler that has a static type analyzer to verify programs before they run. While Erlang doesn't crave a type system as much as other dynamic languages, thanks to its reactive approach to run-time errors, it is definitely nice to benefit from the additional safety usually provided by early type-related error discovery.</p>
+
+<p>Usually, languages with static type systems get to be designed that way. The semantics of the language is heavily influenced by their type systems in what they allow and don't allow. For example, a function such as:</p>
+
+<pre class="brush:erl">
+foo(X) when is_integer(X) -&gt; X + 1;
+foo(X) -&gt; list_to_atom(X).
+</pre>
+
+<p>Most type systems are unable to properly represent the types of the function above. They can see that it can take an integer or a list and return an integer or an atom, but they won't track the dependency between the input type of the function and its output type (conditional types and intersection types are able to, but they can be verbose). This means that writing such functions, which is entirely normal in Erlang, can result in some uncertainty for the type analyzer when these functions get used later on in the code.</p>
+
+<p>Generally speaking, analyzers will want to actually <em>prove</em> that there will be no type errors at run time, as in mathematically prove. This means that in a few circumstances, the type checker will disallow certain practically valid operations for the sake of removing uncertainty that could lead to crashes.</p>
+
+<p>Implementing such a type system would likely mean forcing Erlang to change its semantics. The problem is that by the time Dialyzer came around, Erlang was already well in use for very large projects. For any tool like Dialyzer to be accepted, it needed to respect Erlang's philosophies. If Erlang allows pure nonsense in its types that can only be solved at run time, so be it. The type checker doesn't have a right to complain. No programmer likes a tool that tells him his program cannot run when it has been doing so in production for a few months already!</p>
+
+<p>The other option is then to have a type system that will not <em>prove</em> the absence of errors, but will do a best effort at detecting whatever it can. You can make such detection really good, but it will never be perfect. It's a tradeoff to be made.</p>
+
+<p>Dialyzer's type system thus made the decision not to prove that a program is error-free when it comes to types, but only to find as many errors as possible without ever contradicting what happens in the real world:</p>
+
+<blockquote title="Practical Type Inference Based on Success Typings, by Tobias Lindahl and Konstantinos Sagonas">
+    <p>Our main goal is to make uncover the implicit type information in Erlang code and make it explicitly available in programs. Because of the sizes of typical Erlang applications, the type inference should be completely automatic and faithfully respect the operational semantics of the language. Moreover, it should impose no code rewrites of any kind. The reason for this is simple. Rewriting, often safety critical, applications consisting of hundreds of thousand lines of code just to satisfy a type inferencer is not an option which will enjoy much success. However, large software applications have to be maintained, and often not by their original authors. By automatically revealing the type information that is already present, we provide automatic documentation that can evolve together with the program and will not rot. We also think that it is important to achieve a balance between precision and readability. Last but not least, the inferred typings should never be wrong.</p>
+</blockquote>
+
+<p>As the <a class="external" href="http://www.it.uu.se/research/group/hipe/papers/succ_types.pdf">Success Typings paper</a> behind Dialyzer explains it, a type checker for a language like Erlang should work without type declarations being there (although it accepts hints), should be simple and readable, should adapt to the language (and not the other way around), and only complain on type errors that would guarantee a crash.</p>
+
+<p>Dialyzer thus begins each analysis optimistically assuming that all functions are good. It will see them as always succeeding, accepting anything, and possibly returning anything. No matter how an unknown function is used, it's a good way to use it. This is why warnings about unknown functions are not a big deal when generating PLTs. It's all good anyway; Dialyzer is a natural optimist when it comes to type inference.</p>
+
+<p>As the analysis goes, Dialyzer gets to know your functions better and better. As it does so, it can analyze the code and see some interesting things. Say one of your functions has a <code>+</code> operator between both of its arguments and that it returns the value of the addition. Dialyzer no longer assumes that the function takes anything and returns anything, but will now expect the arguments to be numbers (either integers or floating point values), and the returned values will similarly be numbers. This function will have a basic type associated to it saying that it accepts two numbers and returns a number.</p>
+
+<p>Now let's say one of your functions calls the one described above with an atom and a number. Dialyzer will think about the code and say "wait a minute, you can't use an atom and a number with the <code>+</code> operator!" It will then freak out because where the function could return a number before, it can not return anything given how you use it.</p>
+
+<p>In more general circumstances, though, you might see Dialyzer keep silent on many things that you know will <em>sometimes</em> cause an error. Take for example a snippet of code looking a bit like this:</p>
+
+<pre class="brush:erl">
+main() -&gt;
+    X = case fetch() of
+        1 -&gt; some_atom;
+        2 -&gt; 3.14
+    end,
+    convert(X).
+
+convert(X) when is_atom(X) -&gt; {atom, X}.
+</pre>
+
+<p>This bit of code assumes the existence of a <code>fetch/0</code> function that returns either <samp>1</samp> or <samp>2</samp>. Based on this, we either return an atom or a floating point number.</p>
+
+<p>From our point of view, it appears that at some point in time, the call to <code>convert/1</code> will fail. We'd likely expect a type error there whenever <code>fetch()</code> returns 2, which sends a floating point value to <code>convert/1</code>. Dialyzer doesn't think so. Remember, Dialyzer is optimistic. It has figurative faith in your code, and because there is the <em>possibility</em> that the function call to <code>convert/1</code> succeeds at some point, Dialyzer will keep silent. No type error is reported in this case.</p>
+
+<h3><a class="section" name="type-inference-and-discrepancies">Type Inference and Discrepancies</a></h3>
+
+<p>For a practical example of the principles above, let's try Dialyzer on a few modules. The modules are <a class="source" href="static/erlang/discrep1.erl">discrep1.erl</a>, <a class="source" href="static/erlang/discrep2.erl">discrep2.erl</a>, and <a class="source" href="static/erlang/discrep3.erl">discrep3.erl</a>. They're evolutions of each other. Here's the first one:
+
+<pre class="brush:erl">
+-module(discrep1).
+-export([run/0]).
+
+run() -&gt; some_op(5, you).
+
+some_op(A, B) -&gt; A + B.
+</pre>
+
+<p>The error in that one is kind of obvious. You can't add <code>5</code> to the <code>you</code> atom. We can try Dialyzer on that piece of code, assuming the PLT has been created:</p>
+
+<pre class="brush:erl">
+$ dialyzer discrep1.erl
+  Checking whether the PLT /home/ferd/.dialyzer_plt is up-to-date... yes
+  Proceeding with analysis...
+discrep1.erl:4: Function run/0 has no local return
+discrep1.erl:4: The call discrep1:some_op(5,'you') will never return since it differs in the 2nd argument from the success typing arguments: (number(),number())
+discrep1.erl:6: Function some_op/2 has no local return
+discrep1.erl:6: The call erlang:'+'(A::5,B::'you') will never return since it differs in the 2nd argument from the success typing arguments: (number(),number())
+ done in 0m0.62s
+done (warnings were emitted)
+</pre>
+
+<p>Oh bloody fun, Dialyzer found stuff. What the hell does it mean? The first one is an error you will see happening a <em>lot</em> of times using Dialyzer. 'Function Name/Arity has no local return' is the standard Dialyzer warning emitted whenever a function provably doesn't return anything (other than perhaps raising an exception) because one of the function it calls happens to trip Dialyzer's type error detector or raises an exception itself. When such a thing happens, the set of possible types of values the function could return is empty; it doesn't actually return. This error propagates to the function that called it, giving us the 'no local return' error.</p>
+
+<p>The second error is somewhat more understandable. It says that calling <code>some_op(5, 'you')</code> breaks what Dialyzer detected would be the types required to make the function work, which is two numbers (<code>number()</code> and <code>number()</code>). Granted the notation is a bit foreign for now, but we'll see it in more details soon enough.</p>
+
+<p>The third error is yet again a no local return. The first one was because <code>some_op/2</code> would fail, this one is because the <code>+</code> call that will fail. This is what the fourth and last error is about. The plus operator (actually the function <code>erlang:'+'/2</code> can't add the number <code>5</code> to the atom <code>you</code>.</p>
+
+<p>What about <a class="source" href="static/erlang/discrep2.erl">discrep2.erl</a>? Here's what it looks like:</p>
+
+<pre class="brush:erl">
+-module(discrep2).
+-export([run/0]).
+
+run() -&gt;
+    Tup = money(5, you),
+    some_op(count(Tup), account(Tup)).
+
+money(Num, Name) -&gt; {give, Num, Name}.
+count({give, Num, _}) -&gt; Num.
+account({give, _, X}) -&gt; X.
+
+some_op(A, B) -&gt; A + B.
+</pre>
+
+<p>If you run Dialyzer over that file again, you'll get similar errors to before:</p>
+
+<pre class="brush:erl">
+$ dialyzer discrep2.erl
+  Checking whether the PLT /home/ferd/.dialyzer_plt is up-to-date... yes
+  Proceeding with analysis...
+discrep2.erl:4: Function run/0 has no local return
+discrep2.erl:6: The call discrep2:some_op(5,'you') will never return since it differs in the 2nd argument from the success typing arguments: (number(),number())
+discrep2.erl:12: Function some_op/2 has no local return
+discrep2.erl:12: The call erlang:'+'(A::5,B::'you') will never return since it differs in the 2nd argument from the success typing arguments: (number(),number())
+ done in 0m0.69s
+done (warnings were emitted)
+</pre>
+
+<p>During its analysis, Dialyzer can see the types right through the <code>count/1</code> and <code>account/1</code> functions. It infers the types of each of the elements of the tuple and then figures out the values they pass. It can then find the errors again, without a problem.</p>
+
+<p>Let's push it a bit further, with <a class="source" href="static/erlang/discrep3.erl">discrep3.erl</a>:</p>
+
+<pre class="brush:erl">
+-module(discrep3).
+-export([run/0]).
+
+run() -&gt;
+    Tup = money(5, you),
+    some_op(item(count, Tup), item(account, Tup)).
+
+money(Num, Name) -&gt; {give, Num, Name}.
+
+item(count, {give, X, _}) -&gt; X;
+item(account, {give, _, X}) -&gt; X.
+
+some_op(A, B) -&gt; A + B.
+</pre>
+
+<p>This version introduces a new level of indirection. Instead of having a function clearly defined for the count and the account values, this one works with atoms and switches to different function clauses. If we run Dialyzer on it, we get this:</p>
+
+<pre class="brush:erl">
+$ dialyzer discrep3.erl
+  Checking whether the PLT /home/ferd/.dialyzer_plt is up-to-date... yes
+  Proceeding with analysis... done in 0m0.70s
+done (passed successfully)
+</pre>
+
+<img class="right" width="281" height="165" alt="A check for 5 cents made to 'YOU!'" src="http://dev.learnyousomeerlang.com/static/img/small_check.png" />
+
+<p>Uh oh. Somehow the new change to the file made things complex enough that Dialyzer got lost in our type definitions. The error is still there though. We'll get back to understanding why Dialyzer doesn't find the errors in this file and how to fix it in a while, but for now, there are still a few more ways to run Dialyzer that we need to explore.</p>
+
+<p>If we wanted to run Dialyzer over, say, our <a class="source" href="static/erlang/processquest.zip">Process Quest release</a>, we could do it as follows:</p>
+
+<pre class="brush:eshell">
+$ cd processquest/apps
+$ ls
+processquest-1.0.0  processquest-1.1.0  regis-1.0.0  regis-1.1.0  sockserv-1.0.0  sockserv-1.0.1
+</pre>
+
+<p>So we've got a bunch of libraries. Dialyzer wouldn't like it if we had many modules with the same names, so we'll need to specify directories manually:</p>
+
+<pre class="brush:eshell">
+$ dialyzer -r processquest-1.1.0/src regis-1.1.0/src sockserv-1.0.1/src
+Checking whether the PLT /home/ferd/.dialyzer_plt is up-to-date... yes
+Proceeding with analysis...
+dialyzer: Analysis failed with error:
+No .beam files to analyze (no --src specified?)
+</pre>
+
+<p>Oh right. By default, dialyzer will look for <code>.beam</code> files. We need to add the <code>--src</code> flag to tell Dialyzer to use <code>.erl</code> files for its analysis:</p>
+
+<pre class="brush:eshell">
+$ dialyzer -r processquest-1.1.0/src regis-1.1.0/src sockserv-1.0.1/src --src
+Checking whether the PLT /home/ferd/.dialyzer_plt is up-to-date... yes
+Proceeding with analysis... done in 0m2.32s
+done (passed successfully)
+</pre>
+
+<p>You'll note that I chose to add the <code>src</code> directory to all requests. You could have done the same search without it, but then Dialyzer would have complained about a bunch of errors related to EUnit tests, based on how some of the assertion macros work with regard to the code analysis &mdash; we do not really care about these. Plus, if you sometimes test for failures and make your software crash on purpose inside of tests, Dialyzer will pick on that and you might not want it to.</p>
+
+
+<h3><a class="section" name="typing-about-types-of-types">Typing About Types of Types</a></h3>
+
+<p>As seen with <a class="source" href="static/erlang/discrep3.erl">discrep3.erl</a>, Dialyzer will sometimes not be able to infer all the types in the way we intended it. That's because Dialyzer cannot read our minds. To help out Dialyzer in its task (and mostly help ourselves), it is possible to declare types and annotate functions in order to both document them and help formalize the implicit expectations about types we put in our code.</p>
+
+<p>Erlang types can be things simple as say, the number 42, noted <code>42</code> as a type (nothing different from usual), or specific atoms such as <code>cat</code>, or maybe <code>molecule</code>. Those are called <em>singleton types</em> as they refer to a value itself. The following singleton types exist:</p>
+
+<table>
+    <tr>
+        <td><code>'some atom'</code></td>
+        <td>Any atom can be its own singleton type.</td>
+    </tr>
+    <tr>
+        <td><code>42</code></td>
+        <td>A given integer.</td>
+    </tr>
+    <tr>
+        <td><code>[]</code></td>
+        <td>An empty list.</td>
+    </tr>
+    <tr>
+        <td><code>{}</code></td>
+        <td>An empty tuple.</td>
+    </tr>
+    <tr>
+        <td><code>&lt;&lt;&gt;&gt;</code></td>
+        <td>An empty binary.</td>
+    </tr>
+</table>
+
+<p>You can see that it could be annoying to program Erlang using only these types. There is no way to express things such as ages, or much less "all the integers" for our programs by using singleton types. And then, even if we had a way to specify many types at once, it would be awfully annoying to express things such as 'any integer' without writing them all by hand, which isn't exactly possible anyway.</p>
+
+<p>Because of this, Erlang has <em>union types</em>, which allow you to describe a type that has two atoms in it, and <em>built-in types</em>, which are pre-defined types, not necessarily possible to build by hand, and they're generally useful. Union types and built-in types generally share a similar syntax, and they're noted with the form <code>TypeName()</code>. For example, the type for all possible integers would be noted <code>integer()</code>. The reason why parentheses are used is that they let us differentiate between, say the type <code>atom()</code> for all atoms, and <code>atom</code> for the specific <code>atom</code> atom. Moreover, to make code clearer, many Erlang programmers choose to quote all atoms in type declarations, giving us <code>'atom'</code> instead of <code>atom</code>. This makes it explicit that <code>'atom'</code> was meant to be a singleton type, and not a built-in type where the programmer forgot the parentheses.</p>
+
+<p>Following is a table of built-in types provided with the language. Note that they do not all have the same syntax as union types do. Some of them, like binaries and tuples, have a special syntax to make them friendlier to use.</p>
+
+<table>
+    <tr>
+        <td><code>any()</code></td>
+        <td>Any Erlang term at all.</td>
+    </tr>
+    <tr>
+        <td><code>none()</code></td>
+        <td>This is a special type that means that no term or type is valid. Usually, when Dialyzer boils down the possible return values of a function to <code>none()</code>, it means the function should crash. It is synonymous with "this stuff won't work."</td>
+    </tr>
+    <tr>
+        <td><code>pid()</code></td>
+        <td>A process identifier.</td>
+    </tr>
+    <tr>
+        <td><code>port()</code></td>
+        <td>A port is the underlying representation of file descriptors (which we rarely see unless we go dig deep inside the innards of Erlang libraries), sockets, or generally things that allow Erlang to communicate with the outside world, such as the <code>erlang:open_port/2</code> function. In the Erlang shell, they look like <code>#Port&lt;0.638&gt;</code>.</td>
+    </tr>
+    <tr>
+        <td><code>reference()</code></td>
+        <td>Unique values returned by <code>make_ref()</code> or <code>erlang:monitor/2</code>.</td>
+    </tr>
+    <tr>
+        <td><code>atom()</code></td>
+        <td>Atoms in general.</td>
+    </tr>
+    <tr>
+        <td><code>binary()</code></td>
+        <td>A blob of binary data.</td>
+    </tr>
+    <tr>
+        <td><code>&lt;&lt;_:Integer&gt;&gt;</code></td>
+        <td>A binary of a known size, where <var>Integer</var> is the size.</td>
+    </tr>
+    <tr>
+        <td><code>&lt;&lt;_:_*Integer&gt;&gt;</code></td>
+        <td>A binary that has a given unit size, but of unspecified length.</td>
+    </tr>
+    <tr>
+        <td><code>&lt;&lt;_:Integer, _:_*OtherInteger&gt;&gt;</code></td>
+        <td>A mix of both previous forms to specify that a binary can have a minimum length.</td>
+    </tr>
+    <tr>
+        <td><code>integer()</code></td>
+        <td>Any integer.</td>
+    </tr>
+    <tr>
+        <td><code>N..M</code></td>
+        <td>A range of integers. For example, if you wanted to represent a number of months in a year, the range <code>1..12</code> could be defined. Note that Dialyzer reserves the right to expand this range into a bigger one.</td>
+    </tr>
+    <tr>
+        <td><code>non_neg_integer()</code></td>
+        <td>Integers that are greater or equal to 0.</td>
+    </tr>
+    <tr>
+        <td><code>pos_integer()</code></td>
+        <td>Integers greater than 0.</td>
+    </tr>
+    <tr>
+        <td><code>neg_integer()</code></td>
+        <td>Integers up to -1</td>
+    </tr>
+    <tr>
+        <td><code>float()</code></td>
+        <td>Any floating point number.</td>
+    </tr>
+    <tr>
+        <td><code>fun()</code></td>
+        <td>Any kind of function.</td>
+    </tr>
+    <tr>
+        <td><code>fun((...) -&gt; Type)</code></td>
+        <td>An anonymous function of any arity that returns a given type. A given function that returns lists could be noted as <code>fun((...) -&gt; list())</code>.</td>
+    </tr>
+    <tr>
+        <td><code>fun(() -&gt; Type)</code></td>
+        <td>An anonymous function with no arguments, returning a term of a given type.</td>
+    </tr>
+    <tr>
+        <td><code>fun((Type1, Type2, ..., TypeN) -&gt; Type)</code></td>
+        <td>An anonymous function taking a given number of arguments of a known type. An example could be a function that handles an integer and a floating point value, which could be declared as <code>fun((integer(), float()) -&gt; any())</code>.</td>
+    </tr>
+    <tr>
+        <td><code>[]</code></td>
+        <td>An empty list.</td>
+    </tr>
+    <tr>
+        <td><code>[Type()]</code></td>
+        <td>A list containing a given type. A list of integers could be defined as <code>[integer()]</code>. Alternatively, it can be written as <code>list(Type())</code>. Lists can sometimes be improper (like <code>[1, 2 | a]</code>). As such, Dialyzer has types declared for improper lists with <code>improper_list(TypeList, TypeEnd)</code>. The improper list <code>[1, 2 | a]</code> could be typed as <code>improper_list(integer(), atom())</code>, for example. Then, to make matters more complex, it is possible to have lists where we are not actually sure whether the list will be proper or not. In such circumstances, the type <code>maybe_improper_list(TypeList, TypeEnd)</code> can be used.</td>
+    </tr>
+    <tr>
+        <td><code>[Type(), ...]</code></td>
+        <td>This special case of <code>[Type()]</code> mentions that the list can not be empty.</td>
+    </tr>
+    <tr>
+        <td><code>tuple()</code></td>
+        <td>Any tuple.</td>
+    </tr>
+    <tr>
+        <td><code>{Type1, Type2, ..., TypeN}</code></td>
+        <td>A tuple of a known size, with known types. For example, a binary tree node could be defined as <code>{'node', any(), any(), any(), any()}</code>, corresponding to <code>{'node', LeftTree, RightTree, Key, Value}</code>.</td>
+    </tr>
+</table>
+
+<img class="right" src="static/img/venn.png" width="229" height="143" alt="A venn diagram. The leftmost circle is a gold ingot, the rightmost one is a shower head. In the center is a pixelated and censored coloured bit" title="a dirty one..." />
+
+<p>Given the built-in types above, it becomes a bit easier to imagine how we'd define types for our Erlang programs. Some of it is still missing though. Maybe things are too vague, or not appropriate for our needs. You do remember one of the <code>discrepN</code> modules' errors mentioning the type <code>number()</code>. That type is neither a singleton type, neither a built-in type. It would then be a union type, which means we could define it ourselves.</p>
+
+<p>The notation to represent the union of types is the pipe (<code>|</code>). Basically, this lets us say that a given type <var>TypeName</var> is represented as the union of <code>Type1 | Type2 | ... | TypeN</code>. As such, the <code>number()</code> type, which includes integers and floating point values, could be represented as <code>integer() | float()</code>. A boolean value could be defined as <code>'true' | 'false'</code>. It is also possible to define types where only one other type is used. Although it looks like a union type, it is in fact an <em>alias</em>.</p>
+
+<p>In fact, many such aliases and type unions are pre-defined for you. Here are some of them:</p>
+<table>
+    <tr>
+        <td><code>term()</code></td>
+        <td>This is equivalent to <code>any()</code> and was added because other tools used <code>term()</code> before. Alternatively, the <code>_</code> variable can be used as an alias of both <code>term()</code> and <code>any()</code>.</td>
+    </tr>
+    <tr>
+        <td><code>boolean()</code></td>
+        <td><code>'true' | 'false'</code></td>
+    </tr>
+    <tr>
+        <td><code>byte()</code></td>
+        <td>Defined as <code>0..255</code>, it's any valid byte in existence.</td>
+    </tr>
+    <tr>
+        <td><code>char()</code></td>
+        <td>It's defined as <code>0..16#10ffff</code>, but it isn't clear whether this type refers to specific standards for characters or not. It's extremely general in its approach to avoid conflicts.</td>
+    </tr>
+    <tr>
+        <td><code>number()</code></td>
+        <td><code>integer() | float()</code></td>
+    </tr>
+    <tr>
+        <td><code>maybe_improper_list()</code></td>
+        <td>This is a quick alias for <code>maybe_improper_list(any(), any())</code> for improper lists in general.</td>
+    </tr>
+    <tr>
+        <td><code>maybe_improper_list(T)</code></td>
+        <td>Where <var>T</var> is any given type. This is an alias for <code>maybe_improper_list(T, any())</code>.</td>
+    </tr>
+    <tr>
+        <td><code>string()</code></td>
+        <td>A string is defined as <code>[char()]</code>, a list of characters. There is also <code>nonempty_string()</code>, defined as <code>[char(), ...]</code>. Sadly, there is so far no string type for binary strings only, but that's more because they're blobs of data that are to be interpreted in whatever type you choose.</td>
+    </tr>
+    <tr>
+        <td><code>iolist()</code></td>
+        <td>Ah, good old iolists. They're defined as <code>maybe_improper_list(char() | binary() | iolist(), binary() | [])</code>. you can see that the iolist is itself defined in terms of iolists. Dialyzer does support recursive types, starting with R13B04. Before then you couldn't use them, and types like iolists could only be defined through some arduous gymnastics.</td>
+    </tr>
+    <tr>
+        <td><code>module()</code></td>
+        <td>This is a type standing for module names, and is currently an alias of <code>atom()</code>.</td>
+    </tr>
+    <tr>
+        <td><code>timeout()</code></td>
+        <td><code>non_neg_integer() | 'infinity'</code></td>
+    </tr>
+    <tr>
+        <td><code>node()</code></td>
+        <td>An Erlang's node name, which is an atom.</td>
+    </tr>
+    <tr>
+        <td><code>no_return()</code></td>
+        <td>This is an alias of <code>none()</code> intended to be used in the return type of functions. It is particularly meant to annotate functions that loop (hopefully) forever, and thus never return.</td>
+    </tr>
+</table>
+
+<p>Well, that makes a few types already. Earlier, I did mention a type for a tree written as <code>{'node', any(), any(), any(), any()}</code>. Now that we know a bit more about types, we could declare it in a module.</p>
+
+<p>The syntax for type declaration in a module is:</p>
+
+<pre class="brush:erl">
+-type TypeName() :: TypeDefinition.
+</pre>
+
+<p>As such, our tree could have been defined as:</p>
+
+<pre class="brush:erl">
+-type tree() :: {'node', tree(), tree(), any(), any()}.
+</pre>
+
+<p>Or, by using a special syntax that allows to use variable names as type comments:</p>
+
+<pre class="brush:erl">
+-type tree() :: {'node', Left::tree(), Right::tree(), Key::any(), Value::any()}.
+</pre>
+
+<p>But that definition doesn't work, because it doesn't allow for a tree to be empty. A better tree definition can be built by thinking recursively, much like we did with our <a class="source" href="static/erlang/tree.erl">tree.erl</a> module back in <a class="chapter" href="recursion.html#more-than-lists">Recursion</a>. En empty tree, in that module, is defined as <code>{node, 'nil'}</code>. Whenever we hit such a node in a recursive function, we stop. A regular non-empty node is noted as <code>{node, Key, Val, Left, Right}</code>. Translating this into a type gives us a tree node of the following form:</p>
+
+<pre class="brush:erl">
+-type tree() :: {'node', 'nil'}
+              | {'node', Key::any(), Val::any(), Left::tree(), Right::tree()}.
+</pre>
+
+<p>That way, we have a tree that is either an empty node or a non-empty node. Note that we could have used <code>'nil'</code> instead of <code>{'node', 'nil'}</code> and Dialyzer would have been fine with it. I just wanted to respect the way we had written our <code>tree</code> module. There's another piece of Erlang code we might want to give types to but haven't thought of yet...</p>
+
+<p>What about records? They have a somewhat convenient syntax to declare types. To see it, let's imagine a <code>#user{}</code> record. We want to store the user's name, some specific notes (to use our <code>tree()</code> type), the user's age, a list of friends, and some short biography.</p>
+
+<pre class="brush:erl">
+-record(user, {name="" :: string(),
+               notes :: tree(),
+               age :: non_neg_integer(),
+               friends=[] :: [#user{}],
+               bio :: string() | binary()}).
+</pre>
+
+<p>The general record syntax for type declarations is <code>Field :: Type</code>, and if there's a default value to be given, it becomes <code>Field = Default :: Type</code>. In the record above, we can see that the name needs to be a string, the notes has to be a tree, and the age any integer from 0 to infinity (who knows how old people can get!). An interesting field is <code>friends</code>. The <code>[#user{}]</code> type means that the user records can hold a list of zero or more other user records. It also tells us that a record can be used as a type by writing it as <code>#RecordName{}</code>. The last part tells us that the biography can be either a string or a binary.</p>
+
+<p>Furthermore, to give a more uniform style to type declarations and definitions, people tend to add an alias such as <code>-type Type() :: #Record{}.</code>. We could also change the <code>friends</code> definition to use the <code>user()</code> type, ending up as follows:</p>
+<pre class="brush:erl">
+-record(user, {name = "" :: string(),
+               notes :: tree(),
+               age :: non_neg_integer(),
+               friends=[] :: [user()],
+               bio :: string() | binary()}).
+
+-type user() :: #user{}.
+</pre>
+
+<p>You'll note that I defined types for all fields of the record, but some of them have no default value. If I were to create a user record instance as <code>#user{age=5}</code>, there would be <em>no</em> type error. All record field definitions have an implicit <code>'undefined'</code> union added to them if no default value is provided for them. For earlier versions, the declaration would have caused type errors.</p>
+
+<h3><a class="section" name="typing-functions">Typing Functions</a></h3>
+
+<p>While we could be defining types all day and night, filling files and files with them, then printing the files, framing them and feeling strongly accomplished, they won't automatically be used by Dialyzer's type inference engine. Dialyzer doesn't work from the types you declare to narrow down what is possible or impossible to execute.</p>
+
+<p>Why the hell would we declare these types then? Documentation? Partially. There is an additional step to making Dialyzer understand the types you declared. We need to pepper type signature declarations over all the functions we want augmented, bridging our type declarations with the functions inside modules.</p>
+
+<img class="left" src="static/img/31337.png" width="178" height="156" alt="5 playing cards, the 3 of clubs, ace of diamonds, 3 of spades, 3 of hearts, 7 of diamonds" alt="31337 *wink wink* *nudge nudge*" />
+
+<p>We have spent most of the chapter on things like 'here is the syntax for this and that', but now it's time to get practical. A simple example of things needing to be typed could be playing cards. There are four suits: spades, clubs, hearts, and diamonds. Cards can then be numbered from 1 to 10 (where the ace is 1), and then be a Jack, Queen, or King.</p>
+
+<p>In regular times, we'd represent cards probably as <code>{Suit, CardValue}</code> so that we could have the ace  of spades as <code>{spades, 1}</code>. Now, instead of just having this up in the air, we can define types to represent this:</p>
+
+<pre class="brush:erl">
+-type suit() :: spades | clubs | hearts | diamonds.
+-type value() :: 1..10 | j | q | k.
+-type card() :: {suit(), value()}.
+</pre>
+
+<p>The <code>suit()</code> type is simply the union of the four atoms that can represent suits. The values can be any card from one to ten (<code>1..10</code>), or <code>j</code>, <code>q</code>, or <code>k</code> for the face cards. The <code>card()</code> type joins them together as a tuple.</p>
+
+<p>These three types can now be used to represent cards in regular functions and give us some interesting guarantees. Take the following <a class="source" href="static/erlang/cards.erl">cards.erl</a> module for example:</p>
+
+<pre class="brush:erl">
+-module(cards).
+-export([kind/1, main/0]).
+
+-type suit() :: spades | clubs | hearts | diamonds.
+-type value() :: 1..10 | j | q | k.
+-type card() :: {suit(), value()}.
+
+kind({_, A}) when A &gt;= 1, A =&lt; 10 -&gt; number;
+kind(_) -&gt; face.
+
+main() -&gt;
+    number = kind({spades, 7}),
+    face   = kind({hearts, k}),
+    number = kind({rubies, 4}),
+    face   = kind({clubs, q}).
+</pre>
+
+<p>The <code>kind/1</code> function should return whether a card is a face card or a number card. You will notice that the suit is never checked. In the <code>main/0</code> function you can see that the third call is made with the <code>rubies</code> suit, something we obviously didn't intend in our types, and likely not in the <code>kind/1</code> function:</p>
+
+<pre class="brush:eshell">
+$ erl
+...
+1&gt; c(cards).
+{ok,cards}
+2&gt; cards:main().
+face
+</pre>
+
+<p>Everything works fine. That shouldn't be the case. Even running Dialyzer does nothing. However, if we add the following type signature to the <code>kind/1</code> function:</p>
+
+<pre class="brush:erl">
+-spec kind(card()) -&gt; face | number.
+kind({_, A}) when A &gt;= 1, A =&lt; 10 -&gt; number;
+kind(_) -&gt; face.
+</pre>
+
+<p>Then something more interesting will happen. But before we run Dialyzer, let's see how that works. Type signatures are of the form <code>-spec FunctionName(ArgumentTypes) -&gt; ReturnTypes.</code>. In the specification above we say that the <code>kind/1</code> function accepts cards as arguments, according to the <code>card()</code> type we created. It also says the function either returns the atom <code>face</code> or <code>number</code>.</p>
+
+<p>Running Dialyzer on the module yields the following:</p>
+
+<pre class="brush:eshell">
+$ dialyzer cards.erl
+  Checking whether the PLT /home/ferd/.dialyzer_plt is up-to-date... yes
+  Proceeding with analysis...
+cards.erl:12: Function main/0 has no local return
+cards.erl:15: The call cards:kind({'rubies',4}) breaks the contract (card()) -&gt; 'face' | 'number'
+ done in 0m0.80s
+done (warnings were emitted)
+</pre>
+
+<img class="right" src="static/img/contract.png" width="179" height="177" alt="A contract, ripped in two, saying 'I will always say the truth no matter what' signed by 'Spec'" />
+
+<p>Oh bloody fun. Calling <code>kind/1</code> with a "card" that has the <code>rubies</code> suit isn't a valid thing according to our specifications.</p>
+
+<p>In this case, Dialyzer respects the type signature we gave, and when it analyzes the <code>main/0</code> function, it figures out that there is a bad use of <code>kind/1</code> in there. This prompts the warning from line 15 (<code>number = kind({rubies, 4}),</code>). Dialyzer from then on assumes that the type signature is reliable, and that if the code is to be used according to it, it would logically not be valid. This breach in the contract propagates to the <code>main/0</code> function, but there isn't much that can be said at that level as to why it fails; just that it does.</p>
+
+<div class="note">
+    <p><strong>Note:</strong> Dialyzer only complained about this once a type specification was defined. Before a type signature was added, Dialyzer couldn't assume that you planned to use <code>kind/1</code> only with <code>card()</code> arguments. With the signature in place, it can work with that as its own type definition.</p>
+</div>
+
+<p>Here's a more interesting function to type, in <a class="source" href="static/erlang/convert.erl">convert.erl</a>:</p>
+
+<pre class="brush:erl">
+-module(convert).
+-export([main/0]).
+
+main() -&gt;
+    [_,_] = convert({a,b}),
+    {_,_} = convert([a,b]),
+    [_,_] = convert([a,b]),
+    {_,_} = convert({a,b}).
+
+convert(Tup) when is_tuple(Tup) -&gt; tuple_to_list(Tup);
+convert(L = [_|_]) -&gt; list_to_tuple(L).
+</pre>
+
+<p>When reading the code, it is obvious to us that the two last calls to <code>convert/1</code> will fail. The function accepts a list and returns a tuple, or a tuple and returns a list. If we run Dialyzer on the code though, it'll find nothing.</p>
+
+<p>That's because Dialyzer infers a type signature similar to:</p>
+
+<pre class="brush:erl">
+-spec convert(list() | tuple()) -&gt; list() | tuple().
+</pre>
+
+<p>Or to put it in words, the function accepts lists and tuples, and returns lists in tuples. This is true, but this is sadly a bit <em>too</em> true. The function isn't as permissive as the type signature would imply. This is one of the places where Dialyzer sits back and tries not to say too much without being 100% sure of the problems.</p>
+
+<p>To help Dialyzer a bit, we can send in a fancier type declaration:</p>
+
+<pre class="brush:erl">
+-spec convert(tuple()) -&gt; list();
+             (list()) -&gt; tuple().
+convert(Tup) when is_tuple(Tup) -&gt; tuple_to_list(Tup);
+convert(L = [_|_]) -&gt; list_to_tuple(L).
+</pre>
+
+<p>Rather than putting <code>tuple()</code> and <code>list()</code> types together into a single union, this syntax allows you to declare type signatures with alternative clauses. If you call <code>convert/1</code> with a tuple, we expect a list, and the opposite in the other case.</p>
+
+<p>With this more specific information, Dialyzer can now give more interesting results:</p>
+
+<pre class="brush:eshell">
+$ dialyzer convert.erl
+  Checking whether the PLT /home/ferd/.dialyzer_plt is up-to-date... yes
+  Proceeding with analysis...
+convert.erl:4: Function main/0 has no local return
+convert.erl:7: The pattern [_, _] can never match the type tuple()
+ done in 0m0.90s
+done (warnings were emitted)
+</pre>
+
+<p>Ah, there it finds the error. Success! We can now use Dialyzer to tell us what we knew. Of course putting it that way sounds useless, but when you type your functions right and make a tiny mistake that you forget to check, Dialyzer will have your back, which is definitely better than an error logging system waking you up at night (or having your car keyed by your operations guy).</p>
+
+<div class="note">
+    <p><strong>Note:</strong> some people will prefer the following syntax for multi-clause type signature:</p>
+
+<pre class="brush:erl">
+-spec convert(tuple()) -&gt; list()
+      ;      (list()) -&gt; tuple().
+</pre>
+
+    <p>which is exactly the same, but puts the semi-colon on another line because it might be more readable. There is no widely accepted standard at the time of this writing.</p>
+</div>
+
+<p>By using type definitions and specifications in that way, we're in fact able to let Dialyzer find errors with our earlier <code>discrep</code> modules. See how <a class="source" href="static/erlang/discrep4.erl">discrep4.erl</a> does it.</p>
+
+<h3><a class="section" name="typing-practice">Typing Practice</a></h3>
+
+<p>I've been writing a queue module, for First In, First Out (FIFO) operations. You should know what queues are, given Erlang's mailboxes are queues. The first element added will be the first one to be popped (unless we do selective receives). The module works as explained in this image we've seen a few times already:</p>
+
+<img class="center explanation" src="static/img/fifo.png" width="237" height="162" alt="Drawing representing the implementation of a functional queue" title="Total reuse from the 'Types or Lack Thereof' chapter!" />
+
+<p>To simulate a queue, we use two lists as stacks. One list stores the new elements and one list lets us remove them from the queue. We always add to the same list, and remove from the second one. When the list we remove from is empty, we reverse the list we add items to and it becomes the new list to remove from. This generally guarantees better average performance than using a single list to do both tasks.</p>
+
+<p>Here's <a class="source" href="static/erlang/fifo_types.erl">my module</a>, with a few type signatures I added to check it with Dialyzer:</p>
+
+<pre class="brush:erl">
+-module(fifo_types).
+-export([new/0, push/2, pop/1, empty/1]).
+-export([test/0]).
+
+-spec new() -&gt; {fifo, [], []}.
+new() -&gt; {fifo, [], []}.
+
+-spec push({fifo, In::list(), Out::list()}, term()) -&gt; {fifo, list(), list()}.
+push({fifo, In, Out}, X) -&gt; {fifo, [X|In], Out}.
+
+-spec pop({fifo, In::list(), Out::list()}) -&gt; {term(), {fifo, list(), list()}}.
+pop({fifo, [], []}) -&gt; erlang:error('empty fifo');
+pop({fifo, In, []}) -&gt; pop({fifo, [], lists:reverse(In)});
+pop({fifo, In, [H|T]}) -&gt; {H, {fifo, In, T}}.
+
+-spec empty({fifo, [], []}) -&gt; true;
+           ({fifo, list(), list()}) -&gt; false.
+empty({fifo, [], []}) -&gt; true;
+empty({fifo, _, _}) -&gt; false.
+
+test() -&gt;
+    N = new(),
+    {2, N2} = pop(push(push(new(), 2), 5)),
+    {5, N3} = pop(N2),
+    N = N3,
+    true = empty(N3),
+    false = empty(N2),
+    pop({fifo, [a|b], [e]}).
+</pre>
+
+<p>I defined a queue as a tuple of the form <code>{fifo, list(), list()}</code>. You'll notice I didn't define a <code>fifo()</code> type, mostly because I simply wanted to be able to easily make different clauses for empty queues and filled queues. The <code>empty(...)</code> type specification reflects that.</p>
+
+<div class="note">
+    <p><strong>Note:</strong> You will notice that in the function <code>pop/1</code> that I do not specify the <code>none()</code> type even though one of the function clauses calls <code>erlang:error/1</code>.</p>
+
+    <p>The type <code>none()</code>, as mentioned earlier, is a type that means a given function will not return. If the function might either fail or return a value, it is useless to type it as returning both a value and <code>none()</code>. The <code>none()</code> type is always assumed to be there, and as such, the union <code>Type() | none()</code> is the same as <code>Type()</code> alone.</p>
+
+    <p>The circumstances where <code>none()</code> is warranted is whenever you're writing a function that always fails when call, such as if you were implementing <code>erlang:error/1</code> yourself.</p>
+</div>
+
+<p>Now all the type specifications above do appear to make sense. Just to make sure, during code reviewing, I ask you to run Dialyzer with me to see the results:</p>
+
+<pre class="brush:eshell">
+$ dialyzer fifo_types.erl
+  Checking whether the PLT /home/ferd/.dialyzer_plt is up-to-date... yes
+  Proceeding with analysis...
+fifo_types.erl:16: Overloaded contract has overlapping domains; such contracts are currently unsupported and are simply ignored
+fifo_types.erl:21: Function test/0 has no local return
+fifo_types.erl:28: The call fifo_types:pop({'fifo',nonempty_improper_list('a','b'),['e',...]}) breaks the contract ({'fifo',In::[any()],Out::[any()]}) -&gt; {term(),{'fifo',[any()],[any()]}}
+ done in 0m0.96s
+done (warnings were emitted)
+</pre>
+
+<p>Silly me. We've got a bunch of errors showing up. And curses, they're not so easy to read. The second one, 'Function test/0 has no local return', is at least something we know how to handle &mdash; we will just skip to the next one and it should disappear.</p>
+
+<p>For now let's focus on the first one, the one about contracts with overlapping domains. If we go into <a class="source" href="static/erlang/fifo_types.erl">fifo_types</a> on line 16, we see this:</p>
+
+<pre class="brush:erl">
+-spec empty({fifo, [], []}) -&gt; true;
+           ({fifo, list(), list()}) -&gt; false.
+empty({fifo, [], []}) -&gt; true;
+empty({fifo, _, _}) -&gt; false.
+</pre>
+
+<p>So what are said overlapping domains? We have to refer to the mathematical concepts of domain and image. To put it simply, the domain is the set of all possible input values to a function, and the image is the set of all possible output values of a function. Overlapping domain thus refer to two sets of input that overlap.</p>
+
+<img class="center explanation" src="static/img/domain-image.png" width="303" height="124" alt="an url from 'http://example.org/404' with an arrow pointing to the traditional 'broken image' icon, with a caption saying 'an invalid domain leads to an invalid image" />
+
+<p>To find the source of the problem we have to look at <code>list()</code>. If you remember the large tables from earlier, <code>list()</code> is pretty much the same as <code>[any()]</code>. And you'll also remember that both of these types both also include empty lists. And there's your overlapping domain. When <code>list()</code> is specified as a type, it overlaps with <code>[]</code>. To fix this, we need to replace the type signature as follows:</p>
+
+<pre class="brush:erl">
+-spec empty({fifo, [], []}) -&gt; true;
+           ({fifo, nonempty_list(), nonempty_list()}) -&gt; false.
+</pre>
+
+<p>or alternatively:</p>
+
+<pre class="brush:erl">
+-spec empty({fifo, [], []}) -&gt; true;
+           ({fifo, [any(), ...], [any(), ...]}) -&gt; false.
+</pre>
+
+<p>Then running Dialyzer again will get rid of the warning. However, this is not enough. What if someone sent in <code>{fifo, [a,b], []}</code>? Even if Dialyzer might not complain about it, it is somewhat obvious for human readers that the type specification above doesn't take this into account. The spec doesn't match the intended use of the function. We can instead give more details and take the following approach:</p>
+
+<pre class="brush:erl">
+-spec empty({fifo, [], []}) -&gt; true;
+           ({fifo, [any(), ...], []}) -&gt; false;
+           ({fifo, [], [any(), ...]}) -&gt; false;
+           ({fifo, [any(), ...], [any(), ...]}) -&gt; false.
+</pre>
+
+<p>Which will both work, and have the right meaning.</p>
+
+<p>On to the next error (which I broke into multiple lines):</p>
+
+<pre class="brush:eshell">
+fifo_types.erl:28:
+The call fifo_types:pop({'fifo',nonempty_improper_list('a','b'),['e',...]})
+breaks the contract
+({'fifo',In::[any()],Out::[any()]}) -&gt; {term(),{'fifo',[any()],[any()]}}
+</pre>
+
+<p>Translated into human, this means that on line 28, there's a call to <code>pop/1</code> that has inferred types breaking the one I specified in the file:</p>
+
+<pre class="brush:erl">
+pop({fifo, [a|b], [e]}).
+</pre>
+
+<p>That's the call. Now, the error message says that it identified an improper list (that happens to not be empty), which is entirely right; <code>[a|e]</code> is an improper list. It also mentions that it breaks a contract. We need to match the type definition that is broken between the following, coming from the error message:</p>
+
+<pre class="brush:erl">
+{'fifo',nonempty_improper_list('a','b'),['e',...]}
+{'fifo',In::[any()],Out::[any()]}
+{term(),{'fifo',[any()],[any()]}}
+</pre>
+
+<p>The issue can be explained in one of three ways:</p>
+
+<ol>
+    <li>The type signatures are right, the call is right and the problem is the return value expected.</li>
+    <li>The type signatures are right, the call is wrong and the problem is the input value given.</li>
+    <li>The call is right, but the type signatures are wrong.</li>
+</ol>
+
+<p>We can eliminate the first one right away. We're not actually doing anything with the return value. This leaves the second and third option. The decision boils down to whether we wanted improper lists to be used with our queues or not. This is a judgment call to be made by the writer of the library, and I can say without a doubt that I didn't intend improper lists to be used with this code. In fact you very rarely want improper lists. The winner is number 2, the call is wrong. To solve it, drop the call or fix it:</p>
+
+<pre class="brush:erl">
+test() -&gt;
+    N = new(),
+    {2, N2} = pop(push(push(new(), 2), 5)),
+    ...
+    pop({fifo, [a, b], [e]}).
+</pre>
+
+<p>And running Dialyzer again:</p>
+
+<pre class="brush:eshell">
+$ dialyzer fifo_types.erl
+  Checking whether the PLT /home/ferd/.dialyzer_plt is up-to-date... yes
+  Proceeding with analysis... done in 0m0.90s
+done (passed successfully)
+</pre>
+
+<p>That now makes more sense.</p>
+
+
+<h3><a class="section" name="exporting-types">Exporting Types</a></h3>
+
+<p>That is all very well. We have types, we have signatures, we have additional safety and verifications. So what would happen if we wanted to use our queue in another module? What about any other module we frequently use, things like <code>dict</code>, <code>gb_trees</code>, or ETS tables? How can we use Dialyzer to find type errors related to them?</p>
+
+<p>We can use types coming from other modules. Doing so usually requires rummaging through documentation to find them. For example, the <a class="docs" href="http://www.erlang.org/doc/man/ets.html">ets</a> module's documentation has the following entries:</p>
+
+<pre class="expand">
+---
+DATA TYPES
+
+continuation()
+    Opaque continuation used by select/1 and select/3.
+
+match_spec() = [{match_pattern(), [term()], [term()]}]
+    A match specification, see above.
+
+match_pattern() = atom() | tuple()
+
+tab() = atom() | tid()
+
+tid()
+    A table identifier, as returned by new/2.
+---
+</pre>
+
+<p>Those are the data types exported by <code>ets</code>. If I had a type specification that were to accept ETS tables, a key, and returns a matching entry I could define it maybe like this:</p>
+
+<pre class="brush:erl">
+-spec match(ets:tab(), Key::any()) -&gt; Entry::any().
+</pre>
+
+<p>And that's about it.</p>
+
+<p>Exporting our own types works pretty much the same as we do for functions. All we need to do is add a module attribute of the form <code>-export_type([TypeName/Arity]).</code>. For example, we could have exported the <code>card()</code> type from our <code>cards</code> module by adding the following line:</p>
+
+<pre class="brush:erl">
+-module(cards).
+-export([kind/1, main/0]).
+
+-type suit() :: spades | clubs | hearts | diamonds.
+-type value() :: 1..10 | j | q | k.
+-type card() :: {suit(), value()}.
+
+-export_type([card/0]).
+...
+</pre>
+
+<p>And from then on, if the module is visible to Dialyzer (either by adding it to the PLT or analyzing it at the same time as any other module), you can reference it from any other bit of code as <code>cards:card()</code> in type specifications.</p>
+
+<img class="right" src="static/img/opaque.png" width="301" width="213" alt="A VHS tape saying 'mom and dad wedding night', with a caption that says 'some things are better left unseen'" title="That's when you wish your cornea was opaque, too" />
+
+<p>Doing this will have one downside, though. Using a type like this doesn't forbid anyone using the card module from ripping the types apart and toying with them. Anyone could be writing pieces of code that matches on the cards, a bit like <code>{Suit, _} = ...</code>. This isn't always a good idea: it keeps us from being able to change the implementation of the <code>cards</code> module in the future. This is something we'd especially like to enforce in modules that represent data structures, such as <code>dict</code> or <code>fifo_types</code> (if it exported types).</p>
+
+<p>Dialyzer allows you to export types in a way that tells your users "you know what? I'm fine with you using my types, but don't you dare look inside of them!". It's a question of replacing a declaration of the kind:</p>
+
+<pre class="brush:erl">
+-type fifo() :: {fifo, list(), list()}.
+</pre>
+
+<p>by:</p>
+
+<pre class="brush:erl">
+-opaque fifo() :: {fifo, list(), list()}.
+</pre>
+
+<p>Then you can still export it as <code>-export_type([fifo/0])</code>.</p>
+
+<p>Declaring a type as <em>opaque</em> means that only the module that defined the type has the right to look at how it's made and make modifications to it. It forbids other modules from pattern matching on the values other than the whole thing, guaranteeing (if they use Dialyzer) that they will never be bit by a sudden change of implementation.</p>
+
+<div class="note koolaid">
+    <p><strong>Don't Drink Too Much Kool-Aid:</strong><br />
+    Sometimes the implementation of opaque data types is either not strong enough to do what it should or is actually problematic (i.e. buggy). Dialyzer does not take the spec of a function into account until it has first inferred the success typing for the function.</p>
+
+    <p>This means that when your type looks rather generic without any <code>-type</code> information taken into account, Dialyzer might get confused by some opaque types. For example, Dialyzer analyzing an opaque version of the <code>card()</code> data type might see it as <code>{atom(), any()}</code> after inference. Modules using <code>card()</code> correctly might see Dialyzer complaining because they're breaking a type contract even if they aren't. This is because the <code>card()</code> type itself doesn't contain enough information for Dialyzer to connect the dots and realize what's really going on.</p>
+
+    <p>Usually, if you see errors of that kind, tagging your tuple helps. Moving from a type of the form <code>-opaque card() :: {suit(), value()}.</code> to <code>-opaque card() :: {card, suit(), value()}.</code> might get Dialyzer to work fine with the opaque type.</p>
+
+    <p>The Dialyzer implementers are currently trying to make the implementation of opaque data types better and strengthen their inference. They're also trying to make user-provided specs more important and to trust them better during Dialyzer's analysis, but this is still a work in progress.</p>
+</div>
+
+
+<h3><a class="section" name="typed-behaviours">Typed Behaviours</a></h3>
+
+<p>Back in <a class="chapter" href="clients-and-servers.html#beam-me-up-scotty">Clients and Servers</a>, we've seen that we could declare behaviours using the <code>behaviour_info/1</code> function. The module exporting this function would give its name to the behaviour, and a second module could implement callbacks by adding <code>-behaviour(ModName).</code> as a module attribute.</p>
+
+<p>The behaviour definition of the <code>gen_server</code> module, for example, is:</p>
+
+<pre class="brush:erl">
+behaviour_info(callbacks) -&gt;
+    [{init, 1}, {handle_call, 3}, {handle_cast, 2}, {handle_info, 2},
+     {terminate, 2}, {code_change, 3}];
+behaviour_info(_Other) -&gt;
+    undefined.
+</pre>
+
+<p>The problem with that one is that there is no way for Dialyzer to check type definitions for that. In fact, there is no way for the behaviour module to specify what kind of types it expects the callback modules to implement, and there's thus no way for Dialyzer to do something about it.</p>
+
+<p>Starting with R15B, The Erlang/OTP compiler was upgraded so that it now handles a new module attribute, named <code>-callback</code>. The <code>-callback</code> module attribute has a similar syntax to <code>spec</code>. When you specify function types with it, the <code>behaviour_info/1</code> function gets automatically declared for you, and the specifications get added to the module metadata in a way that lets Dialyzer do its work. For example, here's the declaration of the <code>gen_server</code> starting with R15B:</p>
+
+<pre class="brush:erl">
+-callback init(Args :: term()) -&gt;
+    {ok, State :: term()} | {ok, State :: term(), timeout() | hibernate} |
+    {stop, Reason :: term()} | ignore.
+-callback handle_call(Request :: term(), From :: {pid(), Tag :: term()},
+                      State :: term()) -&gt;
+    {reply, Reply :: term(), NewState :: term()} |
+    {reply, Reply :: term(), NewState :: term(), timeout() | hibernate} |
+    {noreply, NewState :: term()} |
+    {noreply, NewState :: term(), timeout() | hibernate} |
+    {stop, Reason :: term(), Reply :: term(), NewState :: term()} |
+    {stop, Reason :: term(), NewState :: term()}.
+-callback handle_cast(Request :: term(), State :: term()) -&gt;
+    {noreply, NewState :: term()} |
+    {noreply, NewState :: term(), timeout() | hibernate} |
+    {stop, Reason :: term(), NewState :: term()}.
+-callback handle_info(Info :: timeout() | term(), State :: term()) -&gt;
+    {noreply, NewState :: term()} |
+    {noreply, NewState :: term(), timeout() | hibernate} |
+    {stop, Reason :: term(), NewState :: term()}.
+-callback terminate(Reason :: (normal | shutdown | {shutdown, term()} |
+                               term()),
+                    State :: term()) -&gt;
+    term().
+-callback code_change(OldVsn :: (term() | {down, term()}), State :: term(),
+                      Extra :: term()) -&gt;
+    {ok, NewState :: term()} | {error, Reason :: term()}.
+</pre>
+
+<p>And none of your code should break from the behaviour changing things. Do realize, however, that a module cannot use both the <code>-callback</code> form and the <code>behaviour_info/1</code> function at once. Only one or the other. This means if you want to create custom behaviours, there is a rift between what can be used in versions of Erlang prior to R15, and what can be used in latter versions.</p>
+
+<p>The upside is that newer modules will have Dialyzer able to do some analysis to check for errors on the types of whatever is returned there to help.</p>
+
+
+<h3><a class="section" name="polymorphic-types">Polymorphic Types</a></h3>
+
+<p>Oh boy, what a section title. If you've never heard of <em>polymorphic types</em> (or alternatively, <em>parameterized types</em>), this might sound a bit scary. It's fortunately not as complex as the name would let us believe.</p>
+
+<img class="right" src="static/img/ditto.png" width="169" height="157" alt="ditto with a beard" title="Trainer X attacked with transform! It's not very effective ..." />
+
+<p>The need for polymorphic types comes from the fact that when we're typing different data structures, we might sometimes find ourselves wanting to be pretty specific about what they can store. We might want our queue from earlier in the chapter to sometimes handle anything, sometimes handle only playing cards, or sometimes handle only integers. In these two last cases, the issue is that we might want Dialyzer to be able to complain that we're trying to put floating point numbers in our integer queue, or tarot cards in our playing cards queue.</p>
+
+<p>This is something impossible to enforce by strictly doing types the way we were doing them. Enter polymorphic types. A polymorphic type is a type that can be 'configured' with other types. Luckily for us, we already know the syntax to do it. When I said we could define a list of integers as <code>[integer()]</code> or <code>list(integer())</code>, those were polymorphic types. It's a type that accepts a type as an argument.</p>
+
+<p>To make our queue accept only integers or cards, we could have defined its type as:</p>
+
+<pre class="brush:erl">
+-type queue(Type) :: {fifo, list(Type), list(Type)}.
+-export_type([queue/1]).
+</pre>
+
+<p>When another module wishes to make use of the <code>fifo/1</code> type, it needs to parameterize it. So a new deck of cards in the <code>cards</code> module could have had the following signature:</p>
+
+<pre class="brush:erl">
+-spec new() -&gt; fifo:queue(card()).
+</pre>
+
+<p>And Dialyzer, if possible, would have tried to analyze the module to make sure that it only submits and expects cards from the queue it handles.</p>
+
+<p>For a demonstration, we decided to buy a zoo to congratulate ourselves on being nearly done with Learn You Some Erlang. In our zoo, we have two animals: a red panda and a squid. Granted, it is a rather modest zoo, although that shouldn't keep us from setting the entry fee sky high.</p>
+
+<p>We've decided to automate the feeding of our animals, because we're programmers, and programmers sometimes like to automate stuff out of laziness. After doing a bit of research, we've found that red pandas can eat bamboo, some birds, eggs, and berries. We've also found that squids can fight with sperm whales, so we decided to feed them just that with our <a class="source" href="static/erlang/zoo.erl">zoo.erl</a> module:</p>
+
+<pre class="brush:erl">
+-module(zoo).
+-export([main/0]).
+
+feeder(red_panda) -&gt;
+    fun() -&gt;
+            element(random:uniform(4), {bamboo, birds, eggs, berries})
+    end;
+feeder(squid) -&gt;
+    fun() -&gt; sperm_whale end.
+
+feed_red_panda(Generator) -&gt;
+    Food = Generator(),
+    io:format("feeding ~p to the red panda~n", [Food]),
+    Food.
+
+feed_squid(Generator) -&gt;
+    Food = Generator(),
+    io:format("throwing ~p in the squid's aquarium~n", [Food]),
+    Food.
+
+main() -&gt;
+    %% Random seeding
+    &lt;&lt;A:32, B:32, C:32&gt;&gt; = crypto:rand_bytes(12),
+    random:seed(A, B, C),
+    %% The zoo buys a feeder for both the red panda and squid
+    FeederRP = feeder(red_panda),
+    FeederSquid = feeder(squid),
+    %% Time to feed them!
+    %% This should not be right!
+    feed_squid(FeederRP),
+    feed_red_panda(FeederSquid).
+</pre>
+
+<p>This code makes use of <code>feeder/1</code>, which takes an animal name and returns a feeder (a function that returns food items). Feeding the red panda should be done with a red panda feeder, and feeding the squid should be done with a squid feeder. With function definitions such as <code>feed_red_panda/1</code> and <code>feed_squid/1</code>, there is no way to be alerted by the wrong use of a feeder. Even with run time checks, it's impossible to do. As soon as we serve food, it's too late:</p>
+
+<pre class="brush:eshell">
+1&gt; zoo:main().
+throwing bamboo in the squid's aquarium
+feeding sperm_whale to the red panda
+sperm_whale
+</pre>
+
+<p>Oh no, our little animals are not meant to eat that way! Maybe types can help. The following type specifications could be devised to help us, using the power of polymorphic types:</p>
+
+<pre class="brush:erl">
+-type red_panda() :: bamboo | birds | eggs | berries.
+-type squid() :: sperm_whale.
+-type food(A) :: fun(() -&gt; A).
+
+-spec feeder(red_panda) -&gt; food(red_panda());
+            (squid) -&gt; food(squid()).
+-spec feed_red_panda(food(red_panda())) -&gt; red_panda().
+-spec feed_squid(food(squid())) -&gt; squid().
+</pre>
+
+<p>The <code>food(A)</code> type is the one of interest here. <var>A</var> is a free type, to be decided upon later. We then qualify the food type in <code>feeder/1</code>'s type specification by doing <code>food(red_panda())</code> and <code>food(squid())</code>. The food type is then seen as <code>fun(() -&gt; red_panda())</code> and <code>fun(() -&gt; squid())</code> instead of some abstract function returning something unknown. If you add these specs to the file and then run Dialyzer on it, the following happens:</p>
+
+<pre class="brush:eshell">
+$ dialyzer zoo.erl
+  Checking whether the PLT /Users/ferd/.dialyzer_plt is up-to-date... yes
+  Proceeding with analysis...
+zoo.erl:18: Function feed_red_panda/1 will never be called
+zoo.erl:23: The contract zoo:feed_squid(food(squid())) -&gt; squid() cannot be right because the inferred return for feed_squid(FeederRP::fun(() -&gt; 'bamboo' | 'berries' | 'birds' | 'eggs')) on line 44 is 'bamboo' | 'berries' | 'birds' | 'eggs'
+zoo.erl:29: Function main/0 has no local return
+ done in 0m0.68s
+done (warnings were emitted)
+</pre>
+
+<p>And the error is right. Hooray for polymorphic types!</p>
+
+<p>While the above is pretty useful, minor changes in your code can have unexpected consequences in what Dialyzer is able to find. For example, if the <code>main/0</code> function had the following code:</p>
+
+<pre class="brush:erl">
+main() -&gt;
+    %% Random seeding
+    &lt;&lt;A:32, B:32, C:32&gt;&gt; = crypto:rand_bytes(12),
+    random:seed(A, B, C),
+    %% The zoo buys a feeder for both the red panda and squid
+    FeederRP = feeder(red_panda),
+    FeederSquid = feeder(squid),
+    %% Time to feed them!
+    feed_squid(FeederSquid),
+    feed_red_panda(FeederRP),
+    %% This should not be right!
+    feed_squid(FeederRP),
+    feed_red_panda(FeederSquid).
+</pre>
+
+<p>Things would not be the same. Before the functions are called with the wrong kind of feeder, they're first called with the right kind. As of R15B01, Dialyzer would not find an error with this code. This is because Dialyzer does not necessarily keep information regarding whether the anonymous function is being called at all in the feeding functions when some complex module-local refinement is being done.</p>
+
+<p>Even if this is a bit sad for many static typing fans, we have been thoroughly warned. The following quote comes from the paper describing the implementation of success typing for Dialyzer:</p>
+
+<blockquote title="Practical Type Inference Based on Success Typings, by Tobias Lindahl and Konstantinos Sagonas">
+    <p>A success typing is a type signature that over-approximates the set of types for which the function can evaluate to a value. The domain of the signature includes all possible values that the function could accept as parameters, and its range includes all possible return values for this domain.</p>
+
+    <p>However weak this might seem to aficionados of static typing, success typings have the property that they capture the fact that if the function is used in a way not allowed by its success typing (e.g., by applying the function with parameters p ∈/ α) this application will definitely fail. This is precisely the property that a defect detection tool which never “cries wolf” needs. Also, success typings can be used for automatic program documentation because they will never fail to capture some possible &mdash; no matter how unintended &mdash; use of a function.</p>
+</blockquote>
+
+<p>Again, keeping in mind that Dialyzer is optimistic in its approach is vital to working efficiently with it.</p>
+
+<p>If this still depresses you too much, you can try adding the <code>-Woverspecs</code> option to Dialyzer:</p>
+
+<pre class="brush:eshell">
+$ dialyzer zoo.erl -Woverspecs 
+   Checking whether the PLT /home/ferd/.dialyzer_plt is up-to-date... yes
+     Proceeding with analysis...
+     zoo.erl:17: Type specification zoo:feed_red_panda(food(red_panda())) -&gt; red_panda() is a subtype of the success typing: zoo:feed_red_panda(fun(() -&gt; 'bamboo' | 'berries' | 'birds' | 'eggs' | 'sperm_whale')) -&gt; 'bamboo' | 'berries' | 'birds' | 'eggs' | 'sperm_whale'zoo.erl:23: Type specification zoo:feed_squid(food(squid())) -&gt; squid() is a subtype of the success typing: zoo:feed_squid(fun(() -&gt; 'bamboo' | 'berries' | 'birds' | 'eggs' | 'sperm_whale')) -&gt; 'bamboo' | 'berries' | 'birds' | 'eggs' | 'sperm_whale'
+ done in 0m0.94s
+done (warnings were emitted)
+</pre>
+
+<p>This warns you that in fact, your specification is way too strict for what your code is expected to accept, and tells you (albeit indirectly) that you should either make your type specification looser, or validate your inputs and outputs better in your functions to reflect the type specification.</p>
+
+<img class="center" src="static/img/squid-red-panda.png" width="498" height="437" alt="A red panda and a squid sharing a meal (sperm whale, bamboo, eggs and grapes" />
+
+<h3><a class="section" name="youre-my-type">You're my Type</a></h3>
+
+<p>Dialyzer will often prove to be a true friend when programming Erlang, although the frequent nags might tempt you to just drop it. One thing to remember is that Dialyzer is practically never wrong, and you will likely be. You might feel like some errors mean nothing, but contrary to many type systems, Dialyzer only speaks out when it knows it's right, and bugs in its code base are rare. Dialyzer might frustrate you, force you to be humble, but it will be very unlikely to be the source of bad, unclean code.</p>
+
+<div class="note">
+    <p><strong>Note:</strong> While writing this chapter, I ended up having some nasty Dialyzer error message when working with a more complete version of the stream module. I was annoyed enough to go complain on IRC about it, how Dialyzer was not good enough to handle my complex use of types.</p>
+
+    <p>Silly me. It turns out (unsurprisingly so) that <em>I</em> was wrong, and Dialyzer was right, all along. It would keep telling me my <code>-spec</code> was wrong, and I kept believing it wasn't. I lost my fight, Dialyzer and my code won. This is a good thing, I believe.</p>
+</div>
+
+<p>So hey, that's about it for Learn You Some Erlang for great good! Thanks for reading it. There's not much more to say, but if you feel like getting a list of more topics to explore and some general words from me, you can go read the guide's conclusion. Godspeed! You Concurrent Emperor.</p>
+				<ul class="navigation">
+											<li><a href="mnesia.html" title="Previous chapter">&lt; Previous</a></li>
+										
+					<li><a href="contents.html" title="Index">Index</a></li>
+					
+											<li><a href="conclusion.html" title="Next chapter">Next &gt;</a></li>
+									</ul>
+			</div><!-- content -->
+			<div id="footer">
+				<a href="http://creativecommons.org/licenses/by-nc-nd/3.0/" title="Creative Commons License Details"><img src="static/img/cc.png" width="88" height="31" alt="Creative Commons Attribution Non-Commercial No Derivative License" /></a>
+				<p>Except where otherwise noted, content on this site is licensed under a Creative Commons Attribution Non-Commercial No Derivative License</p>
+			</div> <!-- footer -->
+		</div> <!-- wrapper -->
+		<div id="grass" />
+	<script type="text/javascript" src="static/js/shCore.js"></script>
+	<script type="text/javascript" src="static/js/shBrushErlang2.js%3F11"></script>
+	<script type="text/javascript">
+		SyntaxHighlighter.defaults.gutter = false;
+		SyntaxHighlighter.all();
+	</script>
+	</body>
+</html>

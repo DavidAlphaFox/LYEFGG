@@ -1,0 +1,919 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en" dir="ltr">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<meta http-equiv="Content-Style-Type" content="text/css" />
+		<meta name="keywords" content="Erlang, OTP, EUnit, unit test, tdd, fixture, test generator, setup, foreach" />
+		<meta name="description" content="A first foray into testing with Erlang, using EUnit as a test framework. We see EUnit's most important features and put them in practice by studying real tests." />
+        <meta name="google-site-verification" content="mi1UCmFD_2pMLt2jsYHzi_0b6Go9xja8TGllOSoQPVU" />
+		<link rel="stylesheet" type="text/css" href="static/css/screen.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/sh/shCore.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/sh/shThemeLYSE2.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/print.css" media="print" />
+		<link href="rss" type="application/rss+xml" rel="alternate" title="LYSE news" />
+		<link rel="icon" type="image/png" href="favicon.ico" />
+		<link rel="apple-touch-icon" href="static/img/touch-icon-iphone.png" />
+		<link rel="apple-touch-icon" sizes="72x72" href="static/img/touch-icon-ipad.png" />
+		<link rel="apple-touch-icon" sizes="114x114" href="static/img/touch-icon-iphone4.png" />
+		<title>EUnited Nations Council | Learn You Some Erlang for Great Good!</title>
+	</head>
+	<body>
+		<div id="wrapper">
+			<div id="header">
+				<h1>Learn you some Erlang</h1>
+				<span>for great good!</span>
+			</div> <!-- header -->
+			<div id="menu">
+				<ul>
+					<li><a href="content.html" title="Home">Home</a></li>
+					<li><a href="faq.html" title="Frequently Asked Questions">FAQ</a></li>
+					<li><a href="rss" title="Latest News">RSS</a></li>
+					<li><a href="static/erlang/learn-you-some-erlang.zip" title="Source Code">Code</a></li>
+				</ul>
+			</div><!-- menu -->
+			<div id="content">
+            <div class="noscript"><noscript>Hey there, it appears your Javascript is disabled. That's fine, the site works without it. However, you might prefer reading it with syntax highlighting, which requires Javascript!</noscript></div>
+<h2>EUnited Nations Council</h2>
+
+<h3><a class="section" name="the-need-for-tests">The Need for Tests</a></h3>
+
+<img class="left" src="static/img/eunit.png" width="295" height="144" alt="G-Unit logo, parodied to be say 'E-Unit'" title="Gangsta-style unit testing" />
+
+<p>The software we've written has gotten progressively bigger and somewhat more complex with time. When that happens, it becomes rather tedious to start an Erlang shell, type things in, look at results, and make sure things work after code has been changed. As time goes on, it becomes simpler for everyone to run tests that are all prepared and ready in advance rather than following checklists of stuff to check by hand all the time. These are usually pretty good reasons to want tests in your software. It's also possible that you're a fan of test-driven development and so will also find tests useful.</p>
+
+<p>If you recall the chapter where we wrote a <a class="chapter" href="functionally-solving-problems.html#rpn-calculator">RPN calculator</a>, we had a few tests that we had manually written. They were simply a set of pattern matches of the form <code>Result = Expression</code> that would crash if something went wrong, or would succeed otherwise. That works for simple bits of code you write for yourself, but when we get to more serious tests, we will definitely want something better, like a framework.</p>
+
+<p>For unit tests, we'll tend to stick to <em>EUnit</em> (which we see in this chapter). For integration tests, EUnit as well as <em>Common Test</em> can both do the job. In fact, Common Test can do everything from unit tests up to system tests, and even testing of external software, not written in Erlang. For now we'll go with EUnit, given how simple it is for the good results it yields.</p>
+
+<h3><a class="section" name="eunit-whats-a-eunit">EUnit, What's a EUnit?</a></h3>
+
+<p>EUnit, in its simplest form, is just a way to automate running functions that end in <code>_test()</code> in a module by assuming they are unit tests. If you go dig out that RPN calculator I mentioned above, you'll find the following code:</p>
+
+<pre class="brush:erl">
+rpn_test() -&gt;
+    5 = rpn("2 3 +"),
+    87 = rpn("90 3 -"),
+    -4 = rpn("10 4 3 + 2 * -"),
+    -2.0 = rpn("10 4 3 + 2 * - 2 /"),
+    ok = try
+        rpn("90 34 12 33 55 66 + * - +")
+    catch
+        error:{badmatch,[_|_]} -&gt; ok
+    end,
+    4037 = rpn("90 34 12 33 55 66 + * - + -"),
+    8.0 =  rpn("2 3 ^"),
+    true = math:sqrt(2) == rpn("2 0.5 ^"),
+    true = math:log(2.7) == rpn("2.7 ln"),
+    true = math:log10(2.7) == rpn("2.7 log10"),
+    50 = rpn("10 10 10 20 sum"),
+    10.0 = rpn("10 10 10 20 sum 5 /"),
+    1000.0 = rpn("10 10 20 0.5 prod"),
+    ok.
+</pre>
+
+<p>This was the test function we wrote to make sure the calculator worked fine. Find the old module and try this:</p>
+
+<pre class="brush:eshell">
+1&gt; c(calc).
+{ok,calc}
+2&gt; eunit:test(calc).
+  Test passed.
+ok
+</pre>
+
+<p>Calling <code>eunit:test(Module).</code> was all we needed! Yay, we now know EUnit! Pop the champagne and let's head to a different chapter!</p>
+
+<p>Obviously a testing framework that only does this little wouldn't be very useful, and in technical programmer jargon, it might be described as 'not very good'. EUnit does more than automatically exporting and running functions ending in <code>_test()</code>. For one, you can move the tests out to a different module so that your code and its tests are not mixed together. This means you can't test private functions anymore, but also means that if you develop all your tests against the module's interface (the exported functions), then you won't need to rewrite tests when you refactor your code. Let's try separating tests and code with two simple modules:</p>
+
+<pre class="brush:erl">
+-module(ops).
+-export([add/2]).
+
+add(A,B) -&gt; A + B.
+</pre>
+
+<pre class="brush:erl">
+-module(ops_tests).
+-include_lib("eunit/include/eunit.hrl").
+
+add_test() -&gt;
+    4 = ops:add(2,2).
+</pre>
+
+
+<p>So we have <a class="source" href="static/erlang/ops.erl">ops</a> and <a class="source" href="static/erlang/ops_tests.erl">ops_tests</a>, where the second includes tests related to the first. Here's a thing EUnit can do:</p>
+
+<pre class="brush:eshell">
+3&gt; c(ops).
+{ok,ops}
+4&gt; c(ops_tests).
+{ok,ops_tests}
+5&gt; eunit:test(ops).
+  Test passed.
+ok
+</pre>
+
+<p>Calling <code>eunit:test(Mod)</code> automatically looks for <var>Mod</var>_tests and runs the tests within that one. Let's change the test a bit (make it <code>3 = ops:add(2,2)</code>) to see what failures look like:</p>
+
+<pre class="brush:eshell">
+6&gt; c(ops_tests). 
+{ok,ops_tests}
+7&gt; eunit:test(ops).
+ops_tests: add_test (module 'ops_tests')...*failed*
+::error:{badmatch,4}
+  in function ops_tests:add_test/0
+
+
+=======================================================
+  Failed: 1.  Skipped: 0.  Passed: 0.
+error
+</pre>
+
+<img class="right" src="static/img/lies.png" width="214" height="163" alt="A lie detector with a red light lit up, meaning someone lied" />
+
+<p>We can see what test failed (<code>ops_tests: add_test...</code>) and why it did (<code>::error:{badmatch,4}</code>). We also get a full report of how many tests passed or failed. The output is pretty bad though. At least as bad as regular Erlang crashes: no line numbers, no clear explanation (<code>4</code> didn't match with what, exactly?), etc. We're left helpless by a test framework that runs tests but doesn't tell you much about them.</p>
+
+<p>For this reason, EUnit introduces a few macros to help us. Each of them will give us cleaner reporting (including line numbers) and clearer semantics. They're the difference between knowing that something goes wrong and knowing <em>why</em> something goes wrong:</p>
+
+<dl>
+	<dt><code>?assert(Expression), ?assertNot(Expression)</code></dt>
+	<dd>Will test for boolean values. If any value other than <code>true</code> makes it into <code>?assert</code>, an error will be shown. Same for <code>?assertNot</code>, but for negative values. This macro is somewhat equivalent to <code>true = X</code> or <code>false = Y</code>.</dd>
+
+	<dt><code>?assertEqual(A, B)</code></dt>
+	<dd>Does a strict comparison (equivalent to <code>=:=</code>) between two expressions, <var>A</var> and <var>B</var>. If they are different, a failure will occur. This is roughly equivalent to <code>true = X =:= Y</code>. Since R14B04, the macro <code>?assertNotEqual</code> is available to do the opposite of <code>?assertEqual</code>.</dd>
+
+	<dt><code>?assertMatch(Pattern, Expression)</code></dt>
+	<dd>This allows us to match in a form similar to <code>Pattern = Expression</code>, without variables ever binding. This means that I could do something like <code>?assertMatch({X,X}, some_function())</code> and assert that I receive a tuple with two elements being identical. Moreover, I could later do <code>?assertMatch(X,Y)</code> and <var>X</var> would not be bound.</dd>
+	<dd>This is to say that rather than properly being like <code>Pattern = Expression</code>, what we have is closer to <code>(fun (Pattern) -&gt; true; (_) -&gt; erlang:error(nomatch) end)(Expression)</code>: variables in the pattern's head <em>never</em> get bound across multiple assertions. The macro <code>?assertNotMatch</code> has been added to EUnit in R14B04.</dd>
+
+	<dt><code>?assertError(Pattern, Expression)</code></dt>
+	<dd>Tells EUnit that <var>Expression</var> should result in an error. As an example, <code>?assertError(badarith, 1/0)</code> would be a successful test.</dd>
+
+	<dt><code>?assertThrow(Pattern, Expression)</code></dt>
+	<dd>Exactly the same as <code>?assertError</code>, but with <code>throw(Pattern)</code> instead of <code>erlang:error(Pattern)</code>.</dd>
+
+	<dt><code>?assertExit(Pattern, Expression)</code></dt>
+	<dd>Exactly the same as <code>?assertError</code>, but with <code>exit(Pattern)</code> (and not <code>exit/2</code>) instead of <code>erlang:error(Pattern)</code>.</dd>
+
+	<dt><code>?assertException(Class, Pattern, Expression)</code></dt>
+	<dd>A general form of the three previous macros. As an example, <code>?assertException(error, Pattern, Expression)</code> is the same as <code>?assertError(Pattern, Expression)</code>. Starting with R14B04, there is also the macro <code>?assertNotException/3</code> available for tests.</dd>
+</dl>
+
+<p>Using these macros, we could write better tests in our module:</p>
+
+<pre class="brush:erl">
+-module(ops_tests).
+-include_lib("eunit/include/eunit.hrl").
+
+add_test() -&gt;
+    4 = ops:add(2,2).
+
+new_add_test() -&gt;
+    ?assertEqual(4, ops:add(2,2)),
+    ?assertEqual(3, ops:add(1,2)),
+    ?assert(is_number(ops:add(1,2))),
+    ?assertEqual(3, ops:add(1,1)),
+    ?assertError(badarith, 1/0).
+</pre>
+
+<p>And running them:</p>
+
+<pre class="brush:eshell">
+8&gt; c(ops_tests).
+./ops_tests.erl:12: Warning: this expression will fail with a 'badarith' exception
+{ok,ops_tests}
+9&gt; eunit:test(ops).
+ops_tests: new_add_test...*failed*
+::error:{assertEqual_failed,[{module,ops_tests},
+                           {line,11},
+                           {expression,"ops : add ( 1 , 1 )"},
+                           {expected,3},
+                           {value,2}]}
+  in function ops_tests:'-new_add_test/0-fun-3-'/1
+  in call from ops_tests:new_add_test/0
+
+
+=======================================================
+  Failed: 1.  Skipped: 0.  Passed: 1.
+error
+</pre>
+
+<p>See how much nicer the error reporting is? We know that the <code>assertEqual</code> on line 11 of <code>ops_tests</code> failed. When we called <code>ops:add(1,1)</code>, we thought we'd receive <samp>3</samp> as a value, but we instead got <samp>2</samp>. Of course you've got to read these values as Erlang terms, but at least they're there.</p>
+
+<p>What's annoying with this, however, is that even though we had 5 assertions, only one failed but the whole test was still considered a failure. It would be nicer to know that some assertion failed without behaving as if all the others after it failed too. Our test is the equivalent of taking an exam in school, and as soon as you make a mistake, you fail and get thrown out of school. Then your dog dies and you just have a horrible day.</p>
+
+<h3><a class="section" name="test-generators">Test Generators</a></h3>
+
+<p>Because of this common need for flexibility, EUnit supports something called <em>test generators</em>. Test generators are pretty much shorthand for assertions wrapped in functions that can be run later, in clever manners. Instead of having functions ending with <code>_test()</code> with macros that are of the form <code>?assertSomething</code>, we will use functions that end in <code>_test_()</code> and macros of the form <code>?_assertSomething</code>. Those are small changes, but they make things much more powerful. The two following tests would be equivalent:</p>
+
+<pre class="brush:erl">
+function_test() -&gt; ?assert(A == B).
+function_test_() -&gt; ?_assert(A == B).
+</pre>
+
+<p>Here, <code>function_test_()</code> is called a <em>test generator function</em>, while <code>?_assert(A == B)</code> is called a <em>test generator</em>. It is called that way, because secretly, the underlying implementation of <code>?_assert(A == B)</code> is <code>fun() -&gt; ?assert(A == B) end</code>. That is to say, a function that generates a test.</p>
+
+<p>The advantage of test generators, compared to regular assertions, is that they are funs. This means that they can be manipulated without being executed. We could, in fact, have <em>test sets</em> of the following form:</p>
+
+<pre class="brush:erl">
+my_test_() -&gt;
+    [?_assert(A),
+     [?_assert(B),
+      ?_assert(C),
+      [?_assert(D)]],
+     [[?_assert(E)]]].
+</pre>
+
+<p>Test sets can be deeply nested lists of test generators. We could have functions that return tests! Let's add the following to <a class="source" href="static/erlang/ops_tests.erl">ops_tests</a>:</p>
+
+<pre class="brush:erl">
+add_test_() -&gt;
+    [test_them_types(),
+     test_them_values(),
+     ?_assertError(badarith, 1/0)].
+
+test_them_types() -&gt;
+    ?_assert(is_number(ops:add(1,2))).
+
+test_them_values() -&gt;
+    [?_assertEqual(4, ops:add(2,2)),
+     ?_assertEqual(3, ops:add(1,2)),
+     ?_assertEqual(3, ops:add(1,1))].
+</pre>
+
+<p>Because only <code>add_test_()</code> ends in <code>_test_()</code>, the two functions <code>test_them_Something()</code> will not be seen as tests. In fact, they will only be called by <code>add_test_()</code> to generate tests:</p>
+
+<pre class="brush:eshell">
+1&gt; c(ops_tests).
+./ops_tests.erl:12: Warning: this expression will fail with a 'badarith' exception
+./ops_tests.erl:17: Warning: this expression will fail with a 'badarith' exception
+{ok,ops_tests}
+2&gt; eunit:test(ops).
+ops_tests:25: test_them_values...*failed*
+[...]
+ops_tests: new_add_test...*failed*
+[...]
+
+=======================================================
+  Failed: 2.  Skipped: 0.  Passed: 5.
+error
+</pre>
+
+<p>So we still get the expected failures, and now you see that we jumped from 2 tests to 7. The magic of test generators.</p>
+
+<p>What if we only wanted to test some parts of the suite, maybe just <code>add_test_/0</code>? Well EUnit has a few tricks up its sleeves:</p>
+
+<pre class="brush:eshell">
+3&gt; eunit:test({generator, fun ops_tests:add_test_/0}). 
+ops_tests:25: test_them_values...*failed*
+::error:{assertEqual_failed,[{module,ops_tests},
+                           {line,25},
+                           {expression,"ops : add ( 1 , 1 )"},
+                           {expected,3},
+                           {value,2}]}
+  in function ops_tests:'-test_them_values/0-fun-4-'/1
+
+=======================================================
+  Failed: 1.  Skipped: 0.  Passed: 4.
+error
+</pre>
+
+<p>Note that this only works with test generator functions. What we have here as <code>{generator, Fun}</code> is what EUnit parlance calls a <em>test representation</em>. We have a few other representations:</p>
+
+<ul>
+	<li><code>{module, Mod}</code> runs all tests in <var>Mod</var></li>
+	<li><code>{dir, Path}</code> runs all the tests for the modules found in <var>Path</var></li>
+	<li><code>{file, Path}</code> runs all the tests found in a single compiled module</li>
+	<li><code>{generator, Fun}</code> runs a single generator function as a test, as seen above</li>
+	<li><code>{application, AppName}</code> runs all the tests for all the modules mentioned in <var>AppName</var>'s <code>.app</code> file.</li>
+</ul>
+
+<p>These different test representations can make it easy to run test suites for entire applications or even releases.</p>
+
+
+<img class="right" src="static/img/fixture.png" width="175" height="163" alt="a light fixture" title="using a light fixture to shed some light on fixtures. Dur hurr" />
+
+<h3><a class="section" name="fixtures">Fixtures</a></h3>
+
+<p>It would still be pretty hard to test entire applications just by using assertions and test generators. This is why <em>fixtures</em> were added. Fixtures, while not being a catch-all solution to getting your tests up and running to the application level, allow you to build a certain scaffolding around tests.</p>
+
+<p>The scaffolding in question is a general structure that allows us to define setup and teardown functions for each of the test. These functions will allow you to build the state and environment required for each of the tests to be useful. Moreover, the scaffolding will let you specify how to run the tests (do you want to run them locally, in separate processes, etc.?)</p>
+
+<p>There are a few types of fixtures available, with variations to them. The first type is simply called the <em>setup</em> fixture. A setup fixture takes one of the many following forms:</p>
+
+<pre class="expand">
+{setup, Setup, Instantiator}
+{setup, Setup, Cleanup, Instantiator}
+{setup, Where, Setup, Instantiator}
+{setup, Where, Setup, Cleanup, Instantiator}
+</pre>
+
+<p>Argh! It appears we need a little bit of EUnit vocabulary in order to understand this (this will be useful if you need to go read the EUnit documentation):</p>
+
+<dl>
+	<dt>Setup</dt>
+	<dd>A function that takes no argument. Each of the tests will be passed the value returned by the setup function.</dd>
+
+	<dt>Cleanup</dt>
+	<dd>A function that takes the result of a setup function as an argument, and takes care of cleaning up whatever is needed. If in OTP <code>terminate</code> does the opposite of <code>init</code>, then cleanup functions are the opposite of setup functions for EUnit.</dd>
+
+	<dt>Instantiator</dt>
+	<dd>It's a function that takes the result of a setup function and returns a test set (remember, test sets are possibly deeply nested lists of <code>?_Macro</code> assertions).</dd>
+
+	<dt>Where</dt>
+	<dd>Specifies how to run the tests: <code>local</code>, <code>spawn</code>, <code>{spawn, node()}</code>.</dd>
+</dl>
+
+<p>Alright, so what does this look like in practice? Well, let's imagine some test to make sure that a fictive process registry correctly handles trying to register the same process twice, with different names:</p>
+
+<pre class="brush:erl">
+double_register_test_() -&gt;
+    {setup,
+     fun start/0,               % setup function
+     fun stop/1,                % teardown function
+     fun two_names_one_pid/1}.  % instantiator
+
+start() -&gt;
+    {ok, Pid} = registry:start_link(),
+    Pid.
+
+stop(Pid) -&gt;
+    registry:stop(Pid).
+
+two_names_one_pid(Pid) -&gt;
+    ok = registry:register(Pid, quite_a_unique_name, self()),
+    Res = registry:register(Pid, my_other_name_is_more_creative, self()),
+    [?_assertEqual({error, already_named}, Res)].
+</pre>
+
+<p>This fixture first starts the <a class="source" href="static/erlang/processquest/apps/regis-1.0.0/src/regis_server.erl">registry</a> server within the <code>start/0</code> function. Then, the instantiator <code>two_names_one_pid(ResultFromSetup)</code> is called. In that test, the only thing I do is try to register the current process twice. </p>
+
+<p>That's where the instantiator does its work. The result of the second registration is stored in the variable <var>Res</var>. The function will then return a test set containing a single test (<code>?_assertEqual({error, already_named}, Res)</code>). That test set will be run by EUnit. Then, the teardown function <code>stop/1</code> will be called. Using the pid returned by the setup function, it'll be able to shut down the registry that we had started beforehand. Glorious!</p>
+
+<p>What's even better is that this whole fixture itself can be put inside a test set:</p>
+
+<pre class="brush:erl">
+some_test_() -&gt;
+    [{setup, fun start/0, fun stop/1, fun some_instantiator1/1},
+     {setup, fun start/0, fun stop/1, fun some_instantiator2/1},
+     ...
+     {setup, fun start/0, fun stop/1, fun some_instantiatorN/1}].
+</pre>
+
+<p>And this will work! What's annoying there is the need to always repeat that setup and teardown functions, especially when they're always the same. That's where the second type of fixture, the <em>foreach</em> fixture, enters the stage:</p>
+
+<pre class="expand">
+{foreach, Where, Setup, Cleanup, [Instantiator]}
+{foreach, Setup, Cleanup, [Instantiator]}
+{foreach, Where, Setup, [Instantiator]}
+{foreach, Setup, [Instantiator]}
+</pre>
+
+<p>The foreach fixture is quite similar to the setup fixture, with the difference that it takes lists of instantiators. Here's the <code>some_test_/0</code> function written with a foreach fixture:</p>
+
+<pre class="brush:erl">
+some2_test_() -&gt;
+    {foreach,
+     fun start/0,
+     fun stop/1,
+     [fun some_instantiator1/1,
+      fun some_instantiator2/1,
+      ...
+      fun some_instantiatorN/1]}.
+</pre>
+
+<p>That's better. The foreach fixture will then take each of the instantiators and run the setup and teardown function for each of them.</p>
+
+<p>Now we know how to have a fixture for one instantiator, then a fixture for many of them (each getting their setup and teardown function calls). What if I want to have one setup function call, and one teardown function calls for many instantiators?</p>
+
+<p>In other words, what if I have many instantiators, but I want to set some state only once? There's no easy way for this, but here's a little trick that might do it:</p>
+
+<pre class="brush:erl">
+some_tricky_test_() -&gt;
+    {setup,
+     fun start/0,
+     fun stop/1,
+     fun (SetupData) -&gt;
+        [some_instantiator1(SetupData),
+         some_instantiator2(SetupData),
+         ...
+         some_instantiatorN(SetupData)]
+     end}.
+</pre>
+
+<p>By using the fact that test sets can be deeply nested lists, we wrap a bunch of instantiators with an anonymous function behaving like an instantiator for them.</p>
+
+<img class="right" src="static/img/fatspawn.png" width="321" height="305" alt="A fat Spawn (the anti-hero comic book character)" />
+
+<p>Tests can also have some finer grained control into how they should be running when you use fixtures. Four options are available:</p>
+
+<dl>
+	<dt><code>{spawn, TestSet}</code></dt>
+	<dd>Runs tests in a separate process than the main test process. The test process will wait for all of the spawned tests to finish</dd>
+
+	<dt><code>{timeout, Seconds, TestSet}</code></dt>
+	<dd>The tests will run for <var>Seconds</var> number of Seconds. If they take longer than <var>Seconds</var> to finish, they will be terminated without further ado.</dd>
+
+	<dt><code>{inorder, TestSet}</code></dt>
+	<dd>This tells EUnit to run the tests within the test set strictly in the order they are returned.</dd>
+
+	<dt><code>{inparallel, Tests}</code></dt>
+	<dd>Where possible, the tests will be run in parallel.</dd>
+</dl>
+
+<p>As an example, the <code>some_tricky_test_/0</code> test generator could be rewritten as follows:</p>
+
+<pre class="brush:erl">
+some_tricky2_test_() -&gt;
+    {setup,
+     fun start/0,
+     fun stop/1,
+     fun(SetupData) -&gt;
+       {inparallel,
+        [some_instantiator1(SetupData),
+         some_instantiator2(SetupData),
+         ...
+         some_instantiatorN(SetupData)]}
+     end}.
+</pre>
+
+<p>That's really most of it for fixtures, but there's one more nice trick I've forgot to show for now. You can give descriptions of tests in a neat way. Check this out:</p>
+
+<pre class="brush:erl">
+double_register_test_() -&gt;
+    {"Verifies that the registry doesn't allow a single process to "
+     "be registered under two names. We assume that each pid has the "
+     "exclusive right to only one name",
+     {setup,
+      fun start/0,
+      fun stop/1,
+      fun two_names_one_pid/1}}.
+</pre>
+
+<p>Nice, huh? You can wrap a fixture by doing <code>{Comment, Fixture}</code> in order to get readable tests. Let's put this in practice.</p>
+
+
+<h3><a class="section" name="testing-regis">Testing Regis</a></h3>
+
+<p>Because just seeing fake tests as above isn't the most entertaining thing to do, and because pretending to test software that doesn't exist is even worse, we'll instead study the tests I have written for the <a class="source" href="static/erlang/regis-1.0.0.zip">regis-1.0.0</a> process registry, the one used by Process Quest.</p>
+
+<img class="left" src="static/img/regis.png" width="222" height="268" alt="A portrait of Regis Philbin" title="Regis Philbin!" />
+
+<p>Now, the development of <code>regis</code> was done in a test-driven manner. Hopefully you don't hate TDD (Test-Driven Development), but even if you do, it shouldn't be too bad because we'll look at the test suite after the fact. By doing this, we cut through the few trial-and-error sequences and backpedaling that I might have had writing it the first time and I'll look like I'm really competent, thanks to the magic of text editing.</p>
+
+<p>The regis application is made of three processes: a supervisor, a main server, and then an application callback module. Knowing that the supervisor will only check the server and that the application callback module will do nothing except behaving as an interface for the two other modules, we can safely write a test suite focusing on the server itself, without any external dependencies.</p>
+
+<p>Being a good TDD fan, I begun by writing a list of all the features I wanted to cover:</p>
+
+<ul>
+	<li>Respect an interface similar to the Erlang default process registry</li>
+	<li>The Server will have a registered name so that it can be contacted without tracking its pid</li>
+	<li>A process can be registered through our service and can then be contacted by its name</li>
+	<li>A list of all registered processes can be obtained</li>
+	<li>A name that is not registered by any process should return the atom 'undefined' (much like the regular Erlang registry) in order to crash calls using them</li>
+	<li>A process can not have two names</li>
+	<li>Two processes can not share the same name</li>
+	<li>A process that was registered can be registered again if it was unregistered between calls</li>
+	<li>Unregistering a process never crashes</li>
+	<li>A registered process' crash will unregister its name</li>
+</ul>
+
+<p>That's a respectable list. Doing the elements one by one and adding cases as I went, I transformed each of the specification into a test. The final file obtained was <a class="source" href="static/erlang/processquest/apps/regis-1.0.0/test/regis_server_tests.erl">regis_server_tests</a>. I wrote things using a basic structure a bit like this:</p>
+
+<pre class="brush:erl">
+-module(regis_server_tests).
+-include_lib("eunit/include/eunit.hrl").
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% TESTS DESCRIPTIONS %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%
+%%% SETUP FUNCTIONS %%%
+%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%
+%%% ACTUAL TESTS %%%
+%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%
+%%% HELPER FUNCTIONS %%%
+%%%%%%%%%%%%%%%%%%%%%%%%
+</pre>
+
+<p>Ok, I give it to you, that looks weird when the module is empty, but as you fill it up, it makes more and more sense.</p>
+
+<p>After adding a first test, the initial one being that it should be possible to start a server and access it by name, the file looked like this:</p>
+
+<pre class="brush:erl">
+-module(regis_server_tests).
+-include_lib("eunit/include/eunit.hrl").
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% TESTS DESCRIPTIONS %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+start_stop_test_() -&gt;
+    {"The server can be started, stopped and has a registered name",
+     {setup,
+      fun start/0,
+      fun stop/1,
+      fun is_registered/1}}.
+
+%%%%%%%%%%%%%%%%%%%%%%%
+%%% SETUP FUNCTIONS %%%
+%%%%%%%%%%%%%%%%%%%%%%%
+start() -&gt;
+    {ok, Pid} = regis_server:start_link(),
+    Pid.
+
+stop(_) -&gt;
+    regis_server:stop().
+
+%%%%%%%%%%%%%%%%%%%%
+%%% ACTUAL TESTS %%%
+%%%%%%%%%%%%%%%%%%%%
+is_registered(Pid) -&gt;
+    [?_assert(erlang:is_process_alive(Pid)),
+     ?_assertEqual(Pid, whereis(regis_server))].
+
+%%%%%%%%%%%%%%%%%%%%%%%%
+%%% HELPER FUNCTIONS %%%
+%%%%%%%%%%%%%%%%%%%%%%%%
+</pre>
+
+
+<p>See the organization now? Already so much better. The top part of the file contains only fixtures and top-level description of features. The second part contains setup and cleanup functions that we might need. The last one contains the instantiators returning test sets.</p>
+
+<p>In this case, the instantiator checks to see whether <code>regis_server:start_link()</code> spawned a process that was truly alive, and that it was registered with the name <code>regis_server</code>. If it's true, then that will work for the server.</p>
+
+<p>If we look at the current version of the file, it now looks more like this for the two first sections:</p>
+
+<pre class="brush:erl">
+-module(regis_server_tests).
+-include_lib("eunit/include/eunit.hrl").
+
+-define(setup(F), {setup, fun start/0, fun stop/1, F}).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% TESTS DESCRIPTIONS %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+start_stop_test_() -&gt;
+    {"The server can be started, stopped and has a registered name",
+     ?setup(fun is_registered/1)}.
+
+register_test_() -&gt;
+    [{"A process can be registered and contacted",
+      ?setup(fun register_contact/1)},
+     {"A list of registered processes can be obtained",
+      ?setup(fun registered_list/1)},
+     {"An undefined name should return 'undefined' to crash calls",
+      ?setup(fun noregister/1)},
+     {"A process can not have two names",
+      ?setup(fun two_names_one_pid/1)},
+     {"Two processes cannot share the same name",
+      ?setup(fun two_pids_one_name/1)}].
+
+unregister_test_() -&gt;
+    [{"A process that was registered can be registered again iff it was "
+      "unregistered between both calls",
+      ?setup(fun re_un_register/1)},
+     {"Unregistering never crashes",
+      ?setup(fun unregister_nocrash/1)},
+     {"A crash unregisters a process",
+      ?setup(fun crash_unregisters/1)}].
+
+%%%%%%%%%%%%%%%%%%%%%%%
+%%% SETUP FUNCTIONS %%%
+%%%%%%%%%%%%%%%%%%%%%%%
+start() -&gt;
+    {ok, Pid} = regis_server:start_link(),
+    Pid.
+
+stop(_) -&gt;
+    regis_server:stop().
+
+%%%%%%%%%%%%%%%%%%%%%%%%
+%%% HELPER FUNCTIONS %%%
+%%%%%%%%%%%%%%%%%%%%%%%%
+%% nothing here yet
+</pre>
+
+<p>Nice, isn't it? Note that as I was writing the suite, I ended up seeing that I never needed any other setup and teardown functions than <code>start/0</code> and <code>stop/1</code>. For this reason, I added the <code>?setup(Instantiator)</code> macro, that makes things look a bit better than if all the fixtures were to be fully expanded. It's now pretty obvious that I turned each point of the feature list into a bunch of tests. You'll note that I divided all tests depending on whether they had to do with starting and stopping the server (<code>start_stop_test_/0</code>), registering processes (<code>register_test_/0</code>) and unregistering processes (<code>unregister_test_/0</code>).</p>
+
+<p>By reading the test generators' definitions, we can know what the module is supposed to be doing. The tests become documentation (although they should not replace proper documentation).</p>
+
+<p>We'll study the tests a bit and see why things were done in a certain way. The first test in the list <code>start_stop_test_/0</code>, with the simple requirement that the server can be registered:</p>
+
+<pre class="brush:erl">
+start_stop_test_() -&gt;
+    {"The server can be started, stopped and has a registered name",
+     ?setup(fun is_registered/1)}.
+</pre>
+
+<p>The implementation of the test itself is put in the <code>is_registered/1</code> function:</p>
+
+<pre class="brush:erl">
+%%%%%%%%%%%%%%%%%%%%
+%%% ACTUAL TESTS %%%
+%%%%%%%%%%%%%%%%%%%%
+is_registered(Pid) -&gt;
+    [?_assert(erlang:is_process_alive(Pid)),
+     ?_assertEqual(Pid, whereis(regis_server))].
+</pre>
+
+<img class="right" src="static/img/electrocardiogram.png" width="207" height="148" alt="a heart monitor" title="An impossible mission!" />
+
+<p>As explained earlier when we looked at the first version of the test, this checks whether the process is available or not. There's nothing really special about that one, although the function <code>erlang:is_process_alive(Pid)</code> might be new to you. As its name says, it checks whether a process is currently running. I've put that test in there for the simple reason that it might well be possible that the server crashes as soon as we start it, or that it's never started in the first place. We don't want that.</p>
+
+<p>The second test is related to being able to register a process:</p>
+
+<pre class="brush:erl">
+{"A process can be registered and contacted",
+ ?setup(fun register_contact/1)}
+</pre>
+
+<p>Here's what the test looks like:</p>
+
+<pre class="brush:erl">
+register_contact(_) -&gt;
+    Pid = spawn_link(fun() -&gt; callback(regcontact) end),
+    timer:sleep(15),
+    Ref = make_ref(),
+    WherePid = regis_server:whereis(regcontact),
+    regis_server:whereis(regcontact) ! {self(), Ref, hi},
+    Rec = receive
+         {Ref, hi} -&gt; true
+         after 2000 -&gt; false
+    end,
+    [?_assertEqual(Pid, WherePid),
+     ?_assert(Rec)].
+</pre>
+
+<p>Granted, this isn't the most elegant test around. What it does is that it spawns a process that will do nothing but register itself and reply to some message we send it. This is all done in the <code>callback/1</code> helper function defined as follows:</p>
+
+<pre class="brush:erl">
+%%%%%%%%%%%%%%%%%%%%%%%%
+%%% HELPER FUNCTIONS %%%
+%%%%%%%%%%%%%%%%%%%%%%%%
+callback(Name) -&gt;
+    ok = regis_server:register(Name, self()),
+    receive
+        {From, Ref, Msg} -&gt; From ! {Ref, Msg}
+    end.
+</pre>
+
+<p>So the function has the module register itself, receives a message, and sends a response back. Once the process is started, the <code>register_contact/1</code> instantiator waits 15 milliseconds (just a tiny delay to make sure the other process registers itself), and then tries to use the <code>whereis</code> function from <code>regis_server</code> to retrieve a Pid and send a message to the process. If the regis server is functioning correctly, a message will be received back and the pids will match in the tests at the bottom of the function.</p>
+
+<div class="note koolaid">
+	<p><strong>Don't Drink Too Much Kool-Aid:</strong><br />
+	By reading that test, you have seen the little timer work we've had to do. Because of the concurrent and time-sensitive nature of Erlang programs, tests will frequently be filled with tiny timers like that that have the sole role of trying to synchronise bits of code.</p>
+
+	<p>The problem then becomes to try and define what should be considered a good timer, a delay that is long enough. With a system running many tests or even a computer under heavy load, will the timers still be waiting for long enough?</p>
+
+	<p>Erlang programmers who write tests sometimes have to be clever in order to minimize how much synchronisation they need to get things to work. There is no easy solution for it.</p>
+</div>
+
+<p>The next tests are introduced as follows:</p>
+
+<pre class="brush:erl">
+{"A list of registered processes can be obtained",
+ ?setup(fun registered_list/1)}
+</pre>
+
+<p>So when a bunch of processes have been registered, it should be possible to get a list of all the names. This is a functionality similar to Erlang's <code>registered()</code> function call:</p>
+
+<pre class="brush:erl">
+registered_list(_) -&gt;
+    L1 = regis_server:get_names(),
+    Pids = [spawn(fun() -&gt; callback(N) end) || N &lt;- lists:seq(1,15)],
+    timer:sleep(200),
+    L2 = regis_server:get_names(),
+    [exit(Pid, kill) || Pid &lt;- Pids],
+    [?_assertEqual([], L1),
+     ?_assertEqual(lists:sort(lists:seq(1,15)), lists:sort(L2))].
+</pre>
+
+<p>First of all, we make sure that the first list of registered processes is empty (<code>?_assertEqual(L1, [])</code>) so that we've got something that works even when no process has ever tried to register itself. Then 15 processes are created, all of which will try to register themselves with a number (1..15). We make the test sleep a bit to make sure all processes have the time to register themselves, and then call <code>regis_server:get_names()</code>. The names should include all integers between 1 and 15, inclusively. Then a slight cleanup is done by eliminating all the registered processes &mdash; we don't want to be leaking them, after all.</p>
+
+<img class="left" src="static/img/watch.png" width="182" height="170" alt="a pocket watch" />
+
+<p>You'll notice the tendency of the tests to store state in variables (<var>L1</var> and <var>L2</var>) before using them in test sets. The reason for this is that the test set that is returned is executed well after the test initiator (the whole active bit of code) has been running. If you were to try and put function calls that depend on other processes and time-sensitive events in the <code>?_assert*</code> macros, you'd get everything out of sync and things would generally be awful for you and the people using your software.</p>
+
+<p>The next test is simple:</p>
+
+<pre class="brush:erl">
+{"An undefined name should return 'undefined' to crash calls",
+ ?setup(fun noregister/1)}
+
+...
+
+noregister(_) -&gt;
+    [?_assertError(badarg, regis_server:whereis(make_ref()) ! hi),
+     ?_assertEqual(undefined, regis_server:whereis(make_ref()))].
+</pre>
+
+<p>As you can see, this tests for two things: we return <code>undefined</code>, and the specification's assumption that using <code>undefined</code> does indeed crash attempted calls. For that one, there is no need to use temporary variables to store the state: both tests can be executed at any time during the life of the regis server given we never change its state.</p>
+
+<p>Let's keep going:</p>
+
+<pre class="brush:erl">
+{"A process can not have two names",
+ ?setup(fun two_names_one_pid/1)},
+
+...
+
+two_names_one_pid(_) -&gt;
+    ok = regis_server:register(make_ref(), self()),
+    Res = regis_server:register(make_ref(), self()),
+    [?_assertEqual({error, already_named}, Res)].
+</pre>
+
+
+<p>That's pretty much the same test we used in a demo in the previous section of the chapter. In this one, we're just looking to see whether we get the right output and that the test process can't register itself twice with different names.</p>
+
+<div class="note">
+	<p><strong>Note:</strong> you might have noticed that the tests above tend to use <code>make_ref()</code> a whole lot. When possible, it is useful to use functions that generate unique values like <code>make_ref()</code> does. If at some point in the future someone wants to run tests in parallel or to run them under a single regis server that never stops, then it will be possible to do so without needing to modify the tests.</p>
+
+	<p>If we were to use hard coded names like <code>a</code>, <code>b</code>, and <code>c</code> in all the tests, then it would be very likely that sooner or later, name conflicts would happen if we were to try and run many test suites at once. Not all tests in the <code>regis_server_tests</code> suite follow this advice, mostly for demonstration purposes.</p>
+</div>
+
+<p>The next tests is the opposite of <code>two_names_one_pid</code>:</p>
+
+<pre class="brush:erl">
+{"Two processes cannot share the same name",
+ ?setup(fun two_pids_one_name/1)}].
+
+...
+
+two_pids_one_name(_) -&gt;
+    Pid = spawn(fun() -&gt; callback(myname) end),
+    timer:sleep(15),
+    Res = regis_server:register(myname, self()),
+    exit(Pid, kill),
+    [?_assertEqual({error, name_taken}, Res)].
+</pre>
+
+<p>Here, because we need two processes and the results of only one of them, the trick is to spawn one process (the one whose results we do not need), and then do the critical part ourselves.</p>
+
+<p>You can see that timers are used to make sure that the other process tries registering a name first (within the <code>callback/1</code> function), and that the test process itself waits to try at its turn, expecting an error tuple (<code>{error, name_taken}</code>) as a result.</p>
+
+<p>This covers all the features for the tests related to the registration of processes. Only those related to unregistering processes are left:</p>
+
+<pre class="brush:erl">
+unregister_test_() -&gt;
+    [{"A process that was registered can be registered again iff it was "
+      "unregistered between both calls",
+      ?setup(fun re_un_register/1)},
+     {"Unregistering never crashes",
+      ?setup(fun unregister_nocrash/1)},
+     {"A crash unregisters a process",
+      ?setup(fun crash_unregisters/1)}].
+</pre>
+
+<p>Let's see how they are to be implemented. The first one is kind of simple:</p>
+
+<pre class="brush:erl">
+re_un_register(_) -&gt;
+    Ref = make_ref(),
+    L = [regis_server:register(Ref, self()),
+         regis_server:register(make_ref(), self()),
+         regis_server:unregister(Ref),
+         regis_server:register(make_ref(), self())],
+    [?_assertEqual([ok, {error, already_named}, ok, ok], L)].
+</pre>
+
+<p>This way of serializing all the calls in a list is a nifty trick I like to do when I need to test the results of all the events. By putting them in a list, I can then compare the sequence of actions to the expected <code>[ok, {error, already_named}, ok, ok]</code> to see how things went. Note that there is nothing specifying that Erlang should evaluate the list in order, but the trick above has pretty much always worked.</p>
+
+<p>The following test, the one about never crashing, goes like this:</p>
+
+<pre class="brush:erl">
+unregister_nocrash(_) -&gt;
+    ?_assertEqual(ok, regis_server:unregister(make_ref())).
+</pre>
+
+<p>Whoa, slow down here, buddy! That's it? Yes it is. If you look back at <code>re_un_register</code>, you'll see that it already handles testing the 'unregistration' of processes. For <code>unregister_nocrash</code>, we really only want to know if it will work to try and remove a process that's not there.</p>
+
+<p>Then comes the last test, and one of the most important ones for any test registry you'll ever have: a named process that crashes will have the name unregistered. This has serious implications, because if you didn't remove names, you'd end up having an ever growing registry server with an ever shrinking name selection:</p>
+
+<pre class="brush:erl">
+crash_unregisters(_) -&gt;
+    Ref = make_ref(),
+    Pid = spawn(fun() -&gt; callback(Ref) end),
+    timer:sleep(150),
+    Pid = regis_server:whereis(Ref),
+    exit(Pid, kill),
+    timer:sleep(95),
+    regis_server:register(Ref, self()),
+    S = regis_server:whereis(Ref),
+    Self = self(),
+    ?_assertEqual(Self, S).
+</pre>
+
+<p>This one reads sequentially:</p>
+
+<ol>
+	<li> Register a process</li>
+	<li> Make sure the process is registered</li>
+	<li> Kill that process</li>
+	<li> Steal the process' identity (the true spy way)</li>
+	<li> Check whether we do hold the name ourselves.</li>
+</ol>
+
+<p>In all honesty, the test could have been written in a simpler manner:</p>
+
+<pre class="brush:erl">
+crash_unregisters(_) -&gt;
+    Ref = make_ref(),
+    Pid = spawn(fun() -&gt; callback(Ref) end),
+    timer:sleep(150),
+    Pid = regis_server:whereis(Ref),
+    exit(Pid, kill),
+    ?_assertEqual(undefined, regis_server:whereis(Ref)).
+</pre>
+
+<p>That whole part about stealing the identity of the dead process was nothing but a petty thief's fantasy.</p>
+
+<p>That's it! If you've done things right, you should be able to compile the code and run the test suite:</p>
+
+<pre class="brush:eshell">
+$ erl -make
+Recompile: src/regis_sup
+...
+$ erl -pa ebin/
+1&gt; eunit:test(regis_server).
+  All 13 tests passed.
+ok
+2&gt; eunit:test(regis_server, [verbose]).
+======================== EUnit ========================
+module 'regis_server'
+  module 'regis_server_tests'
+    The server can be started, stopped and has a registered name
+      regis_server_tests:49: is_registered...ok
+      regis_server_tests:50: is_registered...ok
+      [done in 0.006 s]
+...
+  [done in 0.520 s]
+=======================================================
+  All 13 tests passed.
+ok
+</pre>
+
+<p>Oh yeah, see how adding the 'verbose' option will add test descriptions and run time information to the reports? That's neat.</p>
+
+<img class="right" src="static/img/knit.png" width="174" height="153" alt="a ball of yarn" />
+
+<h3><a class="section" name="he-who-knits-eunits">He Who Knits EUnits</a></h3>
+
+<p>In this chapter, we've seen how to use most features of EUnit, how to run suites written in them. More importantly, we've seen a few techniques related to how to write tests for concurrent processes, using patterns that make sense in the real world.</p>
+
+<p>One last trick should be known: when you feel like testing processes such as <code>gen_server</code>s and <code>gen_fsm</code>s, you might feel like inspecting the internal state of the processes. Here's a nice trick, courtesy of the <a class="docs" href="http://erldocs.com/17.3/stdlib/sys.html">sys</a> module:</p>
+
+<pre class="brush:eshell">
+3&gt; regis_server:start_link().
+{ok,&lt;0.160.0&gt;}
+4&gt; regis_server:register(shell, self()).
+ok
+5&gt; sys:get_status(whereis(regis_server)).
+{status,&lt;0.160.0&gt;,
+        {module,gen_server},
+        [[{'$ancestors',[&lt;0.31.0&gt;]},
+          {'$initial_call',{regis_server,init,1}}],
+         running,&lt;0.31.0&gt;,[],
+         [{header,"Status for generic server regis_server"},
+          {data,[{"Status",running},
+                 {"Parent",&lt;0.31.0&gt;},
+                 {"Logged events",[]}]},
+          {data,[{"State",
+                  {state,{1,{&lt;0.31.0&gt;,{shell,#Ref&lt;0.0.0.333&gt;},nil,nil}},
+                         {1,{shell,{&lt;0.31.0&gt;,#Ref&lt;0.0.0.333&gt;},nil,nil}}}}]}]]}
+</pre>
+
+<p>Neat, huh? Everything that has to do with the server's innards is given to you: you can now inspect everything you need, all the time!</p>
+
+<p>If you feel like getting more comfortable with testing servers and whatnot, I recommend reading the <a class="source" href="static/erlang/processquest/apps/processquest-1.1.0/test/pq_player_tests.erl">tests written for Process Quests' player module</a>. They test the gen_server using a different technique, where all individual calls to <code>handle_call</code>, <code>handle_cast</code> and <code>handle_info</code> are tried independently. It was still developed in a test-driven manner, but the needs of that one forced things to be done differently.</p>
+
+<p>In any case, we'll see the true value of tests when we rewrite the process registry to use ETS, an in-memory database available for all Erlang processes.</p>
+
+				<ul class="navigation">
+											<li><a href="buckets-of-sockets.html" title="Previous chapter">&lt; Previous</a></li>
+										
+					<li><a href="contents.html" title="Index">Index</a></li>
+					
+											<li><a href="ets.html" title="Next chapter">Next &gt;</a></li>
+									</ul>
+			</div><!-- content -->
+			<div id="footer">
+				<a href="http://creativecommons.org/licenses/by-nc-nd/3.0/" title="Creative Commons License Details"><img src="static/img/cc.png" width="88" height="31" alt="Creative Commons Attribution Non-Commercial No Derivative License" /></a>
+				<p>Except where otherwise noted, content on this site is licensed under a Creative Commons Attribution Non-Commercial No Derivative License</p>
+			</div> <!-- footer -->
+		</div> <!-- wrapper -->
+		<div id="grass" />
+	<script type="text/javascript" src="static/js/shCore.js"></script>
+	<script type="text/javascript" src="static/js/shBrushErlang2.js%3F11"></script>
+	<script type="text/javascript">
+		SyntaxHighlighter.defaults.gutter = false;
+		SyntaxHighlighter.all();
+	</script>
+	</body>
+</html>

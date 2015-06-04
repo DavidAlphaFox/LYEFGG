@@ -1,0 +1,409 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en" dir="ltr">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<meta http-equiv="Content-Style-Type" content="text/css" />
+		<meta name="keywords" content="Erlang, data structure, records, dict, tree, key-value, orddict, sets, digraphs, queue" />
+		<meta name="description" content="A roundup of useful data structure in the Erlang programming language, including records, key-value stores (dicts, trees), sets, directed graphs, queues, etc. " />
+        <meta name="google-site-verification" content="mi1UCmFD_2pMLt2jsYHzi_0b6Go9xja8TGllOSoQPVU" />
+		<link rel="stylesheet" type="text/css" href="static/css/screen.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/sh/shCore.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/sh/shThemeLYSE2.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/print.css" media="print" />
+		<link href="rss" type="application/rss+xml" rel="alternate" title="LYSE news" />
+		<link rel="icon" type="image/png" href="favicon.ico" />
+		<link rel="apple-touch-icon" href="static/img/touch-icon-iphone.png" />
+		<link rel="apple-touch-icon" sizes="72x72" href="static/img/touch-icon-ipad.png" />
+		<link rel="apple-touch-icon" sizes="114x114" href="static/img/touch-icon-iphone4.png" />
+		<title>A Short Visit to Common Data Structures | Learn You Some Erlang for Great Good!</title>
+	</head>
+	<body>
+		<div id="wrapper">
+			<div id="header">
+				<h1>Learn you some Erlang</h1>
+				<span>for great good!</span>
+			</div> <!-- header -->
+			<div id="menu">
+				<ul>
+					<li><a href="content.html" title="Home">Home</a></li>
+					<li><a href="faq.html" title="Frequently Asked Questions">FAQ</a></li>
+					<li><a href="rss" title="Latest News">RSS</a></li>
+					<li><a href="static/erlang/learn-you-some-erlang.zip" title="Source Code">Code</a></li>
+				</ul>
+			</div><!-- menu -->
+			<div id="content">
+            <div class="noscript"><noscript>Hey there, it appears your Javascript is disabled. That's fine, the site works without it. However, you might prefer reading it with syntax highlighting, which requires Javascript!</noscript></div>
+<h2>A Short Visit to Common Data Structures</h2>
+
+<h3><a class="section" name="wont-be-too-long">Won't be too long, promised!</a></h3>
+
+<p>Chances are you now understand the functional subset of Erlang pretty well and could read many programs without a problem. However, I could bet it's still a bit hard to think about how to build a real useful program even though the last chapter was about solving problems in a functional manner. I'm saying this because it's how I felt like at about that point in my learning, but if you're doing better, congratulations!</p>
+
+<p>Anyway, the point I'm coming to is that we've seen a bunch of things: most basic data types, the shell, how to write modules and functions (with recursion), different ways to compile, control the flow of the program, handle exceptions, abstract away some common operations, etc. We've also seen how to store data with tuples, lists and an incomplete implementation of a binary search tree. What we haven't seen is the other data structures provided to the programmer in the Erlang standard library.</p>
+
+<img class="right" src="static/img/record-player.png" width="149" height="213" alt="a phonograph" title="tee hee, broken records" />
+
+<h3><a class="section" name="records">Records</a></h3>
+
+<p>Records are, first of all, a hack. They are more or less an afterthought to the language and can have their share of inconveniences. I'll cover that later. They're still pretty useful whenever you have a small data structure where you want to access the attributes by name directly. As such, Erlang records are a lot like structs in C (if you know C.)</p>
+
+<p>They're declared as module attributes in the following manner:</p>
+
+<pre class="brush:erl">
+-module(records).
+-compile(export_all).
+
+-record(robot, {name,
+                type=industrial,
+                hobbies,
+                details=[]}).
+</pre>
+
+<p>So here we have a record representing robots with 4 fields: name, type, hobbies and details. There is also a default value for type and details, <code>industrial</code> and <code>[]</code>, respectively. Here's how to declare a record in the module <a class="source" href="static/erlang/records.erl">records</a>:</p>
+
+<pre class="brush:erl">
+first_robot() -&gt;
+    #robot{name="Mechatron",
+           type=handmade, 
+           details=["Moved by a small man inside"]}.
+</pre>
+
+<p>And running the code:</p>
+
+<pre class="brush:eshell">
+1&gt; c(records).
+{ok,records}
+2&gt; records:first_robot().
+{robot,"Mechatron",handmade,undefined,
+       ["Moved by a small man inside"]}
+</pre>
+
+<p>Woops! Here comes the hack! Erlang records are just syntactic sugar on top of tuples. Fortunately, there's a way to make it better. The Erlang shell has a command <code>rr(Module)</code> that lets you load record definitions from <var>Module</var>:</p>
+
+<pre class="brush:eshell">
+3&gt; rr(records).
+[robot]
+4&gt; records:first_robot().         
+#robot{name = "Mechatron",type = handmade,
+       hobbies = undefined,
+       details = ["Moved by a small man inside"]}
+</pre>
+
+<p>Ah there! This makes it much easier to work with records that way. You'll notice that in <code>first_robot/0</code>, we had not defined the <code>hobbies</code> field and it had no default value in its declaration. Erlang, by defaults, sets the value to <samp>undefined</samp> for you.</p>
+
+<p>To see the behavior of the defaults we set in the <code>robot</code> definition, let's compile the following function:</p>
+
+<pre class="brush:erl">
+car_factory(CorpName) -&gt;
+    #robot{name=CorpName, hobbies="building cars"}.
+</pre>
+
+<p>And run it:</p>
+
+<pre class="brush:eshell">
+5&gt; c(records).
+{ok,records}
+6&gt; records:car_factory("Jokeswagen").
+#robot{name = "Jokeswagen",type = industrial,
+       hobbies = "building cars",details = []}
+</pre>
+
+<p>And we have an industrial robot that likes to spend time building cars.</p>
+
+<div class="note">
+    <p><strong>Note:</strong> The function <code>rr()</code> can take more than a module name: it can take a wildcard (like <code>rr("*")</code>) and also a list as a second argument to specify which records to load.</p>
+
+    <p>There are a few other functions to deal with records in the shell: <code>rd(Name, Definition)</code> lets you define a record in a manner similar to the <code>-record(Name, Definition)</code> used in our module. You can use <code>rf()</code> to 'unload' all records, or <code>rf(Name)</code> or <code>rf([Names])</code> to get rid of specific definitions.</p>
+
+    <p>You can use <code>rl()</code> to print all record definitions in a way you could copy-paste into the module or use <code>rl(Name)</code> or <code>rl([Names])</code> to restrict it to specific records.</p>
+
+    <p>Finally, <code>rp(Term)</code> lets you convert a tuple to a record (given the definition exists).</p>
+</div>
+
+<p>Writing records alone won't do much. We need a way to extract values from them. There are basically two ways to do this. The first one is with a special 'dot syntax'. Assuming you have the record definition for robots loaded:</p>
+
+<pre class="brush:eshell">
+5&gt; Crusher = #robot{name="Crusher", hobbies=["Crushing people","petting cats"]}. 
+#robot{name = "Crusher",type = industrial,
+       hobbies = ["Crushing people","petting cats"],
+       details = []}
+6&gt; Crusher#robot.hobbies.
+["Crushing people","petting cats"]
+</pre>
+
+<p>Ugh, not a pretty syntax. This is due to the nature of records as tuples. Because they're just some kind of compiler trick, you have to keep keywords around defining what record goes with what variable, hence the <code>#robot</code> part of <code>Crusher#robot.hobbies</code>. It's sad, but there's no way out of it. Worse than that, nested records get pretty ugly:</p>
+
+<pre class="brush:eshell">
+7&gt; NestedBot = #robot{details=#robot{name="erNest"}}.
+#robot{name = undefined,type = industrial,
+       hobbies = undefined,
+       details = #robot{name = "erNest",type = industrial,
+                        hobbies = undefined,details = []}}
+8&gt; (NestedBot#robot.details)#robot.name. 
+"erNest"
+</pre>
+
+<p>And yes, the parentheses are mandatory.</p>
+
+<div class="note update">
+    <p><strong>Update:</strong><br />
+    Starting with revision R14A, it is now possible to nest records without the parentheses. The <var>NestedBot</var> example above could also be written as <code>NestedRobot#robot.details#robot.name</code> and work the same.</p>
+</div>
+
+<p>To further show the dependence of records on tuples, see the following:</p>
+
+<pre class="brush:eshell">
+9&gt; #robot.type.
+3
+</pre>
+
+<p>What this outputs is which element of the underlying tuple it is.</p>
+
+<p>One saving feature of records is the possibility to use them in function heads to pattern match and also in guards. Declare a new record as follows on top of the file, and then add the functions under:</p>
+
+<pre class="brush:erl">
+-record(user, {id, name, group, age}).
+
+%% use pattern matching to filter
+admin_panel(#user{name=Name, group=admin}) -&gt;
+    Name ++ " is allowed!";
+admin_panel(#user{name=Name}) -&gt;
+    Name ++ " is not allowed".
+
+%% can extend user without problem
+adult_section(U = #user{}) when U#user.age &gt;= 18 -&gt;
+    %% Show stuff that can't be written in such a text
+    allowed;
+adult_section(_) -&gt;
+    %% redirect to sesame street site
+    forbidden.
+</pre>
+
+<p>The syntax to bind a variable to any field of a record is demonstrated in the <code>admin_panel/1</code> function (it's possible to bind variables to more than one field). An important thing to note about the <code>adult_section/1</code> function is that you need to do <code>SomeVar = #some_record{}</code> in order to bind the whole record to a variable. Then we do the compiling as usual:</p>
+
+<pre class="brush:eshell">
+10&gt; c(records).
+{ok,records}
+11&gt; rr(records).
+[robot,user]
+12&gt; records:admin_panel(#user{id=1, name="ferd", group=admin, age=96}).
+"ferd is allowed!"
+13&gt; records:admin_panel(#user{id=2, name="you", group=users, age=66}). 
+"you is not allowed"
+14&gt; records:adult_section(#user{id=21, name="Bill", group=users, age=72}).
+allowed
+15&gt; records:adult_section(#user{id=22, name="Noah", group=users, age=13}).
+forbidden
+</pre>
+
+<p>What this lets us see is how it is not necessary to match on all parts of the tuple or even know how many there are when writing the function: we can only match on the age or the group if that's what's needed and forget about all the rest of the structure. If we were to use a normal tuple, the function definition might need to look a bit like <code>function({record, _, _, ICareAboutThis, _, _}) -&gt; ...</code>. Then, whenever someone decides to add an element to the tuple, someone else (probably angry about it all) would need to go around and update all functions where that tuple is used.</p>
+
+<p>The following function illustrates how to update a record (they wouldn't be very useful otherwise):</p>
+
+<pre class="brush:erl">
+repairman(Rob) -&gt;
+    Details = Rob#robot.details,
+    NewRob = Rob#robot{details=["Repaired by repairman"|Details]},
+    {repaired, NewRob}.
+</pre>
+
+<p>And then:</p>
+
+<pre class="brush:eshell">
+16&gt; c(records).
+{ok,records}
+17&gt; records:repairman(#robot{name="Ulbert", hobbies=["trying to have feelings"]}).
+{repaired,#robot{name = "Ulbert",type = industrial,
+                 hobbies = ["trying to have feelings"],
+                 details = ["Repaired by repairman"]}}
+</pre>
+
+<p>And you can see my robot has been repaired. The syntax to update records is a bit special here. It looks like we're updating the record in place (<code>Rob#robot{Field=NewValue}</code>) but it's all compiler trickery to call the underlying <code><a class="docs" href="http://erldocs.com/17.3/erts/erlang.html#setelement/3" title="some other link to non-official doc">erlang:setelement/3</a></code> function.</p>
+
+<p>One last thing about records. Because they're pretty useful and code duplication is annoying, Erlang programmers frequently share records across modules with the help of <em>header files</em>. Erlang header files are pretty similar to their C counter-part: they're nothing but a snippet of code that gets added to the module as if it were written there in the first place. Create a file named <a class="source" href="static/erlang/records.hrl">records.hrl</a> with the following content:</p>
+
+<pre class="brush:erl">
+%% this is a .hrl (header) file.
+-record(included, {some_field,
+                   some_default = "yeah!",
+                   unimaginative_name}).
+</pre>
+
+<p>To include it in <a class="source" href="static/erlang/records.erl">records.erl</a>, just add the following line to the module:</p>
+
+<pre class="brush:erl">
+-include("records.hrl").
+</pre>
+
+<p>And then the following function to try it:</p>
+
+<pre class="brush:erl">
+included() -&gt; #included{some_field="Some value"}.
+</pre>
+
+<p>Now, try it as usual:</p>
+
+<pre class="brush:eshell">
+18&gt; c(records).
+{ok,records}
+19&gt; rr(records).
+[included,robot,user]
+20&gt; records:included().
+#included{some_field = "Some value",some_default = "yeah!",
+          unimaginative_name = undefined}
+</pre>
+
+<p>Hooray! That's about it for records; they're ugly but useful. Their syntax is not pretty, they're not much but a hack, but they're relatively important for the maintainability of your code.</p>
+
+<div class="note">
+    <p><strong>Note:</strong> You will often see open source software using the method shown here of having a project-wide <code>.hrl</code> file for records that are shared across all modules. While I felt obligated to document this use, I strongly recommend that you keep all record definitions local, within one module. If you want some other module to look at a record's innards, write functions to access its fields and keep its details as private as possible. This helps prevent name clashes, avoids problems when upgrading code, and just generally improves the readability and maintainability of your code.</p>
+</div> 
+
+<h3><a class="section" name="key-value-stores">Key-Value Stores</a></h3>
+
+<img class="right" src="static/img/key.png" width="134" height="59" alt="key and keyhole, another terrible pun" />
+
+<p>I've had you build a tree back a few chapters, and the use was to use it as a key-value store for an address book. That book sucked: we couldn't delete or convert it to anything useful. It was a good demonstration of recursion, but not much more. Now is the time to introduce you to a bunch of useful data structures and modules to store data under a certain key. I won't define what every function does nor go through all the modules. I will simply link to the doc pages. Consider me as someone responsible about 'raising awareness about key-value stores in Erlang' or something. Sounds like a good title. I just need one of these ribbons.</p>
+
+<p>For small amounts of data, there are basically two data structures that can be used. The first one is called a <em>proplist</em>. A proplist is any list of tuples of the form <code>[{Key,Value}]</code>. They're a weird kind of structure because there is no other rule than that. In fact the rules are so relaxed that the list can also contain boolean values, integers and whatever you want. We're rather interested by the idea of a tuple with a key and a value in a list here, though. To work with proplists, you can use the <a class="docs" href="http://erldocs.com/17.3/stdlib/proplists.html">proplists</a> module. It contains functions such as <code><a class="docs" href="http://erldocs.com/17.3/stdlib/proplists.html#delete/2" title="I'll have trouble finding more 'title' ideas">proplists:delete/2</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/proplists.html#get_value/2" title="do you 'get' the 'value' of these titles?">proplists:get_value/2</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/proplists.html#get_all_values/2" title="Really, all of them?">proplists:get_all_values/2</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/proplists.html#lookup/2" title="I'm proud of you">proplists:lookup/2</a></code> and <code><a class="docs" href="http://erldocs.com/17.3/stdlib/proplists.html#lookup_all/2" title="All of you!">proplists:lookup_all/2</a></code>.</p>
+
+<p>You'll notice there is no function to add or update an element of the list. This shows how loosely defined proplists are as a data structure. To get these functionalities, you must cons your element manually (<code>[NewElement|OldList]</code>) and use functions such as <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#keyreplace/4" title="It's a replacement for a real replacement function">lists:keyreplace/4</a></code>. Using two modules for one small data structure is not the cleanest thing, but because proplists are so loosely defined, they're often used to deal with configuration lists, and general description of a given item. Proplists are not exactly complete data structures. They're more of a common pattern that appears when using lists and tuples to represent some object or item; the proplists module is a bit of a toolbox over such a pattern.</p>
+
+<p>If you do want a more complete key-value store for small amounts of data, the <a class="docs" href="http://erldocs.com/17.3/stdlib/orddict.html">orddict</a> module is what you need. Orddicts (ordered dictionaries) are proplists with a taste for formality. Each key can be there once, the whole list is sorted for faster average lookup, etc. Common functions for the <acronym title="Create Read Update Delete">CRUD</acronym> usage include <code><a class="docs" href="http://erldocs.com/17.3/stdlib/orddict.html#store/3" title="a store when you can order dictionaries? not quite.">orddict:store/3</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/orddict.html#find/2" title="But you can find terrible puns there!">orddict:find/2</a></code> (when you do not know whether the key is in the dictionaries), <code><a class="docs" href="http://erldocs.com/17.3/stdlib/orddict.html#fetch/2" title="I won't do anything this time.">orddict:fetch/2</a></code> (when you know it is there or that it <strong>must</strong> be there) and <code><a class="docs" href="http://erldocs.com/17.3/stdlib/orddict.html#erase/2" title="Nevermore.">orddict:erase/2</a></code>.</p>
+
+<img class="left" src="static/img/dict.png" width="320" height="195" alt="A dictionary with the definition of 'Awesome' being 'it's you!'" title="Dictionary says: Awesome -- it's you!" />
+
+<p>Orddicts are a generally good compromise between complexity and efficiency up to about 75 elements (see <a class="source" href="static/erlang/keyval_benchmark.erl">my benchmark</a>). After that amount, you should switch to different key-value stores.</p>
+
+<p>There are basically two key-value structures/modules to deal with larger amounts of data: <a class="docs" href="http://erldocs.com/17.3/stdlib/dict.html">dicts</a> and <a class="docs" href="http://erldocs.com/17.3/stdlib/gb_trees.html">gb_trees</a>. Dictionaries have the same interface as orddicts: <code><a class="docs" href="http://erldocs.com/17.3/stdlib/dict.html#store/3" title="I can't hold any non-pun promise">dict:store/3</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/dict.html#find/2" title="I am but a man">dict:find/2</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/dict.html#fetch/2" title="Although technically I'm a website">dict:fetch/2</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/dict.html#erase/2" title="And I am also text.">dict:erase/2</a></code> and every other function, such as <code><a class="docs" href="http://erldocs.com/17.3/stdlib/dict.html#map/2" title="I was pretty tired at the time of this integration to html">dict:map/2</a></code> and <code><a class="docs" href="http://erldocs.com/17.3/stdlib/dict.html#fold/2" title="if only I could write/program myself a bed!">dict:fold/2</a></code> (pretty useful to work on the whole data structure!) Dicts are thus very good choices to scale orddicts up whenever it is needed.</p>
+
+<p>General Balanced Trees, on the other hand, have a bunch more functions leaving you more direct control over how the structure is to be used. There are basically two modes for gb_trees: the mode where you know your structure in and out (I call this the 'smart mode'), and the mode where you can't assume much about it (I call this one the 'naive mode'). In naive mode, the functions are <code><a class="docs" href="http://erldocs.com/17.3/stdlib/gb_trees.html#enter/3" title="I'm writing garbage in these titles">gb_trees:enter/3</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/gb_trees.html#lookup/2" title="not like there's much non-repetitive titles to have">gb_trees:lookup/2</a></code> and <code><a class="docs" href="http://erldocs.com/17.3/stdlib/gb_trees.html#delete_any/2" title="This is like reading between the lines">gb_trees:delete_any/2</a></code>. The related smart functions are <code><a class="docs" href="http://erldocs.com/17.3/stdlib/gb_trees.html#insert/3" title="Oh do I love vim macros">gb_trees:insert/3</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/gb_trees.html#get/2" title="they're saving me so much time!">gb_trees:get/2</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/gb_trees.html#update/3" title="Emacs couldn't do that.">gb_trees:update/3</a></code> and <code><a class="docs" href="http://erldocs.com/17.3/stdlib/gb_trees.html#delete/2" title="Of course it could. Did you get trolled?">gb_trees:delete/2</a></code>. There is also <code><a class="docs" href="http://erldocs.com/17.3/stdlib/gb_trees.html#map/2" title="This and the unit tests are the worst part of this.">gb_trees:map/2</a></code>, which is always a nice thing when you need it.</p>
+
+<p>The disadvantage of 'naive' functions over 'smart' ones is that because gb_trees are balanced trees, whenever you insert a new element (or delete a bunch), it might be possible that the tree will need to balance itself. This can take time and memory (even in useless checks just to make sure). The 'smart' function all assume that the key is present in the tree: this lets you skip all the safety checks and results in faster times.</p>
+
+<p>When should you use gb_trees over dicts? Well, it's not a clear decision. As the <a class="source" href="static/erlang/keyval_benchmark.erl">benchmark module</a> I have written will show, gb_trees and dicts have somewhat similar performances in many respects. However, the benchmark demonstrates that dicts have the best read speeds while the gb_trees tend to be a little quicker on other operations. You can judge based on your own needs which one would be the best.</p>
+
+<p>Oh and also note that while dicts have a fold function, gb_trees don't: they instead have an <em>iterator</em> function, which returns a bit of the tree on which you can call <code>gb_trees:next(Iterator)</code> to get the following values in order. What this means is that you need to write your own recursive functions on top of gb_trees rather than use a generic fold. On the other hand, gb_trees let you have quick access to the smallest and largest elements of the structure with <code><a class="docs" href="http://erldocs.com/17.3/stdlib/gb_trees.html#smallest/1" title="I hope you don't mind me distracting myself with this">gb_trees:smallest/1</a></code> and <code><a class="docs" href="http://erldocs.com/17.3/stdlib/gb_trees.html#largest/1" title="I'm also tanking search engine relevancy here!">gb_trees:largest/1</a></code>.</p>
+
+<p>I would therefore say that your application's needs is what should govern which key-value store to choose. Different factors such as how much data you've got to store, what you need to do with it and whatnot all have their importance. Measure, profile and benchmark to make sure.</p>
+
+<div class="note">
+    <p><strong>Note:</strong> some special key-value stores exist to deal with resources of different size. Such stores are <a class="docs" href="http://erldocs.com/17.3/stdlib/ets.html" title="ETS tables are pretty neat!">ETS tables</a>, <a class="docs" href="http://erldocs.com/17.3/stdlib/dets.html" title="so are these, but size limits make me sad!">DETS tables</a> and the <a class="docs" href="http://erldocs.com/17.3/mnesia/mnesia.html?search=mnesia&amp;i=0" title="this rules too, kind of.">mnesia database</a>. However, their use is strongly related to the concepts of multiple processes and distribution. Because of this, they'll only be approached later on. I'm leaving this as a reference to pique your curiosity and for those interested.</p>
+</div>
+
+<div class="note update">
+    <p><strong>Update:</strong><br />
+    Starting with version 17.0, the language supports a new native key-value data type, described in <a class="chapter" href="maps.html">Postscript: Maps</a>. They should be the new de-facto replacement for <code>dict</code>s.</p>
+</div>
+
+<h3><a class="section" name="arrays">Arrays</a></h3>
+
+<p>But what about code that requires data structures with nothing but numeric keys? Well for that, there are <a class="docs" href="http://erldocs.com/17.3/stdlib/array.html">arrays</a>. They allow you to access elements with numerical indices and to fold over the whole structure while possibly ignoring undefined slots.</p>
+
+<div class="note koolaid">
+	<p><strong>Don't drink too much kool-aid:</strong><br />
+	 Erlang arrays, at the opposite of their imperative counterparts, are not able to have such things as constant-time insertion or lookup. Because they're usually slower than those in languages which support destructive assignment and that the style of programming done with Erlang doesn't necessary lend itself too well to arrays and matrices, they are rarely used in practice.</p>
+
+    <p>Generally, Erlang programmers who need to do matrix manipulations and other uses requiring arrays tend to use concepts called <a class="docs" href="http://www.erlang.org/doc/tutorial/c_port.html">Ports</a> to let other languages do the heavy lifting, or <a class="docs" href="http://www.erlang.org/doc/tutorial/cnode.html">C-Nodes</a>, <a class="docs" href="http://www.erlang.org/doc/tutorial/c_portdriver.html" title="also named 'Port drivers'">Linked in drivers</a> and <a class="docs" href="http://erldocs.com/17.3/erts/erl_nif.html" title="Natively Implemented Functions">NIFs</a> (Experimental, R13B03+).</p>
+
+    <p>Arrays are also weird in the sense that they're one of the few data structures to be 0-indexed (at the opposite of tuples or lists), along with indexing in the <a class="docs" href="http://erldocs.com/17.3/stdlib/re.html">regular expressions module</a>. Be careful with them.</p>
+</div>
+
+<h3><a class="section" name="set-of-sets">A Set of Sets</a></h3>
+
+<img class="right" src="static/img/swingset.png" width="318" height="238" alt="a swingSET" title="Sometimes I lie awake in my bed at night. Then I think about the puns I make. And I cry with shame" />
+
+<p>If you've ever studied set theory in whatever mathematics class you have an idea about what sets can do. If you haven't, you might want to skip over this. However, I'll just say that sets are groups of unique elements that you can compare and operate on: find which elements are in two groups, in none of them, only in one or the other, etc. There are more advanced operations letting you define relations and operate on these relations and much more. I'm not going to dive into the theory (again, it's out of the scope of this book) so I'll just describe them as it is.</p>
+
+<p>There are 4 main modules to deal with sets in Erlang. This is a bit weird at first, but it makes more sense once you realize that it's because it was agreed by implementers that there was no 'best' way to build a set. The four modules are <a class="docs" href="http://erldocs.com/17.3/stdlib/ordets.html">ordsets</a>, <a class="docs" href="http://erldocs.com/17.3/stdlib/sets.html">sets</a>, <a class="docs" href="http://erldocs.com/17.3/stdlib/gb_sets.html">gb_sets</a> and <a class="docs" href="http://erldocs.com/17.3/stdlib/sofs.html">sofs</a> (sets of sets):</p>
+
+<dl>
+    <dt>ordsets</dt>
+    <dd>Ordsets are implemented as a sorted list. They're mainly useful for small sets, are the slowest kind of set, but they have the simplest and most readable representation of all sets. There are standard functions for them such as <code><a class="docs" href="http://erldocs.com/17.3/stdlib/ordsets.html#new/0" title="I hope at least someone reads these">ordsets:new/0</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/ordsets.html#is_element/2" title="or maybe I'm like the tooth fairy of html titles">ordsets:is_element/2</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/ordsets.html#add_element/2" title="You never see me, but here I am!">ordsets:add_element/2</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/ordsets.html#del_element/2" title="Have you noticed once you realize you can blink your eyes">ordsets:del_element/2</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/ordsets.html#union/1" title="then you can't stop thinking about how you blink them">ordsets:union/1</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/ordsets.html#intersection/1" title="blink... blink... blick...">ordsets:intersection/1</a></code>, and a bunch more.</dd>
+
+<dt>sets</dt>
+<dd>Sets (the module) is implemented on top of a structure really similar to the one used in <code>dict</code>. They implement the same interface as ordsets, but they're going to scale much better. Like dictionaries, they're especially good for read-intensive manipulations, like checking whether some element is part of the set or not.</dd>
+
+<dt>gb_sets</dt>
+<dd>Gb_sets themselves are constructed above a General Balanced Tree structure similar to the one used in the gb_trees module. gb_sets are to sets what gb_tree is to dict; an implementation that is faster when considering operations different than reading, leaving you with more control. While gb_sets implement the same interface as sets and ordsets, they also add more functions. Like gb_trees, you have smart vs. naive functions, iterators, quick access to the smallest and largest values, etc.</dd>
+
+<dt>sofs</dt>
+<dd>Sets of sets (sofs) are implemented with sorted lists, stuck inside a tuple with some metadata. They're the module to use if you want to have full control over relationships between sets, families, enforce set types, etc. They're really what you want if you need mathematics concept rather than 'just' groups of unique elements.</dd>
+</dl>
+
+<div class="note koolaid">
+	<p><strong>Don't drink too much kool-aid:</strong><br />
+	While such a variety can be seen as something great, some implementation details can be downright frustrating. As an example, gb_sets, ordsets and sofs all use the <code>==</code> operator to compare values: if you have the numbers <samp>2</samp> and <samp>2.0</samp>, they'll both end up seen as the same one.</p>
+
+    <p>However, sets (the module) uses the <code>=:=</code> operator, which means you can't necessarily switch over every implementation as you wish. There are cases where you need one precise behavior and at that point, you might lose the benefit of having multiple implementations.</p>
+</div>
+
+<p>It's a bit confusing to have that many options available. Björn Gustavsson, from the Erlang/OTP team and programmer of <a class="external" href="http://www.wings3d.com/" title="Impressive and unexpected work of Erlang">Wings3D</a> mainly suggests using gb_sets in most circumstances, using ordset when you need a clear representation that you want to process with your own code and 'sets' when you need the <code>=:=</code> operator (<a class="external" href="http://erlang.org/pipermail/erlang-questions/2010-March/050332.html">source</a>.)</p>
+
+<p>In any case, like for key-value stores, the best solution is usually to benchmark and see what fits your application better.</p>
+
+
+<h3><a class="section" name="directed-graphs">Directed Graphs</a></h3>
+
+<p>There is one other data structure that I want to mention here (not that there are not more than what's mentioned in this chapter, on the contrary): <a class="external" href="http://en.wikipedia.org/wiki/Directed_graph">directed graphs</a>. Again, this data structure is more for readers who already know the mathematical theory that goes with it.</p>
+
+<p>Directed graphs in Erlang are implemented as two modules, <a class="docs" href="http://erldocs.com/17.3/stdlib/digraph.html">digraph</a> and <a class="docs" href="http://erldocs.com/17.3/stdlib/digraph_utils">digraph_utils</a>. The digraph module basically allows the construction and modification of a directed graph: manipulating edges and vertices, finding paths and cycles, etc. On the other hand, digraph_utils allows you to navigate a graph (postorder, preorder), testing for cycles, arborescences or trees, finding neighbors, and so on.</p>
+
+<p>Because directed graphs are closely related to set theory, the 'sofs' module contains a few functions letting you convert <a class="docs" href="http://erldocs.com/17.3/stdlib/sofs.html#family_to_digraph/2">families to digraphs</a> and <a class="docs" href="http://erldocs.com/17.3/stdlib/sofs.html#digraph_to_family/2">digraphs to families</a>.</p>
+
+
+<h3><a class="section" name="queues">Queues</a></h3>
+
+<p>The <a class="docs" href="http://erldocs.com/17.3/stdlib/queue.html">queue module</a> implements a double-ended FIFO (<a class="external" href="http://en.wikipedia.org/wiki/FIFO_(computing)">First In, First Out</a>) queue:</p>
+
+<img class="center explanation" src="static/img/fifo.png" width="237" height="162" alt="Drawing representing the implementation of a functional queue" title="Total reuse from the 'Types or Lack Thereof' chapter!" />
+
+<p>They're implemented a bit as illustrated above: two lists (in this context, stacks) that allow to both append and prepend elements rapidly.</p>
+
+<p>The queue module basically has different functions in a mental separation into 3 interfaces (or APIs) of varying complexity, called 'Original API', 'Extended API' and 'Okasaki API':</p>
+
+<dl>
+    <dt>Original API</dt>
+    <dd>The original API contains the functions at the base of the queue concept, including: <code><a class="docs" href="http://erldocs.com/17.3/stdlib/queue.html#new/0" title="... blink... blink...">new/0</a></code>, for creating empty queues, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/queue.html#in/2" title="*sigh*">in/2</a></code>, for inserting new elements, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/queue.html#out/1" title="I'm not sure whether I prefer titles or papercuts">out/1</a></code>, for removing elements, and then functions to convert to lists, reverse the queue, look if a particular value is part of it, etc.</dd>
+
+    <dt>Extended API</dt>
+    <dd>The extended API mainly adds some introspection power and flexibility: it lets you do things such as looking at the front of the queue without removing the first element (see <code><a class="docs" href="http://erldocs.com/17.3/stdlib/queue.html#get/1" title="In French, 'queue' is the same as 'queue' and 'tail'">get/1</a></code> or <code><a class="docs" href="http://erldocs.com/17.3/stdlib/queue.html#peek/1" title="It is also slang for a male's reproductive organ. Peek/1.">peek/1</a></code>), removing elements without caring about them (<code><a class="docs" href="http://erldocs.com/17.3/stdlib/queue.html#drop/1" title="I've got nothing more to say">drop/1</a></code>), etc. These functions are not essential to the concept of queues, but they're still useful in general.</dd>
+
+    <dt>Okasaki API</dt>
+    <dd>The Okasaki API is a bit weird. It's derived from Chris Okasaki's <em><a class="external" href="http://books.google.ca/books?id=SxPzSTcTalAC&amp;lpg=PP1&amp;dq=chris%20okasaki%20purely%20functional%20data%20structures&amp;pg=PP1#v=onepage&amp;q=&amp;f=false">Purely Functional Data Structures</a></em>. The API provides operations similar to what was available in the two previous APIs, but some of the function names are written backwards and the whole thing is relatively peculiar. Unless you do know you want this API, I wouldn't bother with it.</dd>
+</dl>
+
+<p>You'll generally want to use queues when you'll need to ensure that the first item ordered is indeed the first one processed. So far, the examples I've shown mainly used lists as a accumulators that would then be reversed. In cases where you can't just do all the reversing at once and elements are frequently added, the queue module is what you want (well, you should test and measure first! Always test and measure first!)</p>
+
+
+<h3><a class="section" name="end-of-the-short-visit">End of the short visit</a></h3>
+
+<p>That's about it for the data structures trip of Erlang. Thank you for having kept your arms inside the vehicles the whole time. Of course, there are a few more data structures available than that to solve different problems. I've only covered those that you're likely to encounter or need the most given the strengths of general use cases of Erlang. I encourage you to explore the <a class="docs" href="http://www.erlang.org/doc/apps/stdlib/index.html">standard library</a> and the <a class="docs" href="http://www.erlang.org/doc/applications.html">extended one</a> too to find more information.</p>
+
+<p>You might be glad to learn that this completes our trip into sequential (functional) Erlang. I know a lot of people get in Erlang to see all the concurrency and processes and whatnot. It's understandable, given it's really where Erlang shines. Supervision trees, fancy error management, distribution, and more. I know I've been very impatient to write about these subjects, so I guess some readers were very impatient to read about them.</p>
+
+<p>However, I judged it made more sense to be comfortable with functional Erlang before moving on to concurrent Erlang. It will be easier to move on afterwards and focus on all the new concepts. Here we go!</p>
+
+<img class="center support" src="static/img/squid-concurrency.png" width="566" height="619" alt="The splash screen's squid riding a rocket towards concurrency" />
+				<ul class="navigation">
+											<li><a href="functionally-solving-problems.html" title="Previous chapter">&lt; Previous</a></li>
+										
+					<li><a href="contents.html" title="Index">Index</a></li>
+					
+											<li><a href="the-hitchhikers-guide-to-concurrency.html" title="Next chapter">Next &gt;</a></li>
+									</ul>
+			</div><!-- content -->
+			<div id="footer">
+				<a href="http://creativecommons.org/licenses/by-nc-nd/3.0/" title="Creative Commons License Details"><img src="static/img/cc.png" width="88" height="31" alt="Creative Commons Attribution Non-Commercial No Derivative License" /></a>
+				<p>Except where otherwise noted, content on this site is licensed under a Creative Commons Attribution Non-Commercial No Derivative License</p>
+			</div> <!-- footer -->
+		</div> <!-- wrapper -->
+		<div id="grass" />
+	<script type="text/javascript" src="static/js/shCore.js"></script>
+	<script type="text/javascript" src="static/js/shBrushErlang2.js%3F11"></script>
+	<script type="text/javascript">
+		SyntaxHighlighter.defaults.gutter = false;
+		SyntaxHighlighter.all();
+	</script>
+	</body>
+</html>

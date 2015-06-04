@@ -1,0 +1,244 @@
+<?xml version="1.0"?>
+<rss version="2.0">
+  <channel>
+    <title>Learn you some Erlang for great good!</title>
+    <link>http://learnyousomeerlang.com/</link>
+    <description>Learn you some Erlang for great good! An Erlang tutorial for beginners and others too.</description>
+    <language>en-us</language>
+    <pubDate>Wed, 09 Apr 2014 14:30:00 -0500</pubDate>
+    <lastBuildDate>Wed, 09 Apr 2014 14:30:00 -0500</lastBuildDate>
+    <ttl>20160</ttl>
+
+    <item>
+      <title>Postscript: Maps</title>
+      <link>http://learnyousomeerlang.com/maps</link>
+      <description>Oh hi. It's been a while. This is an add-on chapter, one that isn't yet part of the printed version of Learn You Some Erlang for great good! Why does this exist? Was the printed book a huge steaming pile of bad information? I hope not (though you can consult the errata to see how wrong it is). The reason for this chapter is that the Erlang zoo of data types has grown just a bit larger with the R17 release, and reworking the entire thing to incorporate the new type would be a lot of trouble. Things that changed include maps (a native dict type!), named anonymous functions (so they can be recursive), and new options for Inet sockets, to name a few. Notes have been peppered through the books where changes happened, but maps are major enough to warrant their own chapter. Enjoy!
+      </description>
+      <pubDate>Wed, 9 Apr 2014 14:30:00 -0500</pubDate>
+      <guid>http://learnyousomeerlang.com/maps</guid>
+    </item>
+    <item>
+      <title>Book available, and other updates</title>
+      <link>http://learnyousomeerlang.com/splash-book</link>
+      <description>Hi everyone who still follows this RSS feed even though the text was marked as done. I'm creating an event there to announce that Learn You Some Erlang for Great Good! is now available as a book from No Starch Press (http://nostarch/erlang). Moreover, the text of the LYSE website has gone under a lot of small changes and fixes in the last few months, mostly typoes, little bugs in implementations, and a few additions relative to new content coming up with new releases. I'll try to maintain the site up to date as the language evolves and keep it relevant. Thanks for reading!</description>
+      <pubDate>Thu, 10 Jan 2013 10:30:00 -0500</pubDate>
+      <guid>http://learnyousomeerlang.com/splash-book</guid>
+    </item>
+    <item>
+      <title>Type Specifications and Erlang</title>
+      <link>http://learnyousomeerlang.com/dialyzer</link>
+      <description>This is LYSE's final and last chapter. In this one, we learn how to use Dialyzer to type check our programs and get a few of static languages' advantages, but with a twist. Dialyzer uses success types, a type of inference that matches the realities of the language better.
+      </description>
+      <pubDate>Thu, 2 Aug 2012 08:30:00 -0400</pubDate>
+      <guid>http://learnyousomeerlang.com/dialyzer</guid>
+    </item>
+    <item>
+      <title>Mnesia And The Art of Remembering</title>
+      <link>http://learnyousomeerlang.com/mnesia</link>
+      <description>Using Common Test and a TDD-like approach, we learn how to use Mnesia, a database written in Erlang, storing data within your VM. It supports full distribution with replication, storage both in RAM and on disk, and all types of queries that made ETS useful wrapped inside transactions. This knowledge is then put to use by writing a Godfather-themed application to track friends and foes across various Erlang nodes.
+      </description>
+      <pubDate>Fri, 27 Apr 2012 08:30:00 -0400</pubDate>
+      <guid>http://learnyousomeerlang.com/mnesia</guid>
+    </item>
+    <item>
+      <title>Common Test For Uncommon Tests</title>
+      <link>http://learnyousomeerlang.com/common-test-for-uncommon-tests</link>
+      <description>Common Test from the bottom up. Common Test is a test framework for system testing and unit testing in Erlang, allowing basic tests to distributed tests. This chapter shows the basic functionalities required to write, read, and understand how Common Test works.
+      </description>
+      <pubDate>Thu, 8 Mar 2012 09:45:00 -0500</pubDate>
+      <guid>http://learnyousomeerlang.com/common-test-for-uncommon-tests</guid>
+    </item>
+    <item>
+      <title>Distributed OTP Applications</title>
+      <link>http://learnyousomeerlang.com/distributed-otp-applications</link>
+      <description>A chapter on how to use the built-in distribution features of OTP applications, allowing for a takeover and failover mechanism to be added to your application.
+      </description>
+      <pubDate>Mon, 23 Jan 2012 09:45:00 -0500</pubDate>
+      <guid>http://learnyousomeerlang.com/distributed-otp-applications</guid>
+    </item>
+    <item>
+      <title>Distribunomicon</title>
+      <link>http://learnyousomeerlang.com/distribunomicon</link>
+      <description>An introduction to distributed computing in the context of Erlang. Material such as the fallacies of distributed computing and the CAP theorem are taught to the reader in a zombie survival set-up. Lastly, all the basic BIFs and options to connect Erlang VMs in a distributed setting are shown.
+      </description>
+      <pubDate>Tue, 27 Dec 2011 10:35:00 -0500</pubDate>
+      <guid>http://learnyousomeerlang.com/distribunomicon</guid>
+    </item>
+    <item>
+      <title>Bears, ETS, Beets</title>
+      <link>http://learnyousomeerlang.com/ets</link>
+      <description>ETS is a memory-based database to store any kind of Erlang terms within the VM. We learn how to use it and then optimize our process registry to use it and be faster in general.
+      </description>
+      <pubDate>Wed, 30 Nov 2011 08:05:00 -0400</pubDate>
+      <guid>http://learnyousomeerlang.com/ets</guid>
+    </item>
+    <item>
+      <title>EUnited Nations Council</title>
+      <link>http://learnyousomeerlang.com/eunit</link>
+      <description>Because of practical necessities when codebases grow, this chapter shows how to to use EUnit, from its most basic uses to effectively testing some OTP code. This includes running tests, writing test generators, using fixtures, and testing a process registry server (OTP code!) to make sure it works fine.
+      </description>
+      <pubDate>Wed, 26 Oct 2011 09:05:00 -0400</pubDate>
+      <guid>http://learnyousomeerlang.com/eunit</guid>
+    </item>
+    <item>
+      <title>Buckets of Sockets</title>
+      <link>http://learnyousomeerlang.com/buckets-of-sockets</link>
+      <description>Going through socket programming in Erlang. We see how to use TCP and UDP sockets with the gen_udp and gen_tcp modules. Topics seen include rate limiting, IO lists, controlling processes and supervisors for TCP/UDP. For a practical aspect of it, we go through the implemention of sockersv, the text-based TCP socket server for Process Quest that can be used to communicate with Telnet for the RPG seen during last chapter.
+      </description>
+      <pubDate>Tue, 27 Sep 2011 08:45:00 -0400</pubDate>
+      <guid>http://learnyousomeerlang.com/buckets-of-sockets</guid>
+    </item>
+    <item>
+      <title>Leveling Up in The Process Quest</title>
+      <link>http://learnyousomeerlang.com/relups</link>
+      <description>Using a clone of Progress Quest written in Erlang, this chapter explains how to safely update the code while it's running, without dropping a single session. This makes use of some of our newly acquired knowledge of releases and some of the OTP material. This is one of the final steps to understanding OTP itself, and readers who internalize all the material seen so far should be able to consider themselves pretty advanced in the framework.
+      </description>
+      <pubDate>Fri, 09 Sep 2011 08:00:00 -0400</pubDate>
+      <guid>http://learnyousomeerlang.com/relups</guid>
+    </item>
+    <item>
+      <title>Finally showing releases</title>
+      <link>http://learnyousomeerlang.com/release-is-the-word</link>
+      <description>This is one of the really obscure while incredibly useful sections of OTP: how to package OTP applications as releases. Making releases with OTP tools is somewhat a black art because the standard documentation is more of a reference than a tutorial. Hopefully this chapter will make light of OTP releases built with both Systools and Reltool. We'll be packaging our erlcount application and its dependencies in a way that makes them fully distributable (as in letting other people install and run stuff). Moreover, the chapter contains a few recipes that should be helpful for other applications than the ones I'm using as demos.
+      </description>
+      <pubDate>Thu, 04 Aug 2011 15:00:00 -0400</pubDate>
+      <guid>http://learnyousomeerlang.com/release-is-the-word</guid>
+    </item>
+    <item>
+      <title>Full throttle on OTP Apps</title>
+      <link>http://learnyousomeerlang.com/building-otp-applications</link>
+      <description>We kill a two-month hiatus with two chapters on OTP applications. The first one (Building OTP Applications) aims to show the basic concepts behind OTP applications by packaging our process pool into the standard OTP structure. The second one (The Count of Applications) shows how to build something with more than one app, by using the ppool app to run regular expressions on a fixed number of files at once, grepping our way through Erlang code.
+      </description>
+      <pubDate>Wed, 22 Jun 2011 08:00:00 -0400</pubDate>
+      <guid>http://learnyousomeerlang.com/building-otp-applications</guid>
+    </item>
+    <item>
+      <title>Building an Application With OTP</title>
+      <link>http://learnyousomeerlang.com/building-applications-with-otp</link>
+      <description>This chapter lets us make practical use of the OTP behaviours seen so far. We do this by writing a process pool application that will let us handle resources and tasks. We explore ideas behind process trees, onion layer theories for processes and general views of how OTP can be used to write software.
+      </description>
+      <pubDate>Fri, 29 Apr 2011 08:00:00 -0400</pubDate>
+      <guid>http://learnyousomeerlang.com/building-applications-with-otp</guid>
+    </item>
+    <item>
+      <title>Who Supervises The Supervisors?</title>
+      <link>http://learnyousomeerlang.com/supervisors</link>
+      <description>Right in time before the Bay Area Erlang Conference, the supervisors make their place in Learn You Some Erlang. We see how to set up an OTP supervisor, the restart strategies available, how to write children specifications and have a little demonstration where a band manager takes pleasure at firing band members.
+      </description>
+      <pubDate>Fri, 18 Mar 2011 07:30:00 -0500</pubDate>
+      <guid>http://learnyousomeerlang.com/supervisors</guid>
+    </item>
+    <item>
+      <title>Event Handlers</title>
+      <link>http://learnyousomeerlang.com/event-handlers</link>
+      <description>Event handlers are one of the most underappreciated behaviours available in OTP (generally only used for alarms and loggers). In this chapter, we see them from a broader angle. We'll be seeing the principles behind event handlers, their generic OTP form with gen_event, and then how event managers and handlers can be used in the context of an Olympic curling game where we need to react to a bunch of events happening as we go.
+      </description>
+      <pubDate>Tue, 15 Feb 2011 08:30:00 -0400</pubDate>
+      <guid>http://learnyousomeerlang.com/event-handlers</guid>
+    </item>
+    <item>
+      <title>Rage Against The Finite-State Machines</title>
+      <link>http://learnyousomeerlang.com/finite-state-machines</link>
+      <description>Rage Against The Finite-State Machines introduces the reader to the concept of finite-state machines and how they're generalised in the OTP framework. We get to write an asynchronous concurrent protocol for a trading system for items between two players for a fictive game. We then implement the protocol by using the gen_fsm behaviour in the OTP way.
+      </description>
+      <pubDate>Tue, 21 Dec 2010 08:30:00 -0400</pubDate>
+      <guid>http://learnyousomeerlang.com/finite-state-machines</guid>
+    </item>
+    <item>
+      <title>What is OTP and Clients and Servers</title>
+      <link>http://learnyousomeerlang.com/what-is-otp</link>
+      <description>Two new chapters, 'What is OTP?' and 'Clients and Servers'. In the first one, the basic ideas behind the OTP framework are explained through the abstraction of a basic client-server pattern into generic and specific components. The latter, the abstraction is pushed further by using the OTP gen_server behaviour to get things going.
+      </description>
+      <pubDate>Tue, 2 Nov 2010 08:30:00 -0400</pubDate>
+      <guid>http://learnyousomeerlang.com/what-is-otp</guid>
+    </item>
+    <item>
+      <title>Designing a Concurrent Application</title>
+      <link>http://learnyousomeerlang.com/designing-a-concurrent-application</link>
+      <description>In this chapter, we write a short concurrent application while reviwing Erlang concurrency primitives: processes, links, monitors, hot code loading and message passing. The process acts as a primer before OTP and a general overview of how to plan a concurrent application.
+      </description>
+      <pubDate>Mon, 13 Sep 2010 08:30:00 -0400</pubDate>
+      <guid>http://learnyousomeerlang.com/designing-a-concurrent-application</guid>
+    </item>
+    <item>
+      <title>Errors and Processes</title>
+      <link>http://learnyousomeerlang.com/errors-and-processes</link>
+      <description>Errors and Processes might be the last chapter released before Learn You Some Erlang hits its one year mark (see: http://ferd.ca/learn-you-some-erlang-a-year-in.html). Thanks to all dedicated readers and reviewers. This chapter covers the building blocks of error management with concurrent Erlang: linking processes together, handling different signals sent between processes when they crash, monitoring actors and naming them. This should be the last material required before we build a real concurrent application in Erlang.
+      </description>
+      <pubDate>Thu, 29 Jul 2010 08:30:00 -0400</pubDate>
+      <guid>http://learnyousomeerlang.com/errors-and-processes</guid>
+    </item>
+    <item>
+      <title>More On Multiprocessing</title>
+      <link>http://learnyousomeerlang.com/more-on-multiprocessing</link>
+      <description>This chapter's a bit of an extension on the practical aspects of the Hitchhiker's Guide to Concurrency. New multiprocessing and concurrent aspects of Erlang are seen, including how to hold state in processes, useful abstractions when passing messages, how to handle timeouts and then selective receives for prioritizing messages. I'm publishing this chapter in English on the night of our French-Canadian national holiday, so enjoy!
+      </description>
+      <pubDate>Wed, 23 Jun 2010 20:00:00 -0400</pubDate>
+      <guid>http://learnyousomeerlang.com/more-on-multiprocessing</guid>
+    </item>
+    <item>
+      <title>The Hitchhiker's Guide to Concurrency</title>
+      <link>http://learnyousomeerlang.com/the-hitchhikers-guide-to-concurrency</link>
+      <description>I was a bit slow to produce this chapter, but I'll blame that on my laptop dying on me and playoffs Hockey (watching a game as I'm writing this!) Anyway, this is the first chapter to really talk about Erlang's concurrency. Because of this, I'm taking a theoretical approach and visiting the language's history a little bit, explaining the rationale and doing a quick overview of how processes work in Erlang. I also take a look at the concepts of concurrency and parallelism to make sure everyone will be on the same level no matter what their background is. I also show the basic building blocks of concurrent Erlang: spawning processes, sending messages and then receiving them.
+      </description>
+      <pubDate>Fri, 21 May 2010 09:30:00 -0400</pubDate>
+      <guid>http://learnyousomeerlang.com/the-hitchhikers-guide-to-concurrency</guid>
+    </item>
+    <item>
+      <title>A Short Visit to Common Data Structures</title>
+      <link>http://learnyousomeerlang.com/a-short-visit-to-common-data-structures</link>
+      <description>Chances are you now understand the functional subset of Erlang pretty well and could read many programs without a problem. However, I still feel like there's a few things missing. In this last chapter about the functional subset of Erlang, I cover concepts such as records, key-value stores, sets and other data structures that are part of the standard library.
+      </description>
+      <pubDate>Mon, 12 Apr 2010 20:00:00 -0400</pubDate>
+      <guid>http://learnyousomeerlang.com/a-short-visit-to-common-data-structures</guid>
+    </item>
+    <item>
+      <title>Functionally Solving Problems in Erlang</title>
+      <link>http://learnyousomeerlang.com/functionally-solving-problems</link>
+      <description>A new chapter arrives. This one is about putting to practice what was seen in Learn You Some Erlang until now. The problems are borrowed from Learn You A Haskell and are about implementing a Reverse Polish Notation calculator with pattern matching and finding the shortest path from Heathrow to London. Hopefully this chapter will help those having trouble thinking in a functional manner to solve problems.
+      </description>
+      <pubDate>Mon, 15 Mar 2010 20:30:00 -0400</pubDate>
+      <guid>http://learnyousomeerlang.com/functionally-solving-problems</guid>
+    </item>
+    <item>
+      <title>Errors and Exceptions</title>
+      <link>http://learnyousomeerlang.com/errors-and-exceptions</link>
+      <description>Erlang being a language built for high reliability, it is natural for it to have exceptions. This chapter focuses on how to handle and raise exceptions in the functional subset of Erlang. I go over compile-time errors and warning, run-time errors, the difference between errors, exits and throws, the different constructs to handle these and then finally, an example of how to use throws for non-local returns.</description>
+      <pubDate>Tue, 2 Feb 2010 10:30:00 -0500</pubDate>
+      <guid>http://learnyousomeerlang.com/errors-and-exceptions</guid>
+    </item>
+    <item>
+      <title>Higher Order Functions</title>
+      <link>http://learnyousomeerlang.com/higher-order-functions</link>
+      <description>Time for another chapter, this time I'm covering higher order functions. I'm showing the syntax of anonymous functions, how to use them. Then, as promised in the recursion chapter, we're going to see how to use higher order functions and anonymous functions to build abstractions letting us avoid worrying about recursion. Lambdas, funs, maps, filters and folds are on the menu!</description>
+      <pubDate>Thu, 17 Dec 2009 08:30:00 -0400</pubDate>
+      <guid>http://learnyousomeerlang.com/higher-order-functions</guid>
+    </item>
+    <item>
+      <title>Learn You Some Recursion</title>
+      <link>http://learnyousomeerlang.com/recursion</link>
+      <description>I've added a new chapter to Learn You Some Erlang. This one's about recursion and tail recursion and explains how to work in a language without looping constructs of any kind. We visit common operations such as calculating factorials (yeah, every functional programming tutorials does that), finding the length of a list, reversing, slicing and zipping lists. I also added an example in, which is about building quicksort in 2-3 different manners and another one about recursively reading and building binary trees in order to construct a small address book.
+
+As for additional changes, I've completely rewritten my Erlang plugin for SyntaxHighlighter making the code much easier to read (hopefully).
+
+I should also add that I feel a bit sorry for not updating the site faster this time, providing a single chapter when I usually get 3 out in the same time period. I've been busy with work projects and did not have enough energy to do as much stuff. I also feel recursion is a touchy subject to teach; it needs to be done right, be very simple without being too patronizing or plainly boring, etc. So I've taken more time to make it as good as possible.</description>
+      <pubDate>Fri, 30 Oct 2009 22:30:00 -0400</pubDate>
+      <guid>http://learnyousomeerlang.com/recursion</guid>
+    </item>
+    <item>
+      <title>Three new chapters available</title>
+      <link>http://learnyousomeerlang.com/content</link>
+      <description>The next three chapters of the tutorial are online: Modules, Syntax in Functions and Types (or lack thereof). We'll see how to write modules and the functions that go in them, compile our code for the Erlang VM. Then functions are pushed a bit further: we explore more pattern matching, define what guards are, learn to write conditional expressions and to convert types.</description>
+      <pubDate>Tue, 22 Sep 2009 23:30:00 -0400</pubDate>
+      <guid>http://learnyousomeerlang.com/modules</guid>
+    </item>
+    <item>
+      <title>Learn You Some Erlang launches!</title>
+      <link>http://learnyousomeerlang.com/content</link>
+      <description>The first three chapters of the tutorial are online: Introduction, Starting Out and Starting Out (for real). We describe Erlang, install the language and VM, visit basic functions of the shell and learn about most of the basic data types of the language.</description>
+      <pubDate>Mon, 17 Aug 2009 20:00:00 -0400</pubDate>
+      <guid>http://learnyousomeerlang.com/content</guid>
+    </item>
+ 
+  </channel>
+</rss>

@@ -1,0 +1,813 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en" dir="ltr">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<meta http-equiv="Content-Style-Type" content="text/css" />
+		<meta name="keywords" content="Erlang, concurrent, message passing, protocol, process, monitor, crash, link, actor, hot code loading" />
+		<meta name="description" content="Writing a short concurrent application with Erlang primitives: processes, links, monitors, hot code loading and message passing are revisited. A primer before OTP." />
+        <meta name="google-site-verification" content="mi1UCmFD_2pMLt2jsYHzi_0b6Go9xja8TGllOSoQPVU" />
+		<link rel="stylesheet" type="text/css" href="static/css/screen.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/sh/shCore.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/sh/shThemeLYSE2.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/print.css" media="print" />
+		<link href="rss" type="application/rss+xml" rel="alternate" title="LYSE news" />
+		<link rel="icon" type="image/png" href="favicon.ico" />
+		<link rel="apple-touch-icon" href="static/img/touch-icon-iphone.png" />
+		<link rel="apple-touch-icon" sizes="72x72" href="static/img/touch-icon-ipad.png" />
+		<link rel="apple-touch-icon" sizes="114x114" href="static/img/touch-icon-iphone4.png" />
+		<title>Designing a Concurrent Application | Learn You Some Erlang for Great Good!</title>
+	</head>
+	<body>
+		<div id="wrapper">
+			<div id="header">
+				<h1>Learn you some Erlang</h1>
+				<span>for great good!</span>
+			</div> <!-- header -->
+			<div id="menu">
+				<ul>
+					<li><a href="content.html" title="Home">Home</a></li>
+					<li><a href="faq.html" title="Frequently Asked Questions">FAQ</a></li>
+					<li><a href="rss" title="Latest News">RSS</a></li>
+					<li><a href="static/erlang/learn-you-some-erlang.zip" title="Source Code">Code</a></li>
+				</ul>
+			</div><!-- menu -->
+			<div id="content">
+            <div class="noscript"><noscript>Hey there, it appears your Javascript is disabled. That's fine, the site works without it. However, you might prefer reading it with syntax highlighting, which requires Javascript!</noscript></div>
+<h2>Designing a Concurrent Application</h2>
+
+<img class="right" src="static/img/clock.png" width="224" height="232" alt="An alarm clock" title="Okay, this 'rock around the clock' pun is terrible" />
+
+<p>All fine and dandy. You understand the concepts, but then again, all we've had since the beginning of the book were toy examples: calculators, trees, Heathrow to London, etc. It's time for something more fun and more educational. We'll write a small application in concurrent Erlang. The application's going to be small and line-based, but still useful and moderately extensible.</p>
+
+<p>I'm a somewhat unorganized person. I'm lost with homework, things to do around the apartment, this book, work, meetings, appointments, etc. I end up having a dozen of lists everywhere with tasks I still forget to do or look over. Hopefully you still need reminders of what to do (but you don't have a mind that wanders as much as mine does), because we're going to write one of these event reminder applications that prompt you to do stuff and remind you about appointments.</p>
+
+
+<h3><a class="section" name="understanding-the-problem">Understanding the Problem</a></h3>
+
+<p>The first step is to know what the hell we're doing. "A reminder app," you say. "Of course," I say. But there's more. How do we plan on interacting with the software? What do we want it to do for us? How do we represent the program with processes? How do we know what messages to send?</p>
+
+<p>As the quote goes, <cite title="Edward V. Berard">"Walking on water and developing software from a specification are easy if both are frozen."</cite> So let's get a spec and stick to it. Our little piece of software will allow us to do the following:</p>
+
+<ul>
+	<li>Add an event. Events contain a deadline (the time to warn at), an event name and a description.</li>
+	<li>Show a warning when the time has come for it.</li>
+	<li>Cancel an event by name.</li>
+	<li>No persistent disk storage. It's not needed to show the architectural concepts we'll see. It will suck for a real app, but I'll instead just show where it could be inserted if you wanted to do it and also point to a few helpful functions.</li>
+	<li>Given we have no persistent storage, we have to be able to update the code while it is running.</li>
+	<li>The interaction with the software will be done via the command line, but it should be possible to later extend it so other means could be used (say a GUI, web page access, instant messaging software, email, etc.)</li>
+</ul>
+
+<p>Here's the structure of the program I picked to do it:</p>
+
+<img class="center explanation" src="static/img/reminder-structure.png" width="286" height="160" alt="5 components are there: A client (1) that can communicate with an event server (2) and 3 little circles labeled 'x', 'y', and 'z'. All three are linked to the event server." />
+
+<p>Where the client, event server and x, y and z are all processes. Here's what each of them can do:</p>
+
+<h4>Event Server</h4>
+<ul>
+	<li>Accepts subscriptions from clients</li>
+	<li>Forwards notifications from event processes to each of the subscribers</li>
+	<li>Accepts messages to add events (and start the x, y, z processes needed)</li>
+	<li>Can accept messages to cancel an event and subsequently kill the event processes</li>
+	<li>Can be terminated by a client</li>
+	<li>Can have its code reloaded via the shell.</li>
+</ul>
+
+<h4>client</h4>
+<ul>
+	<li>Subscribes to the event server and receive notifications as messages. As such it should be easy to design a bunch of clients all subscribing to the event server. Each of these could potentially be a gateway to the different interaction points mentioned above (GUI, web page, instant messaging software, email, etc.)</li>
+	<li>Asks the server to add an event with all its details</li>
+	<li>Asks the server to cancel an event</li>
+	<li>Monitors the server (to know if it goes down)</li>
+	<li>Shuts down the event server if needed</li>
+</ul>
+
+<h4>x, y and z:</h4>
+<ul>
+	<li>Represent a notification waiting to fire (they're basically just timers linked to the event server)</li>
+	<li>Send a message to the event server when the time is up</li>
+	<li>Receive a cancellation message and die</li>
+</ul>
+
+<p>Note that all clients (IM, mail, etc. which are not implemented in this book) are notified about all events, and a cancellation is not something to warn the clients about. Here the software is written for you and me, and it's assumed only one user will run it.</p>
+
+<p>Here's a more complex graph with all the possible messages:</p>
+
+<img class="center explanation" src="static/img/reminder-bubbles-and-arrows.png" width="609" height="335" alt="A visual representation of the list above" />
+
+<p>This represents every process we'll have. By drawing all the arrows there and saying they're messages, we've written a high level protocol, or at least its skeleton.</p>
+
+<p>It should be noted that using one process per event to be reminded of is likely going to be overkill and hard to scale in a real world application. However, for an application you are going to be the sole user of, this is good enough. A different approach could be using functions such as <a class="docs" href="http://erldocs.com/17.3/stdlib/timer.html#send_after/2">timer:send_after/2-3</a> to avoid spawning too many processes.</p>
+
+<h3><a class="section" name="defining-the-protocol">Defining the Protocol</a></h3>
+
+
+<p>Now that we know what each component has to do and to communicate, a good idea would be to make a list of all messages that will be sent and specify what they will look like. Let's first start with the communication between the client and the event server:</p>
+
+<img class="center explanation" src="static/img/reminder-subscribe.png" width="486" height="163" alt="The client can send {subscribe, Self} to the event server, which can reply only with 'ok'. Note that both the client and server monitor eachother" />
+
+<p>Here I chose to use two monitors because there is no obvious dependency between the client and the server. I mean, of course the client doesn't work without the server, but the server can live without a client. A link could have done the job right here, but because we want our system to be extensible with many clients, we can't assume other clients will all want to crash when the server dies. And neither can we assume the client can really be turned into a system process and trap exits in case the server dies. Now to the next message set:</p>
+
+<img class="center explanation" src="static/img/reminder-add.png" width="507" height="127" alt="The client can send the message {add, Name, Description, TimeOut}, to which the server can either reply 'ok' or {error, Reason}" />
+
+<p>This adds an event to the event server. A confirmation is sent back under the form of the <code>ok</code> atom, unless something goes wrong (maybe the TimeOut is in the wrong format.) The inverse operation, removing events, can be done as follows:</p>
+
+<img class="center explanation" src="static/img/reminder-remove.png" width="393" height="137" alt="The client can send the message {cancel, Name} and the event server should return ok as an atom" />
+
+<p>The event server can then later send a notification when the event is due:</p>
+
+<img class="center explanation" src="static/img/reminder-cs-done.png" width="472" height="114" alt="The event server forwards a {done, Name, Description} message to the client" />
+
+<p>Then we only need the two following special cases for when we want to shut the server down or when it crashes:</p>
+
+<img class="center explanation" src="static/img/reminder-shutdown.png" width="442" height="220" alt="When the client sends the 'shutdown' atom to the event server, it dies and returns {'DOWN', Ref, process, Pid, shutdown} because it was monitored" />
+
+<p>No direct confirmation is sent when the server dies because the monitor will already warn us of that. That's pretty much all that will happen between the client and the event server. Now for the messages between the event server and the event processes themselves.</p>
+
+<p>A thing to note here before we start is that it would be very useful to have the event server linked to the events. The reason for this is that we want all events to die if the server does: they make no sense without it.</p>
+
+<p>Ok, so back to the events. When the event server starts them, it gives each of them a special identifier (the event's name). Once one of these events' time has come, it needs to send a message saying so:</p>
+
+<img class="center explanation" src="static/img/reminder-es-done.png" width="378" height="133" alt="An event can send {done, Id} to the event server" />
+
+<p>On the other hand, the event has to watch for cancel calls from the event server:</p>
+
+<img class="center explanation" src="static/img/reminder-cancel.png" width="386" height="130" alt="The server sends 'cancel' to an event, which replies with 'ok'" />
+
+<p>And that should be it. One last message will be needed for our protocol, the one that lets us upgrade the server:</p>
+
+<img class="center explanation" src="static/img/reminder-code-change.png" width="426" height="139" alt="the event server has to accept a 'code_change' message from the shell" />
+
+<p>No reply is necessary. We'll see why when we actually program that feature and you'll see it makes sense.</p>
+
+<p>Having both the protocol defined and the general idea of how our process hierarchy will look in place, we can actually start working on the project.</p>
+
+
+<h3><a class="section" name="lay-them-foundations">Lay Them Foundations</a></h3>
+
+<img class="right" src="static/img/cement.png" width="364" height="203" alt="A cement truck" />
+
+<p>To begin with it all, we should lay down a standard Erlang directory structure, which looks like this:</p>
+
+<pre class="expand">
+ebin/
+include/
+priv/
+src/
+</pre>
+
+<p>The <code>ebin/</code> directory is where files will go once they are compiled. The <code>include/</code> directory is used to store <code>.hrl</code> files that are to be included by other applications; the private <code>.hrl</code> files are usually just kept inside the <code>src/</code> directory. The <code>priv/</code> directory is used for executables that might have to interact with Erlang, such as specific drivers and whatnot. We won't actually use that directory for this project. Then the last one is the <code>src/</code> directory, where all <code>.erl</code> files stay.</p>
+
+<p>In standard Erlang projects, this directory structure can vary a little. A <code>conf/</code> directory can be added for specific configuration files, <code>doc/</code> for documentation and <code>lib/</code> for third party libraries required for your application to run. Different Erlang product on the market often use different names than these, but the four ones mentioned above usually stay the same given they're part of the <a class="docs" href="http://www.erlang.org/doc/design_principles/applications.html#id71171" title="Reference page only, don't expect to understand everything out of it">standard OTP practices</a>.</p>
+
+<h3><a class="section" name="an-event-module">An Event Module</a></h3>
+
+<p>Get into the <code>src/</code> directory and start an <a class="source" href="static/erlang/event.erl">event.erl</a> module, which will implement the x, y and z events in the earlier drawings. I'm starting with this module because it's the one with the fewest dependencies: we'll be able to try to run it without needing to implement the event server or client functions.</p>
+
+<p>Before really writing code, I have to mention that the protocol is incomplete. It helps represent what data will be sent from process to process, but not the intricacies of it: how the addressing works, whether we use references or names, etc. Most messages will be wrapped under the form <code>{Pid, Ref, Message}</code>, where <var>Pid</var> is the sender and <var>Ref</var> is a unique message identifier to help know what reply came from who. If we were to send many messages before looking for replies, we would not know what reply went with what message without a reference.</p>
+
+<p>So here we go. The core of the processes that will run <code>event.erl</code>'s code will be the function <code>loop/1</code>, which will look a bit like the following skeleton if you remember the protocol:</p>
+
+<pre class="brush:erl">
+loop(State) -&gt;
+    receive
+        {Server, Ref, cancel} -&gt;
+            ...
+    after Delay -&gt;
+        ...
+    end.
+</pre>
+
+<p>This shows the timeout we have to support to announce an event has come to term and the way a server can call for the cancellation of an event. You'll notice a variable <var>State</var> in the loop. The <var>State</var> variable will have to contain data such as the timeout value (in seconds) and the name of the event (in order to send the message <code>{done, Id}</code>.) It will also need to know the event server's pid in order to send it notifications.</p>
+
+<p>This is all stuff that's fit to be held in the loop's state. So let's declare a <code>state</code> record on the top of the file:</p>
+
+<pre class="brush:erl">
+-module(event).
+-compile(export_all).
+-record(state, {server,
+                name="",
+                to_go=0}).
+</pre>
+
+<p>With this state defined, it should be possible to refine the loop a bit more:</p>
+
+<pre class="brush:erl">
+loop(S = #state{server=Server}) -&gt;
+    receive
+        {Server, Ref, cancel} -&gt;
+            Server ! {Ref, ok}
+    after S#state.to_go*1000 -&gt;
+        Server ! {done, S#state.name}
+    end.
+</pre>
+
+<p>Here, the multiplication by a thousand is to change the <code>to_go</code> value from seconds to milliseconds.</p>
+
+<div class="note koolaid">
+	<p><strong>Don't drink too much Kool-Aid:</strong><br />
+	Language wart ahead! The reason why I bind the variable 'Server' in the function head is because it's used in pattern matching in the receive section. Remember, <a class="chapter" href="a-short-visit-to-common-data-structures.html#records">records are hacks!</a> The expression <code>S#state.server</code> is secretly expanded to <code>element(2, S)</code>, which isn't a valid pattern to match on.</p>
+	
+	<p>This still works fine for <code>S#state.to_go</code> after the <code>after</code> part, because that one can be an expression left to be evaluated later.</p>
+</div>
+
+<p>Now to test the loop:</p>
+<pre class="brush:eshell">
+6&gt; c(event).
+{ok,event}
+7&gt; rr(event, state).
+[state]
+8&gt; spawn(event, loop, [#state{server=self(), name="test", to_go=5}]).
+&lt;0.60.0&gt;
+9&gt; flush().
+ok
+10&gt; flush().
+Shell got {done,"test"}
+ok
+11&gt; Pid = spawn(event, loop, [#state{server=self(), name="test", to_go=500}]).
+&lt;0.64.0&gt;
+12&gt; ReplyRef = make_ref().
+#Ref&lt;0.0.0.210&gt;
+13&gt; Pid ! {self(), ReplyRef, cancel}.
+{&lt;0.50.0&gt;,#Ref&lt;0.0.0.210&gt;,cancel}
+14&gt; flush().
+Shell got {#Ref&lt;0.0.0.210&gt;,ok}
+ok
+</pre>
+
+<p>Lots of stuff to see here. Well first of all, we import the record from the event module with <code>rr(Mod)</code>. Then, we spawn the event loop with the shell as the server (<code>self()</code>). This event should fire after 5 seconds. The 9th expression was run after 3 seconds, and the 10th one after 6 seconds. You can see we did receive the <code>{done, "test"}</code> message on the second try.</p>
+
+<p>Right after that, I try the cancel feature (with an ample 500 seconds to type it). You can see I created the reference, sent the message and got a reply with the same reference so I know the <code>ok</code> I received was coming from this process and not any other on the system.</p>
+
+<p>The reason why the cancel message is wrapped with a reference but the <code>done</code> message isn't is simply because we don't expect it to come from anywhere specific (any place will do, we won't match on the receive) nor should we want to reply to it. There's another test I want to do beforehand. What about an event happening next year?</p>
+<pre class="brush:eshell">
+15&gt; spawn(event, loop, [#state{server=self(), name="test", to_go=365*24*60*60}]).
+&lt;0.69.0&gt;
+16&gt; 
+=ERROR REPORT==== DD-MM-YYYY::HH:mm:SS ===
+Error in process &lt;0.69.0&gt; with exit value: {timeout_value,[{event,loop,1}]}
+</pre>
+
+<p>Ouch. It seems like we hit an implementation limit. It turns out Erlang's timeout value is limited to about 50 days in milliseconds. It might not be significant, but I'm showing this error for three reasons:</p>
+
+<ol>
+	<li>It bit me in the ass when writing the module and testing it, halfway through the chapter.</li>
+	<li>Erlang is certainly not perfect for every task and what we're seeing here is the consequences of using timers in ways not intended by the implementers.</li>
+	<li>That's not really a problem; let's work around it.</li>
+</ol>
+
+<p>The fix I decided to apply for this one was to write a function that would split the timeout value into many parts if turns out to be too long. This will request some support from the <code>loop/1</code> function too. So yeah, the way to split the time is basically divide it in equal parts of 49 days (because the limit is about 50), and then put the remainder with all these equal parts. The sum of the list of seconds should now be the original time:</p>
+
+<pre class="brush:erl">
+%% Because Erlang is limited to about 49 days (49*24*60*60*1000) in
+%% milliseconds, the following function is used
+normalize(N) -&gt;
+    Limit = 49*24*60*60,
+    [N rem Limit | lists:duplicate(N div Limit, Limit)].
+</pre>
+
+<p>The function <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#duplicate/2" title="THE MAGICAL LIST THAT CAN DUPLICATE ITSELF">lists:duplicate/2</a></code> will take a given expression as a second argument and reproduce it as many times as the value of the first argument (<code>[a,a,a] = lists:duplicate(3, a)</code>). If we were to send <code>normalize/1</code> the value <code>98*24*60*60+4</code>, it would return <code>[4,4233600,4233600]</code>. The <code>loop/1</code> function should now look like this to accommodate the new format:</p>
+
+<pre class="brush:erl">
+%% Loop uses a list for times in order to go around the ~49 days limit
+%% on timeouts.
+loop(S = #state{server=Server, to_go=[T|Next]}) -&gt;
+    receive
+        {Server, Ref, cancel} -&gt;
+            Server ! {Ref, ok}
+    after T*1000 -&gt;
+        if Next =:= [] -&gt;
+            Server ! {done, S#state.name};
+           Next =/= [] -&gt;
+            loop(S#state{to_go=Next})
+        end
+    end.
+</pre>
+
+<p>You can try it, it should work as normal, but now support years and years of timeout. How this works is that it takes the first element of the <code>to_go</code> list and waits for its whole duration. When this is done, the next element of the timeout list is verified. If it's empty, the timeout is over and the server is notified of it. Otherwise, the loop keeps going with the rest of the list until it's done.</p>
+
+<p>It would be very annoying to have to manually call something like <code>event:normalize(N)</code> every time an event process is started, especially since our workaround shouldn't be of concern to programmers using our code. The standard way to do this is to instead have an <code>init</code> function handling all initialization of data required for the loop function to work well. While we're at it, we'll add the standard <code>start</code> and <code>start_link</code> functions:</p>
+
+<pre class="brush:erl">
+start(EventName, Delay) -&gt;
+    spawn(?MODULE, init, [self(), EventName, Delay]).
+
+start_link(EventName, Delay) -&gt;
+    spawn_link(?MODULE, init, [self(), EventName, Delay]).
+
+%%% Event's innards
+init(Server, EventName, Delay) -&gt;
+    loop(#state{server=Server,
+                name=EventName,
+                to_go=normalize(Delay)}).
+</pre>
+
+<p>The interface is now much cleaner. Before testing, though, it would be nice to have the only message we can send, cancel, also have its own interface function:</p>
+
+<pre class="brush:erl">
+cancel(Pid) -&gt;
+    %% Monitor in case the process is already dead
+    Ref = erlang:monitor(process, Pid),
+    Pid ! {self(), Ref, cancel},
+    receive
+        {Ref, ok} -&gt;
+            erlang:demonitor(Ref, [flush]),
+            ok;
+        {'DOWN', Ref, process, Pid, _Reason} -&gt;
+            ok
+    end.
+</pre>
+
+<p>Oh! A new trick! Here I'm using a monitor to see if the process is there or not. If the process is already dead, I avoid useless waiting time and return <code>ok</code> as specified in the protocol. If the process replies with the reference, then I know it will soon die: I remove the reference to avoid receiving them when I no longer care about them. Note that I also supply the <code>flush</code> option, which will purge the <code>DOWN</code> message if it was sent before we had the time to demonitor.</p>
+
+<p>Let's test these:</p>
+<pre class="brush:eshell">
+17&gt; c(event).
+{ok,event}
+18&gt; f().
+ok
+19&gt; event:start("Event", 0).
+&lt;0.103.0&gt;
+20&gt; flush().
+Shell got {done,"Event"}
+ok
+21&gt; Pid = event:start("Event", 500).
+&lt;0.106.0&gt;
+22&gt; event:cancel(Pid).
+ok
+</pre>
+
+<p>And it works! The last thing annoying with the event module is that we have to input the time left in seconds. It would be much better if we could use a standard format such as Erlang's datetime (<code>{{Year, Month, Day}, {Hour, Minute, Second}}</code>). Just add the following function that will calculate the difference between the current time on your computer and the delay you inserted:</p>
+
+<pre class="brush:erl">
+time_to_go(TimeOut={{_,_,_}, {_,_,_}}) -&gt;
+    Now = calendar:local_time(),
+    ToGo = calendar:datetime_to_gregorian_seconds(TimeOut) -
+           calendar:datetime_to_gregorian_seconds(Now),
+    Secs = if ToGo &gt; 0  -&gt; ToGo;
+              ToGo =&lt; 0 -&gt; 0
+           end,
+    normalize(Secs).
+</pre>
+
+<p>Oh, yeah. The <a class="docs" href="http://erldocs.com/17.3/stdlib/calendar.html" title="">calendar module</a> has pretty funky function names. As noted above, this calculates the number of seconds between now and when the event is supposed to fire. If the event is in the past, we instead return <samp>0</samp> so it will notify the server as soon as it can. Now fix the init function to call this one instead of <code>normalize/1</code>. You can also rename <var>Delay</var> variables to say <var>DateTime</var> if you want the names to be more descriptive:</p>
+
+<pre class="brush:erl">
+init(Server, EventName, DateTime) -&gt;
+    loop(#state{server=Server,
+                name=EventName,
+                to_go=time_to_go(DateTime)}).
+</pre>
+
+<p>Now that this is done, we can take a break. Start a new event, go drink a pint (half-litre) of milk/beer and come back just in time to see the event message coming in.</p>
+
+<h3><a class="section" name="the-event-server">The Event Server</a></h3>
+
+<p>Let's deal with the <a class="source" href="static/erlang/evserv.erl">event server</a>. According to the protocol, the skeleton for that one should look a bit like this:</p>
+
+<pre class="brush:erl">
+-module(evserv).
+-compile(export_all).
+
+loop(State) -&gt;
+    receive
+        {Pid, MsgRef, {subscribe, Client}} -&gt;
+            ...
+        {Pid, MsgRef, {add, Name, Description, TimeOut}} -&gt;
+            ...
+        {Pid, MsgRef, {cancel, Name}} -&gt;
+            ...
+        {done, Name} -&gt;
+            ...
+        shutdown -&gt;
+            ...
+        {'DOWN', Ref, process, _Pid, _Reason} -&gt;
+            ...
+        code_change -&gt;
+            ...
+        Unknown -&gt;
+            io:format("Unknown message: ~p~n",[Unknown]),
+            loop(State)
+    end.
+</pre>
+
+<p>You'll notice I have wrapped calls that require replies with the same <code>{Pid, Ref, Message}</code> format as earlier. Now, the server will need to keep two things in its state: a list of subscribing clients and a list of all the event processes it spawned. If you have noticed, the protocol says that when an event is done, the event server should receive <code>{done, Name}</code>, but send <code>{done, Name, Description}</code>. The idea here is to have as little traffic as necessary and only have the event processes care about what is strictly necessary. So yeah, list of clients and list of events:</p>
+
+<pre class="brush:erl">
+-record(state, {events,    %% list of #event{} records
+                clients}). %% list of Pids
+
+-record(event, {name="",
+                description="",
+                pid,
+                timeout={{1970,1,1},{0,0,0}}}).
+</pre>
+
+<p>And the loop now has the record definition in its head:</p>
+
+<pre class="brush:erl">
+loop(S = #state{}) -&gt;
+    receive
+        ...
+    end.
+</pre>
+
+<p>It would be nice if both events and clients were orddicts. We're unlikely to have many hundreds of them at once. If you recall the chapter on <a class="chapter" href="a-short-visit-to-common-data-structures.html#key-value-stores">data structures</a>, orddicts fit that need very well. We'll write an <code>init</code> function to handle this:</p>
+
+<pre class="brush:erl">
+init() -&gt;
+    %% Loading events from a static file could be done here.
+    %% You would need to pass an argument to init telling where the
+    %% resource to find the events is. Then load it from here.
+    %% Another option is to just pass the events straight to the server
+    %% through this function.
+    loop(#state{events=orddict:new(),
+                clients=orddict:new()}).
+</pre>
+
+<p>With the skeleton and initialization done, I'll implement each message one by one. The first message is the one about subscriptions. We want to keep a list of all subscribers because when an event is done, we have to notify them. Also, the protocol above mentions we should monitor them. It makes sense because we don't want to hold onto crashed clients and send useless messages for no reason. Anyway, it should look like this:</p>
+
+<pre class="brush:erl">
+{Pid, MsgRef, {subscribe, Client}} -&gt;
+    Ref = erlang:monitor(process, Client),
+    NewClients = orddict:store(Ref, Client, S#state.clients),
+    Pid ! {MsgRef, ok},
+    loop(S#state{clients=NewClients});
+</pre>
+
+<img class="left" src="static/img/rss.png" width="154" height="156" alt="Hand drawn RSS logo" />
+
+<p>So what this section of <code>loop/1</code> does is start a monitor, and store the client info in the orddict under the key <var>Ref</var>. The reason for this is simple: the only other time we'll need to fetch the client ID will be if we receive a monitor's <code>EXIT</code> message, which will contain the reference (which will let us get rid of the orddict's entry).</p>
+
+<p>The next message to care about is the one where we add events. Now, it is possible to return an error status. The only validation we'll do is check the timestamps we accept. While it's easy to subscribe to the <code>{{Year,Month,Day}, {Hour,Minute,seconds}}</code> layout, we have to make sure we don't do things like accept events on February 29 when we're not in a leap year, or any other date that doesn't exist. Moreover, we don't want to accept impossible date values such as "5 hours, minus 1 minute and 75 seconds". A single function can take care of validating all of that.</p>
+
+<p>The first building block we'll use is the function <code><a class="docs" href="http://erldocs.com/17.3/stdlib/calendar.html#valid_date/1" title="oh, erldocs. So many links!">calendar:valid_date/1</a></code>. This one, as the name says, checks if the date is valid or not. Sadly, the weirdness of the calendar module doesn't stop at funky names: there is actually no function to confirm that <code>{H,M,S}</code> has valid values. We'll have to implement that one too, following the funky naming scheme:</p>
+
+
+<pre class="brush:erl">
+valid_datetime({Date,Time}) -&gt;
+    try
+        calendar:valid_date(Date) andalso valid_time(Time)
+    catch
+        error:function_clause -&gt; %% not in {{Y,M,D},{H,Min,S}} format
+            false
+    end;
+valid_datetime(_) -&gt;
+    false.
+
+valid_time({H,M,S}) -&gt; valid_time(H,M,S).
+valid_time(H,M,S) when H &gt;= 0, H &lt; 24,
+                       M &gt;= 0, M &lt; 60,
+                       S &gt;= 0, S &lt; 60 -&gt; true;
+valid_time(_,_,_) -&gt; false.
+</pre>
+
+
+<p>The <code>valid_datetime/1</code> function can now be used in the part where we try to add the message:</p>
+
+<pre class="brush:erl">
+{Pid, MsgRef, {add, Name, Description, TimeOut}} -&gt;
+    case valid_datetime(TimeOut) of
+        true -&gt;
+            EventPid = event:start_link(Name, TimeOut),
+            NewEvents = orddict:store(Name,
+                                      #event{name=Name,
+                                             description=Description,
+                                             pid=EventPid,
+                                             timeout=TimeOut},
+                                      S#state.events),
+            Pid ! {MsgRef, ok},
+            loop(S#state{events=NewEvents});
+        false -&gt;
+            Pid ! {MsgRef, {error, bad_timeout}},
+            loop(S)
+    end;
+</pre>
+
+<p>If the time is valid, we spawn a new event process, then store its data in the event server's state before sending a confirmation to the caller. If the timeout is wrong, we notify the client rather than having the error pass silently or crashing the server. Additional checks could be added for name clashes or other restrictions (just remember to update the protocol documentation!)</p>
+
+<p>The next message defined in our protocol is the one where we cancel an event. Canceling an event never fails on the client side, so the code is simpler there. Just check whether the event is in the process' state record. If it is, use the <code>event:cancel/1</code> function we defined to kill it and send ok. If it's not found, just tell the user everything went right anyway -- the event is not running and that's what the user wanted.</p>
+
+
+<pre class="brush:erl">
+{Pid, MsgRef, {cancel, Name}} -&gt;
+    Events = case orddict:find(Name, S#state.events) of
+                 {ok, E} -&gt;
+                     event:cancel(E#event.pid),
+                     orddict:erase(Name, S#state.events);
+                  error -&gt;
+                     S#state.events
+             end,
+    Pid ! {MsgRef, ok},
+    loop(S#state{events=Events});
+</pre>
+
+<p>Good, good. So now all voluntary interaction coming from the client to the event server is covered. Let's deal with the stuff that's going between the server and the events themselves. There are two messages to handle: canceling the events (which is done), and the events timing out. That message is simply <code>{done, Name}</code>:</p>
+
+<pre class="brush:erl">
+{done, Name} -&gt;
+    case orddict:find(Name, S#state.events) of
+        {ok, E} -&gt;
+            send_to_clients({done, E#event.name, E#event.description},
+                            S#state.clients),
+            NewEvents = orddict:erase(Name, S#state.events),
+            loop(S#state{events=NewEvents});
+        error -&gt;
+            %% This may happen if we cancel an event and
+            %% it fires at the same time
+            loop(S)
+    end;
+</pre>
+
+<p>And the function <code>send_to_clients/2</code> does as its name says and is defined as follows:</p>
+
+<pre class="brush:erl">
+send_to_clients(Msg, ClientDict) -&gt;
+    orddict:map(fun(_Ref, Pid) -&gt; Pid ! Msg end, ClientDict).
+</pre>
+
+<p>That should be it for most of the loop code. What's left is the set different status messages: clients going down, shutdown, code upgrades, etc. Here they come:</p>
+
+<pre class="brush:erl">
+shutdown -&gt;
+    exit(shutdown);
+{'DOWN', Ref, process, _Pid, _Reason} -&gt;
+    loop(S#state{clients=orddict:erase(Ref, S#state.clients)});
+code_change -&gt;
+    ?MODULE:loop(S);
+Unknown -&gt;
+    io:format("Unknown message: ~p~n",[Unknown]),
+    loop(S)
+</pre>
+
+<p>The first case (<code>shutdown</code>) is pretty explicit. You get the kill message, let the process die. If you wanted to save state to disk, that could be a possible place to do it. If you wanted safer save/exit semantics, this could be done on every <code>add</code>, <code>cancel</code> or <code>done</code> message. Loading events from disk could then be done in the <code>init</code> function, spawning them as they come.</p>
+
+<p>The <code>'DOWN'</code> message's actions are also simple enough. It means a client died, so we remove it from the client list in the state.</p>
+
+<p>Unknown messages will just be shown with <code>io:format/2</code> for debugging purposes, although a real production application would likely use a dedicated logging module</p>
+
+<p>And here comes the code change message. This one is interesting enough for me to give it its own section.</p>
+
+
+<h3><a class="section" name="hot-code-loving">Hot Code Loving</a></h3>
+
+<p>In order to do hot code loading, Erlang has a thing called the <em>code server</em>. The code server is basically a VM process in charge of an <a class="docs" href="http://erldocs.com/17.3/stdlib/ets.html">ETS table</a> (in-memory database table, native to the VM.) The code server can hold two versions of a single module in memory, and both versions can run at once. A new version of a module is automatically loaded when compiling it with <code>c(Module)</code>, loading with <code>l(Module)</code> or loading it with one of the many functions of the <a class="docs" href="http://erldocs.com/17.3/kernel/code.html">code module</a>.</p>
+
+<p>A concept to understand is that Erlang has both <em>local</em> and <em>external</em> calls. Local calls are those function calls you can make with functions that might not be exported. They're just of the format <code>Atom(Args)</code>. An external call, on the other hand, can only be done with exported functions and has the form <code>Module:Function(Args)</code>.</p>
+
+<p>When there are two versions of a module loaded in the VM, all local calls are done through the currently running version in a process. However, external calls are <strong>always</strong> done on the newest version of the code available in the code server. Then, if local calls are made from within the external one, they are in the new version of the code.</p>
+
+<img class="center explanation" src="static/img/hot-code-loading.png" width="513" height="307" alt="A fake module showing local calls staying in the old version and external calls going on the new one" />
+
+<p>Given that every process/actor in Erlang needs to do a recursive call in order to change its state, it is possible to load entirely new versions of an actor by having an external recursive call.</p>
+
+<div class="note">
+<p><strong>Note:</strong> If you load a third version of a module while a process still runs with the first one, that process gets killed by the VM, which assumes it was an orphan process without a supervisor or a way to upgrade itself. If nobody runs the oldest version, it is simply dropped and the newest ones are kept instead.</p>
+</div>
+
+<p>There are ways to bind yourself to a system module that will send messages whenever a new version of a module is loaded. By doing this, you can trigger a module reload only when receiving such a message, and always do it with a code upgrade function, say <code>MyModule:Upgrade(CurrentState)</code>, which will then be able to transform the state data structure according to the new version's specification. This 'subscription' handling is done automatically by the OTP framework, which we'll start studying soon enough. For the reminder application, we won't use the code server and will instead use a custom <code>code_change</code> message from the shell, doing very basic reloading. That's pretty much all you need to know to do hot code loading. Nevertheless, here's a more generic example:</p>
+
+<pre class="brush:erl">
+-module(hotload).
+-export([server/1, upgrade/1]).
+
+server(State) -&gt;
+    receive
+        update -&gt;
+            NewState = ?MODULE:upgrade(State),
+            ?MODULE:server(NewState);  %% loop in the new version of the module
+        SomeMessage -&gt;
+            %% do something here
+            server(State)  %% stay in the same version no matter what.
+    end.
+
+upgrade(OldState) -&gt;
+    %% transform and return the state here.
+</pre>
+
+<p>As you can see, our <code>?MODULE:loop(S)</code> fits this pattern.</p>
+
+
+<h3><a class="section" name="hide-your-messages">I Said, Hide Your Messages</a></h3>
+
+<p>Hiding messages! If you expect people to build on your code and processes, you must hide the messages in interface functions. Here's what we used for the <code>evserv</code> module:</p>
+
+<pre class="brush:erl">
+start() -&gt;
+    register(?MODULE, Pid=spawn(?MODULE, init, [])),
+    Pid.
+
+start_link() -&gt;
+    register(?MODULE, Pid=spawn_link(?MODULE, init, [])),
+    Pid.
+
+terminate() -&gt;
+    ?MODULE ! shutdown.
+</pre>
+
+<p>I decided to register the server module because, for now, we should only have one running at a time. If you were to expand the reminder use to support many users, it would be a good idea to instead register the names with the <a class="docs" href="http://erldocs.com/17.3/stdlib/global.html">global module</a>, or the <a class="docs" href="http://github.com/uwiger/gproc">gproc library</a>. For the sake of this example app, this will be enough.</p>
+
+<p>The first message we wrote is the next we should abstract away: how to subscribe. The little protocol or specification I wrote above called for a monitor, so this one is added there. At any point, if the reference returned by the subscribe message is in a <code>DOWN</code> message, the client will know the server has gone down.</p>
+
+<pre class="brush:erl">
+subscribe(Pid) -&gt;
+    Ref = erlang:monitor(process, whereis(?MODULE)),
+    ?MODULE ! {self(), Ref, {subscribe, Pid}},
+    receive
+        {Ref, ok} -&gt;
+            {ok, Ref};
+        {'DOWN', Ref, process, _Pid, Reason} -&gt;
+            {error, Reason}
+    after 5000 -&gt;
+        {error, timeout}
+    end.
+</pre>
+
+<p>The next one is the event adding:</p>
+
+<pre class="brush:erl">
+add_event(Name, Description, TimeOut) -&gt;
+    Ref = make_ref(),
+    ?MODULE ! {self(), Ref, {add, Name, Description, TimeOut}},
+    receive
+        {Ref, Msg} -&gt; Msg
+    after 5000 -&gt;
+        {error, timeout}
+    end.
+</pre>
+
+<p>Note that I choose to forward the <code>{error, bad_timeout}</code> message that could be received to the client. I could have also decided to crash the client by raising <code>erlang:error(bad_timeout)</code>. Whether crashing the client or forwarding the error message is the thing to do is still debated in the community. Here's the alternative crashing function:</p>
+
+<pre class="brush:erl">
+add_event2(Name, Description, TimeOut) -&gt;
+    Ref = make_ref(),
+    ?MODULE ! {self(), Ref, {add, Name, Description, TimeOut}},
+    receive
+        {Ref, {error, Reason}} -&gt; erlang:error(Reason);
+        {Ref, Msg} -&gt; Msg
+    after 5000 -&gt;
+        {error, timeout}
+    end.
+</pre>
+
+<p>Then there's event cancellation, which just takes a name:</p>
+
+<pre class="brush:erl">
+cancel(Name) -&gt;
+    Ref = make_ref(),
+    ?MODULE ! {self(), Ref, {cancel, Name}},
+    receive
+        {Ref, ok} -&gt; ok
+    after 5000 -&gt;
+        {error, timeout}
+    end.
+</pre>
+
+<p>Last of all is a small nicety provided for the client, a function used to accumulate all messages during a given period of time. If messages are found, they're all taken and the function returns as soon as possible:</p>
+
+<pre class="brush:erl">
+listen(Delay) -&gt;
+    receive
+        M = {done, _Name, _Description} -&gt;
+            [M | listen(0)]
+    after Delay*1000 -&gt;
+        []
+    end.
+</pre>
+
+
+<h3><a class="section" name="a-test-drive">A Test Drive</a></h3>
+
+<p>You should now be able to compile the application and give it a test run. To make things a bit simpler, we'll write a specific Erlang makefile to build the project. Open a file named <code>Emakefile</code> and put it in the project's base directory. The file contains Erlang terms and gives the Erlang compiler the recipe to cook wonderful and crispy <code>.beam</code> files:</p>
+
+<img class="right" src="static/img/oven.png" width="230" height="229" alt="An old oven with smoke coming out of it" />
+
+<pre class="expand">
+{'src/*', [debug_info,
+           {i, "src"},
+           {i, "include"},
+           {outdir, "ebin"}]}.
+</pre>
+
+<p>This tells the compiler to add debug_info to the files (this is rarely an option you want to give up), to look for files in the <code>src/</code> and <code>include/</code> directory and to output them in <code>ebin/</code>.</p>
+
+<p>Now, by going in your command line and running <code>erl -make</code>, the files should all be compiled and put inside the <code>ebin/</code> directory for you. Start the Erlang shell by doing <code>erl -pa ebin/</code>. The <code>-pa &lt;directory&gt;</code> option tells the Erlang VM to add that path to the places it can look in for modules.</p>
+
+<p>Another option is to start the shell as usual and call <code>make:all([load])</code>. This will look for a file named 'Emakefile' in the current directory, recompile it (if it changed) and load the new files.</p>
+
+<p>You should now be able to track thousands of events (just replace the <var>DateTime</var> variables with whatever makes sense when you're writing the text):</p>
+<pre class="brush:eshell">
+1&gt; evserv:start().
+&lt;0.34.0&gt;
+2&gt; evserv:subscribe(self()).
+{ok,#Ref&lt;0.0.0.31&gt;}
+3&gt; evserv:add_event("Hey there", "test", FutureDateTime).
+ok
+4&gt; evserv:listen(5).
+[]
+5&gt; evserv:cancel("Hey there").
+ok
+6&gt; evserv:add_event("Hey there2", "test", NextMinuteDateTime).
+ok
+7&gt; evserv:listen(2000).
+[{done,"Hey there2","test"}]
+</pre>
+
+<p>Nice nice nice. Writing any client should now be simple enough given the few basic interface functions we have created.</p>
+
+
+<h3><a class="section" name="adding-supervision">Adding Supervision</a></h3>
+
+<p>In order to be a more stable application, we should write another 'restarter' as we did in the <a class="chapter" href="errors-and-processes.html#naming-processes"> last chapter</a>. Open up a file named <a class="source" href="static/erlang/sup.erl">sup.erl</a> where our supervisor will be:</p>
+
+<pre class="brush:erl">
+-module(sup).
+-export([start/2, start_link/2, init/1, loop/1]).
+
+start(Mod,Args) -&gt;
+    spawn(?MODULE, init, [{Mod, Args}]).
+
+start_link(Mod,Args) -&gt;
+    spawn_link(?MODULE, init, [{Mod, Args}]).
+
+init({Mod,Args}) -&gt;
+    process_flag(trap_exit, true),
+    loop({Mod,start_link,Args}).
+
+loop({M,F,A}) -&gt;
+    Pid = apply(M,F,A),
+    receive
+        {'EXIT', _From, shutdown} -&gt;
+            exit(shutdown); % will kill the child too
+        {'EXIT', Pid, Reason} -&gt;
+            io:format("Process ~p exited for reason ~p~n",[Pid,Reason]),
+            loop({M,F,A})
+    end.
+</pre>
+
+<p>This is somewhat similar to the 'restarter', although this one is a tad more generic. It can take any module, as long as it has a <code>start_link</code> function. It will restart the process it watches indefinitely, unless the supervisor itself is terminated with a shutdown exit signal. Here it is in use:</p>
+
+<pre class="brush:eshell">
+1&gt; c(evserv), c(sup).
+{ok,sup}
+2&gt; SupPid = sup:start(evserv, []).
+&lt;0.43.0&gt;
+3&gt; whereis(evserv).
+&lt;0.44.0&gt;
+4&gt; exit(whereis(evserv), die).
+true
+Process &lt;0.44.0&gt; exited for reason die
+5&gt; exit(whereis(evserv), die).
+Process &lt;0.48.0&gt; exited for reason die
+true
+6&gt; exit(SupPid, shutdown).
+true
+7&gt; whereis(evserv).
+undefined
+</pre>
+
+<p>As you can see, killing the supervisor will also kill its child.</p>
+
+<div class="note">
+	<p><strong>Note:</strong> We'll see much more advanced and flexible supervisors in the chapter about OTP supervisors. Those are the ones people are thinking of when they mention <em>supervision trees</em>. The supervisor demonstrated here is only the most basic form that exists and is not exactly fit for production environments compared to the real thing.</p>
+</div>
+
+<h3><a class="section" name="namespaces">Namespaces (or lack thereof)</a></h3>
+
+<img class="left" src="static/img/gentleman.png" width="334" height="298" alt="A Gentleman about to step in a pile of crap" title="Mentlegent!" />
+
+<p>Because Erlang has a flat module structure (there is no hierarchy), It is frequent for some applications to enter in conflict. One example of this is the frequently used <code>user</code> module that almost every project attempts to define at least once. This clashes with the <code>user</code> module shipped with Erlang. You can test for any clashes with the function <code><a class="docs" href="http://erldocs.com/17.3/kernel/code.html#clash/0">code:clash/0</a></code>.</p>
+
+<p>Because of this, the common pattern is to prefix every module name with the name of your project. In this case, our reminder application's modules should be renamed to <code>reminder_evserv</code>, <code>reminder_sup</code> and <code>reminder_event</code>.</p>
+
+<p>Some programmers then decide to add a module, named after the application itself, which wraps common calls that programmers could use when using their own application. Example calls could be functions such as starting the application with a supervisor, subscribing to the server, adding and cancelling events, etc.</p>
+
+<p>It's important to be aware of other namespaces, too, such as registered names that must not clash, database tables, etc.</p>
+
+<p>That's pretty much it for a very basic concurrent Erlang application. This one showed we could have a bunch of concurrent processes without thinking too hard about it: supervisors, clients, servers, processes used as timers (and we could have thousands of them), etc. No need to synchronize them, no locks, no real main loop. Message passing has made it simple to compartmentalize our application into a few modules with separated concerns and tasks.</p>
+
+<p>The basic calls inside <a class="source" href="static/erlang/evserv.erl">evserv.erl</a> could now be used to construct clients that would allow to interact with the event server from somewhere outside of the Erlang VM and make the program truly useful.</p>
+
+<p>Before doing that, though, I suggest you read up on the OTP framework. The next few chapters will cover some of its building blocks, which will allow for much more robust and elegant applications. A huge part of Erlang's power comes from using it. It's a carefully crafted and well-engineered tool that any self-respecting Erlang programmer has to know.</p>
+				<ul class="navigation">
+											<li><a href="errors-and-processes.html" title="Previous chapter">&lt; Previous</a></li>
+										
+					<li><a href="contents.html" title="Index">Index</a></li>
+					
+											<li><a href="what-is-otp.html" title="Next chapter">Next &gt;</a></li>
+									</ul>
+			</div><!-- content -->
+			<div id="footer">
+				<a href="http://creativecommons.org/licenses/by-nc-nd/3.0/" title="Creative Commons License Details"><img src="static/img/cc.png" width="88" height="31" alt="Creative Commons Attribution Non-Commercial No Derivative License" /></a>
+				<p>Except where otherwise noted, content on this site is licensed under a Creative Commons Attribution Non-Commercial No Derivative License</p>
+			</div> <!-- footer -->
+		</div> <!-- wrapper -->
+		<div id="grass" />
+	<script type="text/javascript" src="static/js/shCore.js"></script>
+	<script type="text/javascript" src="static/js/shBrushErlang2.js%3F11"></script>
+	<script type="text/javascript">
+		SyntaxHighlighter.defaults.gutter = false;
+		SyntaxHighlighter.all();
+	</script>
+	</body>
+</html>

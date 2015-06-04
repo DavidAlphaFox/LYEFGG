@@ -1,0 +1,764 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en" dir="ltr">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<meta http-equiv="Content-Style-Type" content="text/css" />
+		<meta name="keywords" content="Erlang, OTP, sockets, tcp, udp, gen_tpc, gen_udp, inet, io list, server" />
+		<meta name="description" content="A quick expedition through socket programming with UDP and TCP. We see io lists, gen_udp, gen_tcp and the inet module. We also build a TCP server for telnet clients." />
+        <meta name="google-site-verification" content="mi1UCmFD_2pMLt2jsYHzi_0b6Go9xja8TGllOSoQPVU" />
+		<link rel="stylesheet" type="text/css" href="static/css/screen.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/sh/shCore.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/sh/shThemeLYSE2.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/print.css" media="print" />
+		<link href="rss" type="application/rss+xml" rel="alternate" title="LYSE news" />
+		<link rel="icon" type="image/png" href="favicon.ico" />
+		<link rel="apple-touch-icon" href="static/img/touch-icon-iphone.png" />
+		<link rel="apple-touch-icon" sizes="72x72" href="static/img/touch-icon-ipad.png" />
+		<link rel="apple-touch-icon" sizes="114x114" href="static/img/touch-icon-iphone4.png" />
+		<title>Buckets of Sockets | Learn You Some Erlang for Great Good!</title>
+	</head>
+	<body>
+		<div id="wrapper">
+			<div id="header">
+				<h1>Learn you some Erlang</h1>
+				<span>for great good!</span>
+			</div> <!-- header -->
+			<div id="menu">
+				<ul>
+					<li><a href="content.html" title="Home">Home</a></li>
+					<li><a href="faq.html" title="Frequently Asked Questions">FAQ</a></li>
+					<li><a href="rss" title="Latest News">RSS</a></li>
+					<li><a href="static/erlang/learn-you-some-erlang.zip" title="Source Code">Code</a></li>
+				</ul>
+			</div><!-- menu -->
+			<div id="content">
+            <div class="noscript"><noscript>Hey there, it appears your Javascript is disabled. That's fine, the site works without it. However, you might prefer reading it with syntax highlighting, which requires Javascript!</noscript></div>
+<h2>Buckets of Sockets</h2>
+
+<img class="right" src="static/img/bucket.png" width="259" height="241" alt="A 'hello' enters a tin can and exits from a bucket" />
+
+<p>So far we've had some fun dealing with Erlang itself, barely communicating to the outside world, if only by text files that we read here and there. As much of relationships with yourself might be fun, it's time to get out of our lair and start talking to the rest of the world.</p>
+
+<p>This chapter will cover three components of using sockets: IO lists, UDP sockets and TCP sockets. IO lists aren't extremely complex as a topic. They're just a clever way to efficiently build strings to be sent over sockets and other Erlang drivers.</p>
+
+
+<h3><a class="section" name="io-lists">IO Lists</a></h3>
+
+<p>I've mentioned earlier in this guide that for text, we could use either strings (lists of integers) or binaries (a binary data structure holding data). Sending things over the wire such as "Hello World" can be done as a string as <code>"Hello World"</code>, and as a binary as <code>&lt;&lt;"Hello World"&gt;&gt;</code>. Similar notation, similar results.</p>
+
+<p>The difference lies in how you can assemble things. A string is a bit like a linked list of integers: for each character, you've got to store the character itself plus a link towards the rest of the list. Moreover, if you want to add elements to a list, either in the middle or at the end, you have to traverse the whole list up to the point you're modifying and then add your elements. This isn't the case when you prepend, however:</p>
+
+<pre class="expand">
+A = [a]
+B = [b|A] = [b,a]
+C = [c|B] = [c,b,a]
+</pre>
+
+<p>In the case of prepending, as above, whatever is held into <var>A</var> or <var>B</var> or <var>C</var> never needs to be rewritten. The representation of C can be seen as either <code>[c,b,a]</code>, <code>[c|B]</code> or <code>[c,|[b|[a]]]</code>, among others. In the last case, you can see that the shape of <var>A</var> is the same at the end of the list as when it was declared. Similarly for <var>B</var>. Here's how it looks with appending:</p>
+
+<pre class="expand">
+A = [a]
+B = A ++ [b] = [a] ++ [b] = [a|[b]]
+C = B ++ [c] = [a|[b]] ++ [c] = [a|[b|[c]]]
+</pre>
+
+<p>Do you see all that rewriting? When we create <var>B</var>, we have to rewrite <var>A</var>. When we write <var>C</var>, we have to rewrite <var>B</var> (including the <code>[a|...]</code> part it contains). If we were to add <var>D</var> in a similar manner, we would need to rewrite <var>C</var>. Over long strings, this becomes way too inefficient, and it creates a lot of garbage left to be cleaned up by the Erlang VM.</p>
+
+<p>With binaries, things are not exactly as bad:</p>
+
+<pre class="expand">
+A = &lt;&lt;"a"&gt;&gt;
+B = &lt;&lt;A/binary, "b"&gt;&gt; = &lt;&lt;"ab"&gt;&gt;
+C = &lt;&lt;B/binary, "c"&gt;&gt; = &lt;&lt;"abc"&gt;&gt;
+</pre>
+
+<p>In this case, binaries know their own length and data can be joined in constant time. That's good, much better than lists. They're also more compact. For these reasons, we'll often try to stick to binaries when using text in the future.</p>
+
+<p>There are a few downsides, however. Binaries were meant to handle things in certain ways, and there is still a cost to modifying binaries, splitting them, etc. Moreover, sometimes we'll work with code that uses strings, binaries, and individual characters interchangeably. Constantly converting between types would be a hassle.</p>
+
+<p>In these cases, <em>IO lists</em> are our saviour. IO lists are a weird type of data structure. They are lists of either bytes (integers from 0 to 255), binaries, or other IO lists. This means that functions that accept IO lists can accept items such as <code>[$H, $e, [$l, &lt;&lt;"lo"&gt;&gt;, " "], [[["W","o"], &lt;&lt;"rl"&gt;&gt;]] | [&lt;&lt;"d"&gt;&gt;]]</code>. When this happens, the Erlang VM will just flatten the list as it needs to do it to obtain the sequence of characters <code>Hello World</code>.</p>
+
+<p>What are the functions that accept such IO Lists? Most of the functions that have to do with outputting data do. Any function from the <a class="docs" href="http://erldocs.com/17.3/stdlib/io.html">io</a> module, <a class="docs" href="http://erldocs.com/17.3/kernel/file.html">file</a> module, TCP and UDP sockets will be able to handle them. Some library functions, such as some coming from the <a class="docs" href="http://erldocs.com/17.3/stdlib/unicode.html">unicode</a> module and all of the functions from the <a class="docs" href="http://erldocs.com/17.3/stdlib/re.html">re</a> (for <em>r</em>egular <em>e</em>xpressions) module will also handle them, to name a few.</p>
+
+<p>Try the previous <samp>Hello World</samp> IO List in the shell with <code>io:format("~s~n", [IoList])</code> just to see. It should work without a problem.</p>
+
+<img class="right" src="static/img/brotocol.png" width="234" height="240" alt="A guido with an RJ-45 connection head" title="I'm truly a male connector, Brah!" />
+
+<p>All in all, they're a pretty clever way of building strings to avoid the problems of immutable data structures when it comes to dynamically building content to be output.</p>
+
+
+<h3><a class="section" name="tcp-and-udp-brotocols">TCP and UDP: Bro-tocols</a></h3>
+
+<p>The first kind of socket that we can use in Erlang is based on the <a class="external" href="http://en.wikipedia.org/wiki/User_Datagram_Protocol">UDP protocol</a>. UDP is a protocol built on top of the IP layer that provides a few abstractions on top of it such as port numbers. UDP is said to be a stateless protocol. The data that is received from UDP port is broken in small parts, untagged, without a session, and there is no guarantee that the fragments you received were sent in the same order as you got them. In fact, there is no guarantee that if someone sends a packet, you'll receive it at all. For these reasons, people tend to use UDP when the packets are small, can sometimes be lost with little consequences, when there aren't too many complex exchanges taking place or when low latency is absolutely necessary.</p>
+
+<p>This is something to be seen in opposition to stateful protocols like <a class="external" href="http://en.wikipedia.org/wiki/Transmission_Control_Protocol">TCP</a>, where the protocol takes care of handling lost packets, re-ordering them, maintaining isolated sessions between multiple senders and receivers, etc. TCP will allow reliable exchange of information, but will risk being slower and heavier to set up. UDP will be fast, but less reliable. Choose carefully depending on what you need.</p>
+
+<p>In any case, using UDP in Erlang is relatively simple. We set up a socket over a given port, and that socket can both send and receive data:</p>
+
+<img class="center explanation" src="static/img/udp-ports.png" width="426" height="296" alt="Diagram showing a Host A that has ports A, B and C, which can all send and receive packets to other hosts" />
+
+<p>For a bad analogy, this is like having a bunch of mailboxes on your house (each mailbox being a port) and receiving tiny slips of paper in each of them with small messages. They can have any content, from "I like how you look in these pants" down to "The slip is coming from <em>inside</em> the house!". When some messages are too large for a slip of paper, then many of them are dropped in the mailbox. It's your job to reassemble them in a way that makes sense, then drive up to some house, and drop slips after that as a reply. If the messages are purely informative ("hey there, your door is unlocked") or very tiny ("What are you wearing? -Ron"), it should be fine and you could use one mailbox for all of the queries. If they were to be complex, though, we might want to use one port per session, right? Ugh, no! Use TCP!</p>
+
+<p>In the case of TCP, the protocol is said to be stateful, connection-based. Before being able to send messages, you have to do a handshake. This means that someone's taking a mailbox (similar to what we have in the UDP analogy), and sends a message saying 'hey dude, this is IP 94.25.12.37 calling. Wanna chat?', to which you reply something a bit similar to 'Sure. Tag your messages with number N and then add an increasing number to them'. From that point on, when you or IP 92.25.12.37 want to communicate with each other, it'll be possible to order slips of paper, ask for missing ones, reply to them and so on in a meaningful manner.</p>
+
+<p>That way, we can use a single mailbox (or port) and keep all our communications fine. That's the neat thing of TCP. It adds some overhead, but makes sure that everything is ordered, properly delivered, and so on.</p>
+
+<p>If you're not a fan of these analogies, do not despair because we'll cut to the chase by seeing how to use TCP and UDP sockets with Erlang right now. This should be simpler.</p>
+
+
+<h3><a class="section" name="udp-sockets">UDP Sockets</a></h3>
+
+<p>There are only a few basic operations with UDP: setting up a socket, sending messages, receiving messages and closing a connection. The possibilities are a bit like this:</p>
+
+<img class="explanation center" src="static/img/udp.png" width="296" height="180" alt="A graph showing that Opening a socket can lead to 3 options: sending data, receiving data, or closing a socket. Sending can lead to receiving data or closing a socket, receiving data can lead to sending data or closing a socket. Finally, closing a socket does nothing" />
+
+<p>The first operation, no matter what, is to open a socket. This is done by calling <code><a class="docs" href="http://erldocs.com/17.3/kernel/gen_udp.html">gen_udp:open/1-2</a></code>. The simplest form is done by calling <code>{ok, Socket} = gen_udp:open(PortNumber)</code>.</p>
+
+<p>The port number will be any integer between 1 and 65535. From 0 to 1023, the ports are known as <em>system ports</em>. Most of the time, your operating system will make it impossible to listen to a system port unless you have administrative rights. Ports from 1024 through 49151 are registered ports. They usually require no permissions and are free to use, although some of them are <a class="extenral" href="http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xml">registered to well known services</a>. Then the rest of the ports are known as <em>dynamic</em> or <em>private</em>. They're frequently used for <em><a class="external" href="http://en.wikipedia.org/wiki/Ephemeral_ports">ephemeral ports</a></em>. For our tests, we'll take port numbers that are somewhat safe, such as <samp>8789</samp>, unlikely to be taken.</p>
+
+<p>But before that, what about <code><a class="docs" href="http://erldocs.com/17.3/kernel/gen_udp.html#open/2">gen_udp:open/2</a></code>? The second argument can be a list of options, specifying in what type we want to receive data (<code>list</code> or <code>binary</code>), how we want them received; as messages (<code>{active, true}</code>) or as results of a function call (<code>{active, false}</code>). There are more options such as whether the socket should be set with IPv4 (<code>inet4</code>) or IPv6 (<code>inet6</code>), whether the UDP socket can be used to broadcast information (<code>{broadcast, true | false}</code>), the size of buffers, etc. There are more options available, but we'll stick to the simple stuff for now because understanding the rest is rather up to you to learn. The topic can become complex fast and this guide is about Erlang, not TCP and UDP, unfortunately.</p>
+
+<p>So let's open a socket. First start a given Erlang shell:</p>
+
+<pre class="brush:eshell">
+1&gt; {ok, Socket} = gen_udp:open(8789, [binary, {active,true}]). 
+{ok,#Port&lt;0.676&gt;}
+2&gt; gen_udp:open(8789, [binary, {active,true}]).
+{error,eaddrinuse}
+</pre>
+
+<p>In the first command, I open the socket, order it to return me binary data, and I want it to be active. You can see a new data structure being returned: <code>#Port&lt;0.676&gt;</code>. This is the representation of the socket we have just opened. They can be used a lot like Pids: you can even set up links to them so that failure is propagated to the sockets in case of a crash! The second function call tries to open the same socket over again, which is impossible. That's why <code>{error, eaddrinuse}</code> is returned. Fortunately, the first <var>Socket</var> socket is still open.</p>
+
+<p>In any case, we'll start a second Erlang shell. In that one we'll open a second UDP socket, with a different port number:</p>
+
+<pre class="brush:eshell">
+1&gt; {ok, Socket} = gen_udp:open(8790).
+{ok,#Port&lt;0.587&gt;}
+2&gt; gen_udp:send(Socket, {127,0,0,1}, 8789, "hey there!").
+ok
+</pre>
+
+<p>Ah, a new function! In the second call, <code><a class="docs" href="http://erldocs.com/17.3/kernel/gen_udp.html#send/4">gen_udp:send/4</a></code> is used to send messages (what a wonderfully descriptive name). The arguments are, in order: <code>gen_udp:send(OwnSocket, RemoteAddress, RemotePort, Message)</code>. The <var>RemoteAddress</var> can be either a string or an atom containing a domain name ("example.org"), a 4-tuple describing an IPv4 address or a 8-tuple describing an IPv6 address. Then we specify the receiver's port number (in what mailbox are we going to drop our slip of paper?), and then the message, which can be a string, a binary, or an IO list.</p>
+
+<p>Did the message ever get sent? Go back to your first shell and try to flush the data:</p>
+
+<pre class="brush:eshell">
+3&gt; flush().
+Shell got {udp,#Port&lt;0.676&gt;,{127,0,0,1},8790,&lt;&lt;"hey there!"&gt;&gt;}
+ok
+</pre>
+
+<p>Fantastic. The process that opened the socket will receive messages of the form <code>{udp, Socket, FromIp, FromPort, Message}</code>. Using these fields, we'll be able to know where a message is from, what socket it went through, and what the contents were. So we've covered opening sockets, sending data, and receiving it in an active mode. What about passive mode? For this, we need to close the socket from the first shell and open a new one:</p>
+
+<pre class="brush:eshell">
+4&gt; gen_udp:close(Socket).
+ok
+5&gt; f(Socket).
+ok
+6&gt; {ok, Socket} = gen_udp:open(8789, [binary, {active,false}]).
+{ok,#Port&lt;0.683&gt;}
+</pre>
+
+<p>So here, we close the socket, unbind the <var>Socket</var> variable, then bind it as we open a socket again, in passive mode this time. Before sending a message back, try the following:</p>
+
+<pre class="brush:eshell">
+7&gt; gen_udp:recv(Socket, 0).
+
+</pre>
+
+<p>And your shell should be stuck. The function here is <code><a class="docs" href="http://erldocs.com/17.3/kernel/gen_udp.html#recv/2">recv/2</a></code>. This is the function used to poll a passive socket for messages. The <code>0</code> here is the length of the message we want. The funny thing is that the length is completely ignored with <code>gen_udp</code>. <code>gen_tcp</code> has a similar function, and in that case, it does have an impact. Anyway, if we never send a message, <code>recv/2</code> is never going to return. Get back to the second shell and send a new message:</p>
+
+<pre class="brush:eshell">
+3&gt; gen_udp:send(Socket, {127,0,0,1}, 8789, "hey there!").
+ok
+</pre>
+
+<p>Then the first shell should have printed <code>{ok,{{127,0,0,1},8790,&lt;&lt;"hey there!"&gt;&gt;}}</code> as the return value. What if you don't want to wait forever? Just add a time out value:</p>
+
+<pre class="brush:eshell">
+8&gt; gen_udp:recv(Socket, 0, 2000).
+{error,timeout}
+</pre>
+
+<p>And that's most of it for UDP. No, really!</p>
+
+
+<h3><a class="section" name="tcp-sockets">TCP Sockets</a></h3>
+
+<p>While TCP sockets share a large part of their interface with UDP sockets, there are some vital differences in how they work. The biggest one is that clients and servers are two entirely different things. A client will behave with the following operations:</p>
+
+<img class="center explanation" src="static/img/tcp-client.png" width="298" height="180" alt="A diagram similar to the UDP one: connection leads to send and receive, which both send to each other. More over, all states can then lead to the closed state" />
+
+<p>While a server will rather follow this scheme:</p>
+
+<img class="center explanation" src="static/img/tcp-server.png" width="287" height="250" alt="Diagram similar to the UDP one, although a listen state is added before the whole thing. That state can either move on to the 'accept' state (similar to 'open socket' for the possible branches) or to a close state." />
+
+<p>Weird looking, huh? The client acts a bit like what we had with gen_udp: you connect to a port, send and receive, stop doing so. When serving, however, we have one new mode there: listening. That's because of how TCP works to set sessions up.</p>
+
+<p>First of all, we open a new shell and start something called a <em>listen socket</em> with <code>gen_tcp:listen(Port, Options)</code>:</p>
+
+<pre class="brush:eshell">
+1&gt; {ok, ListenSocket} = gen_tcp:listen(8091, [{active,true}, binary]).
+{ok,#Port&lt;0.661&gt;}
+</pre>
+
+<p>The listen socket is just in charge of waiting for connection requests. You can see that I used similar options as I did with gen_udp. That's because most options are going to be similar for all IP sockets. The TCP ones do have a few more specific options, including a connection backlog (<code>{backlog, N}</code>), keepalive sockets (<code>{keepalive, true | false}</code>), packet packaging (<code>{packet, N}</code>, where <var>N</var> is the length of each packet's header to be stripped and parsed for you), etc.</p>
+
+<p>Once the listen socket is open, any process (and more than one) can take the listen socket and fall into an 'accepting' state, locked up until some client asks to talk with it:</p>
+
+<pre class="brush:eshell">
+2&gt; {ok, AcceptSocket} = gen_tcp:accept(ListenSocket, 2000).
+** exception error: no match of right hand side value {error,timeout}
+3&gt; {ok, AcceptSocket} = gen_tcp:accept(ListenSocket).
+** exception error: no match of right hand side value {error,closed}
+</pre>
+
+<p>Damn. We timed out and then crashed. The listen socket got closed when the shell process it was associated with disappeared. Let's start over again, this time without the 2 seconds (2000 milliseconds) timeout:</p>
+
+<pre class="brush:eshell">
+4&gt; f().
+ok
+5&gt; {ok, ListenSocket} = gen_tcp:listen(8091, [{active, true}, binary]).
+{ok,#Port&lt;0.728&gt;}
+6&gt; {ok, AcceptSocket} = gen_tcp:accept(ListenSocket).
+</pre>
+
+<p>And then the process is locked. Great! Let's open a second shell:</p>
+
+<pre class="brush:eshell">
+1&gt; {ok, Socket} = gen_tcp:connect({127,0,0,1}, 8091, [binary, {active,true}]). 
+{ok,#Port&lt;0.596&gt;}
+</pre>
+
+<p>This one still takes the same options as usual, and you can add a <var>Timeout</var> argument in the last position if you don't want to wait forever. If you look back to the first shell, it should have returned with <code>{ok, SocketNumber}</code>. From that point on, the accept socket and the client socket can communicate on a one-on-one basis, similarly to <code>gen_udp</code>. Take the second shell and send messages to the first one:</p>
+
+<pre class="brush:eshell">
+3&gt; gen_tcp:send(Socket, "Hey there first shell!").
+ok
+</pre>
+
+<p>And from the first shell:</p>
+
+<pre class="brush:eshell">
+7&gt; flush().
+Shell got {tcp,#Port&lt;0.729&gt;,&lt;&lt;"Hey there first shell!"&gt;&gt;}
+ok
+</pre>
+
+<p>Both sockets can send messages in the same way, and can then be closed with <code>gen_tcp:close(Socket)</code>. Note that closing an accept socket will close that socket alone, and closing a listen socket will close none of the related and established accept sockets, but will interrupt currently running accept calls by returning <code>{error, closed}</code>.</p>
+
+<p>That's it for most of TCP sockets in Erlang! But is it really?</p>
+
+<p>Ah yes, of course, there is more that can be done. If you've experimented with sockets a bit on your own, you might have noticed that there is some kind of ownership to sockets.</p>
+
+<p>By this, I mean that UDP sockets, TCP client sockets and TCP accept sockets can all have messages sent through them from any process in existence, but messages received can only be read by the process that started the socket:</p>
+
+<img class="center explanation" src="static/img/socket-owner.png" width="260" height="193" alt="A diagram that shows that all processes can send to a socket, but only the owner can receive messages" />
+
+<p>That's not very practical now, is it? It means that we have to always keep the owner process alive to relay messages, even if it has nothing to do with our needs. Wouldn't it be neat to be able to do something like this?</p>
+
+<pre class="expand">
+    1.  Process A starts a socket
+    2.  Process A sends a request
+    3.  Process A spawns process B
+        with a socket
+    4a. Gives ownership of the      4b. Process B handles the request
+        socket to Process B
+    5a. Process A sends a request   5b. Process B Keeps handling
+                                        the request
+    6a. Process A spawns process C  6b. ...
+        with a socket
+        ...
+</pre>
+
+<p>Here, <var>A</var> would be in charge of running a bunch of queries, but each new process would take charge of waiting for the reply, processing it and whatnot. Because of this, it would be clever for <var>A</var> to delegate a new process to run the task. The tricky part here is giving away the ownership of the socket.</p>
+
+<p>Here's the trick. Both gen_tcp and gen_udp contain a function called <code>controlling_process(Socket, Pid)</code>. This function has to be called by the current socket owner. Then the process tells Erlang 'you know what? Just let this <var>Pid</var> guy take over my socket. I give up'. From now on, the <var>Pid</var> in the function is the one that can read and receive messages from the socket. That's it.</p>
+
+
+<h3><a class="section" name="more-control-with-inet">More Control With Inet</a></h3>
+
+<p>So now we understand how to open sockets, send messages through them, change ownership, and so on. We also know how to listen to messages both in passive and active mode. Back in the UDP example, when I wanted to switch from active to passive mode, I restarted the socket, flushed variables and went on. This is rather unpractical, especially when we desire to do the same while using TCP because we'd have to break an active session.</p>
+
+<p>Fortunately, there's a module named <code><a class="docs" href="http://erldocs.com/17.3/kernel/inet.html">inet</a></code> that takes care of handling all operations that can be common to both gen_tcp and gen_udp sockets. For our problem at hand, which was changing between active and passive modes, there's a function named <code>inet:setopts(Socket, Options)</code>. The option list can contain any terms used at the setup of a socket.</p>
+
+<div class="note">
+<p><strong>Note:</strong> be careful! There exists a module named <code>inet</code> and a module named <code>inets</code>. <code>inet</code> is the module we want here. <code>inets</code> is an OTP application that contains a bunch of pre-written services and servers (including FTP, Trivial FTP (TFTP), HTTP, etc.)</p>
+
+<p>An easy trick to differentiate them is that <code>inets</code> is about <strong>s</strong>ervices built on top of <code>inet</code>, or if you prefer, <code>inet</code> + <strong>s</strong>(ervices).</p>
+</div>
+
+<p>Start a shell to be a TCP server:</p>
+
+<pre class="brush:eshell">
+1&gt; {ok, Listen} = gen_tcp:listen(8088, [{active,false}]).
+{ok,#Port&lt;0.597&gt;}
+2&gt; {ok, Accept} = gen_tcp:accept(Listen).
+</pre>
+
+<p>And in a second shell:</p>
+
+<pre class="brush:eshell">
+1&gt; {ok, Socket} = gen_tcp:connect({127,0,0,1}, 8088, []).
+{ok,#Port&lt;0.596&gt;}
+2&gt; gen_tcp:send(Socket, "hey there").
+ok
+</pre>
+
+<p>Then back to the first shell, the socket should have been accepted. We flush to see if we got anything:</p>
+
+<pre class="brush:eshell">
+3&gt; flush().
+ok
+</pre>
+
+<p>Of course not, we're in passive mode. Let's fix this:</p>
+
+<pre class="brush:eshell">
+4&gt; inet:setopts(Accept, [{active, true}]).
+ok
+5&gt; flush().
+Shell got {tcp,#Port&lt;0.598&gt;,"hey there"}
+ok
+</pre>
+
+<p>Yes! With full control over active and passive sockets, the power is ours. How do we pick between active and passive modes?</p>
+
+<img class="right" src="static/img/stop.png" width="148" height="179" alt="A stop sign" title="... Hammer time!" />
+
+<p>Well there are many points. In general, if you're waiting for a message right away, passive mode will be much faster. Erlang won't have to toy with your process' mailbox to handle things, you won't have to scan said mailbox, fetch messages, etc. Using <code>recv</code> will be more efficient. However, <code>recv</code> changes your process from something event-driven to active polling &mdash; if you've got to play middle-man between a socket and some other Erlang code, this might make things a bit complex.</p>
+
+<p>In that case, switching to active mode will be a good idea. If packets are sent as messages, you just have to wait in a receive (or a gen_server's <code>handle_info</code> function) and play with messages. The downside of this, apart from speed, has to do with rate limiting.</p>
+
+<p>The idea is that if all packets coming from the outside world are blindly accepted by Erlang and then converted to messages, it is somewhat easy for someone outside of the VM to flood it and kill it. Passive mode has the advantage of restricting how and when messages can be put into the Erlang VM, and delegating the task of blocking, queuing up, and dropping messages to the lower-level implementations.</p>
+
+<p>So what if we need active mode for the semantics, but passive mode for the safety? We could try to quickly switch between passive and active with <a class="docs" href="http://erldocs.com/17.3/kernel/inet.html#setopts/2">inet:setopts/2</a>, but that would be rather risky for race conditions. Instead, there's a mode called <em>active once</em>, with the option <code>{active, once}</code>. Let's try it to see how it works.</p>
+
+<p>Keep the shell with the server from earlier:</p>
+
+<pre class="brush:eshell">
+6&gt; inet:setopts(Accept, [{active, once}]).
+ok
+</pre>
+
+<p>Now get to the client shell and run two more <code>send/2</code> calls:</p>
+
+<pre class="brush:eshell">
+3&gt; gen_tcp:send(Socket, "one").
+ok
+4&gt; gen_tcp:send(Socket, "two").
+ok
+</pre>
+
+<p>And back to server shell:</p>
+
+<pre class="brush:eshell">
+7&gt; flush().
+Shell got {tcp,#Port&lt;0.598&gt;,"one"}
+ok
+8&gt; flush().
+ok
+9&gt; inet:setopts(Accept, [{active, once}]).
+ok
+10&gt; flush().
+Shell got {tcp,#Port&lt;0.598&gt;,"two"}
+ok
+</pre>
+
+<p>See? Until we ask for <code>{active, once}</code> a second time, the message <code>"two"</code> hasn't been converted to a message, which means the socket was back to passive mode. So the active once mode allows us to do that back-and-forth switch between active and passive in a safe way. Nice semantics, plus the safety.</p>
+
+<p>There are other nice functions part of inet. Stuff to read statistics, get current host information, inspect sockets and so on.</p>
+
+<p>Well that's most of it for sockets. Now's time to put this into practice.</p>
+
+<div class="note">
+    <p><strong>Note:</strong> out in the wilderness of the Internet, you have libraries to do so with a truckload of protocols: HTTP, 0mq, raw unix sockets, etc. They're all available. The standard Erlang distribution, however, comes with two main options, TCP and UDP sockets. It also comes with some HTTP servers and parsing code, but it's not the most efficient thing around.</p>
+</div>
+
+<div class="note update">
+    <p><strong>Update:</strong><br />
+    Starting with version 17.0, it is now possible to tell a port to be active for <var>N</var> packets.
+The <code>{active, N}</code> option for TCP and UDP ports has been added, where <var>N</var> can be any value from 0 to 32767. Once the remaining message counter either reaches 0 or is explicitly set to 0 through <code>inet:setopts/2</code>, the socket transitions to passive (<code>{active, false}</code>) mode. At that point, a message is sent to the socket's controlling process to inform it of the transition. The message will be <code>{tcp_passive, Socket}</code>, and <code>{udp_passive, Socket}</code> for UDP.</p>
+
+    <p>When calling the function multiple times, each new value is added to the total counter. Calling it with <code>{active, 3}</code> three times will have it send up to 9 messages to the controlling process. The <var>N</var> value can also be negative to force decrementing the counter. If the final value would be below 0, Erlang silently sets it to 0 and transitions to passive mode.</p>
+</div>
+
+<img class="center support" src="static/img/take-a-break.png" width="425" height="200" alt="A cup of coffee with cookies and a spoon. Text says 'take a break'" title="this is really many breaks you gotta take now!" />
+
+
+<h3><a class="section" name="sockserv-revisited">Sockserv, Revisited</a></h3>
+
+<p>I won't be introducing that much new code for this chapter. Instead, we'll look back at the <a class="source" href="static/erlang/processquest/apps/sockserv-1.0.1/src/sockserv_serv.erl">sockserv</a> server from Process Quest, in the last chapter. It's a perfectly viable server and we'll see how to deal with serving TCP connections within an OTP supervision trees, in a gen_server.</p>
+
+<p>A naive implementation of a TCP server might look a bit like this:</p>
+
+<pre class="brush:erl">
+-module(naive_tcp).
+-compile(export_all).
+
+start_server(Port) -&gt;
+    Pid = spawn_link(fun() -&gt;
+        {ok, Listen} = gen_tcp:listen(Port, [binary, {active, false}]),
+        spawn(fun() -&gt; acceptor(Listen) end),
+        timer:sleep(infinity)
+    end),
+    {ok, Pid}.
+
+acceptor(ListenSocket) -&gt;
+    {ok, Socket} = gen_tcp:accept(ListenSocket),
+    spawn(fun() -&gt; acceptor(ListenSocket) end),
+    handle(Socket).
+
+%% Echoing back whatever was obtained
+handle(Socket) -&gt;
+    inet:setopts(Socket, [{active, once}]),
+    receive
+        {tcp, Socket, &lt;&lt;"quit", _/binary&gt;&gt;} -&gt;
+            gen_tcp:close(Socket);
+        {tcp, Socket, Msg} -&gt;
+            gen_tcp:send(Socket, Msg),
+            handle(Socket)
+    end.
+</pre>
+
+<p>To understand how this works, a little graphical representation might be helpful:</p>
+
+<img class="center explanation" src="static/img/sequential-server.png" width="435" height="261" alt="A diagram showing the first process (P1) spawning a listen socket and a first acceptor process (P2). The first acceptor can accept request, handle messages, and then spawn a new acceptor process (P3) that does the same as P2" />
+
+<p>So the <code>start_server</code> function opens a listen socket, spawns an acceptor and then just idles forever. The idling is necessary because the listen socket is bound to the process that opened it, so that one needs to remain alive as long as we want to handle connections. Each acceptor process waits for a connection to accept. Once one connection comes in, the acceptor process starts a new similar process and shares the listen socket to it. Then it can move on and do some processing while the new guy's working. Each handler will repeat all messages it gets until one of them starts with <code>"quit"</code> &mdash; then the connection is closed.</p>
+
+<div class="note">
+	<p><strong>Note:</strong> the pattern <code>&lt;&lt;"quit", _/binary&gt;&gt;</code> means that we first want to match on a binary string containing the characters <code>q</code>, <code>u</code>, <code>i</code>, and <code>t</code>, plus some binary data we don't care about (<code>_</code>).</p>
+</div>
+
+<p>Start the server in an Erlang shell by doing <code>naive_tcp:start_server(8091).</code> Then open up a telnet client (remember, telnet clients are technically not for raw TCP, but act as good clients to test servers without having to write one) to localhost and you can see the following taking place:</p>
+
+<pre class="expand">
+$ telnet localhost 8091
+Trying 127.0.0.1...
+Connected to localhost.
+Escape character is '^]'.
+hey there
+hey there
+that's what I asked
+that's what I asked
+stop repeating &gt;:(
+stop repeating &gt;:(
+quit doing that!
+Connection closed by foreign host.
+</pre>
+
+<p>Hooray. Time to start a new company called <em>Poople Inc.</em> and launch a few social networks with such a server. Except that as the name of the module mentions it, this is a naive implementation. The code is simple, but wasn't thought with parallelism in mind. If all the requests come one by one, then the naive server works fine. What happens if we have a queue of 15 people wanting to connect to the server at once, though?</p>
+
+<p>Then only one query at a time can be replied to, and this has to do with each process first waiting for the connection, setting it up, then spawning a new acceptor. The 15th request in the queue will have had to wait for 14 other connections to have been set up to even get the chance of asking for a right to discuss with our server. If you're working with production servers, it might be closer to, I don't know, five hundred to a thousand queries per second. That's impractical.</p>
+
+<p>What we'd need would be to change the sequential workflow we have:</p>
+
+<img class="center explanation" src="static/img/sequential-accept.png" width="464" height="137" alt="A diagram showing in order, a listen operation, then a bunch of 'accepts' coming one after the other in a chain" />
+
+<p>To something more parallel:</p>
+
+<img class="center explanation" src="static/img/parallel-accept.png" width="406" height="192" alt="A diagram showing in order, a listen operation, then a bunch of 'accepts' coming under the listen operation" />
+
+<p>By having many acceptors already ready on standby, we'll be cutting down on a lot of delays to answer new queries. Now, rather than going through another demo implementation, we'll study <a class="source" href="static/erlang/sockserv-1.0.1.zip">sockserv-1.0.1</a> from the last chapter. It will be nicer to explore something based on real OTP components and real world practice. In fact, the general pattern of sockserv is the same one used in servers like <a class="external" href="https://github.com/extend/cowboy">cowboy</a> (although cowboy is no doubt more reliable than sockserv) and the <a class="external" href="https://github.com/jlouis/etorrent">etorrent</a> torrent client.</p>
+
+<p>To build this Process Quest's sockserv, we'll go top-down. The scheme we'll need will have to be a supervisor with many workers. If we look at the parallel drawing above, the supervisor should hold the listen socket and share it to all workers, which will be in charge of accepting things.</p>
+
+<p>How do we write a supervisor that can share things across all workers? There is no way to do it with regular supervision: all children are entirely independent, no matter if you use <code>one_for_one</code>, <code>one_for_all</code> or <code>rest_for_one</code> supervision. A natural reflex could be to turn to some global state: a registered process that just holds the listen socket and hands it over to the handlers. You must fight this reflex and be clever. Use the force (and the ability to read back into the <a class="chapter" href="supervisors.html">supervisors chapter</a>). You've got 2 minutes to think of a solution (the timing of the two minutes is based on the honor system. Time it yourself.)</p>
+
+<p>The secret is in using a <code>simple_one_for_one</code> supervisor. Because the <code>simple_one_for_one</code> supervisors share the child specification with all of its children, all we need to do is shove the listen socket in there for all the children to access it!</p>
+
+<p>So here's the supervisor in all its glory:</p>
+
+<pre class="brush:erl">
+%%% The supervisor in charge of all the socket acceptors.
+-module(sockserv_sup).
+-behaviour(supervisor).
+
+-export([start_link/0, start_socket/0]).
+-export([init/1]).
+
+start_link() -&gt;
+    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+
+init([]) -&gt;
+    {ok, Port} = application:get_env(port),
+    %% Set the socket into {active_once} mode.
+    %% See sockserv_serv comments for more details
+    {ok, ListenSocket} = gen_tcp:listen(Port, [{active,once}, {packet,line}]),
+    spawn_link(fun empty_listeners/0),
+    {ok, {{simple_one_for_one, 60, 3600},
+         [{socket,
+          {sockserv_serv, start_link, [ListenSocket]}, % pass the socket!
+          temporary, 1000, worker, [sockserv_serv]}
+         ]}}.
+
+start_socket() -&gt;
+    supervisor:start_child(?MODULE, []).
+
+%% Start with 20 listeners so that many multiple connections can
+%% be started at once, without serialization. In best circumstances,
+%% a process would keep the count active at all times to insure nothing
+%% bad happens over time when processes get killed too much.
+empty_listeners() -&gt;
+    [start_socket() || _ &lt;- lists:seq(1,20)],
+    ok.
+</pre>
+
+<p>So what is going on in here. The standard <code>start_link/0</code> and <code>init/1</code> functions are there. You can see sockserv getting the <code>simple_one_for_one</code> restart strategy, and the child specification having <var>ListenSocket</var> passed around. Every child started with <code>start_socket/0</code> will have it as an argument by default. Magic!</p>
+
+<p>Just having that won't be enough. We want the application to be able to serve queries as soon as possible. That's why I added that call to <code>spawn_link(fun empty_listeners/0)</code>. The <code>empty_listeners/0</code> function will start 20 handlers to be locked and waiting for incoming connections. I've put it inside a <code>spawn_link/1</code> call for a simple reason: the supervisor process is in its <code>init/1</code> phase and cannot answer any messages. If we were to call ourselves from within the init function, the process would deadlock and never finish running. An external process is needed just for this reason.</p>
+
+<div class="note">
+	<p><strong>Note:</strong> In the snippet above, you'll notice I pass the option <code>{packet, line}</code> to gen_tcp. This option will make it so all received packets will be broken into separate lines and queued up based on that (the line ends will still be part of the received strings). This will help make sure things work better with telnet clients in our case. Be aware, however, that lines longer than the receive buffer may be split over many packets, so it is possible for two packets to represent a single line. Verifying that the received content ends in a newline will let you know if the line is over or not.</p>
+</div>
+
+<p>So yeah, that was the whole tricky part. We can now focus on writing the workers themselves.</p>
+
+<p>If you recall the Process Quest sessions from last chapter, things went this way:</p>
+
+<ol>
+	<li>The user connects to the server</li>
+	<li>The server asks for the character's name</li>
+	<li>The user sends in a character name</li>
+	<li>The server suggests stats</li>
+	<li>
+		<ol>
+			<li>the user refuses, go back to point 4</li>
+			<li>the user accepts, go to point 6</li>
+		</ol>
+	</li>
+	<li>The game sends event to the player, until:</li>
+	<li>The user sends <code>quit</code> to the server or the socket is forced close</li>
+</ol>
+
+<p>This means we will have two kinds of input to our server processes: input coming from the Process Quest application and input coming from the user. Data coming from the user will be doing so from a socket and so will be handled in our gen_server's <code>handle_info/2</code> function. Data coming from Process Quest can be sent in a way we control, and so a cast handled by <code>handle_cast</code> will make sense there. First, we must start the server:</p>
+
+<pre class="brush:erl">
+-module(sockserv_serv).
+-behaviour(gen_server).
+
+-record(state, {name, % player's name
+                next, % next step, used when initializing
+                socket}). % the current socket
+
+-export([start_link/1]).
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2,
+         code_change/3, terminate/2]).
+</pre>
+
+<p>First of all is a pretty standard gen_server callback module. The only special thing here is the state containing the character's name, the socket, and a field called <code>next</code>. The <code>next</code> part is a bit of a catch-all field to store temporary information related to the state of the server. A gen_fsm could have possibly been used here without too much trouble.</p>
+
+<p>For the actual server startup:</p>
+
+
+<pre class="brush:erl">
+-define(TIME, 800).
+-define(EXP, 50).
+
+start_link(Socket) -&gt;
+    gen_server:start_link(?MODULE, Socket, []).
+
+init(Socket) -&gt;
+    %% properly seeding the process
+    &lt;&lt;A:32, B:32, C:32&gt;&gt; = crypto:rand_bytes(12),
+    random:seed({A,B,C}),
+    %% Because accepting a connection is a blocking function call,
+    %% we can not do it in here. Forward to the server loop!
+    gen_server:cast(self(), accept),
+    {ok, #state{socket=Socket}}.
+
+%% We never need you, handle_call!
+handle_call(_E, _From, State) -&gt;
+    {noreply, State}.
+</pre>
+
+<p>The two macros defined above (<var>?TIME</var> and <var>?EXP</var>) are special parameters that make it possible to set the baseline delay between actions (800 milliseconds) and the amount of experience required to reach the second level (50, doubled after each level).</p>
+
+<p>You'll notice that the <code>start_link/1</code> function takes a socket. That's the listen socket passed in from <code>sockserv_sup</code>.</p>
+
+<p>The first bit about the random seed is about making sure a process is properly seeded to later generate character statistics. Otherwise, some default value will be used across many processes and we don't want that. The reason why we're initializing in the <code>init/1</code> function rather than in whatever library that uses random numbers is because seeds are stored at a process-level (damn it! mutable state!) and we wouldn't want to set a new seed on each library call.</p>
+
+<p>In any case, the real important bit there is that we're casting a message to ourselves. The reason for this is that <code>gen_tcp:accept/1-2</code> is a blocking operation, combined with the fact that all <code>init</code> functions are synchronous. If we wait 30 seconds to accept a connection, the supervisor starting the process will also be locked 30 seconds. So yeah, we cast a message to ourselves, then add the listen socket to the state's <code>socket</code> field.</p>
+
+<div class="note koolaid">
+	<p><strong>Don't Drink Too Much Kool-Aid:</strong><br />
+	   If you read code from other people, you will often see people calling <code>random:seed/1</code> with the result of <code>now()</code>. <code>now()</code> is a nice function because it returns monotonic time (always increasing, never twice the same). However, it's a bad seed value for the random algorithm used in Erlang. For this reason, it's better to use <code>crypto:rand_bytes(12)</code> to generate 12 crypto-safe random bytes (use <code>crypto:strong_rand_bytes(12)</code> if you're on R14B03+). By doing <code>&lt;&lt;A:32, B:32, C:32&gt;&gt;</code>, we're casting the 12 bytes to 3 integers to be passed in.</p>
+</div>
+
+<p>We need to accept that connection. Enough fooling around:</p>
+
+<pre class="brush:erl">
+handle_cast(accept, S = #state{socket=ListenSocket}) -&gt;
+    {ok, AcceptSocket} = gen_tcp:accept(ListenSocket),
+    %% Remember that thou art dust, and to dust thou shalt return.
+    %% We want to always keep a given number of children in this app.
+    sockserv_sup:start_socket(), % a new acceptor is born, praise the lord
+    send(AcceptSocket, "What's your character's name?", []),
+    {noreply, S#state{socket=AcceptSocket, next=name}};
+</pre>
+
+<p>We accept the connection, start a replacement acceptor (so that we always have about 20 acceptors ready to handle new connections), then store the accept socket as a replacement to <var>ListenSocket</var> and note that the next message we receive through a socket is about a name with the 'next' field.</p>
+
+<p>But before moving on, we send a question to the client through the <code>send</code> function, defined as follows:</p>
+
+<pre class="brush:erl">
+send(Socket, Str, Args) -&gt;
+    ok = gen_tcp:send(Socket, io_lib:format(Str++"~n", Args)),
+    ok = inet:setopts(Socket, [{active, once}]),
+    ok.
+</pre>
+
+<p>Trickery! Because I expect us to pretty much always have to reply after receiving a message, I do the <em>active once</em> routine within that function, and also add line breaks in there. Just laziness locked in a function.</p>
+
+<p>We've completed steps 1 and 2, and now we have to wait for user input coming from the socket:</p>
+
+<pre class="brush:erl">
+handle_info({tcp, _Socket, Str}, S = #state{next=name}) -&gt;
+    Name = line(Str),
+    gen_server:cast(self(), roll_stats),
+    {noreply, S#state{name=Name, next=stats}};
+</pre>
+
+<p>We have no idea what's going to be in the <var>Str</var> string, but that's alright because the <code>next</code> field of the state lets us know whatever we receive is a name. Because I was expecting users to use telnet for the demo application, all bits of text we're going to receive will contain line ends. The <code>line/1</code> function, defined as follows, strips them away:</p>
+
+<pre class="brush:erl">
+%% Let's get rid of the white space and ignore whatever's after.
+%% makes it simpler to deal with telnet.
+line(Str) -&gt;
+    hd(string:tokens(Str, "\r\n ")).
+</pre>
+
+<p>Once we've received that name, we store it and then cast a message to ourselves (<code>roll_stats</code>) to generate stats for the player, the next step in line.</p>
+
+<div class="note">
+	<p><strong>Note:</strong> if you look in the file, you'll see that instead of matching on entire messages, I've used a shorter <code>?SOCK(Var)</code> macro. The macro is defined as <code>-define(SOCK(Msg), {tcp, _Port, Msg}).</code> and is just a quick way for someone as lazy as I am to match on strings with slightly less typing.</p>
+</div>
+
+<p>The stats rolling comes back into a <code>handle_cast</code> clause:</p>
+
+<pre class="brush:erl">
+handle_cast(roll_stats, S = #state{socket=Socket}) -&gt;
+    Roll = pq_stats:initial_roll(),
+    send(Socket,
+         "Stats for your character:~n"
+         "  Charisma: ~B~n"
+         "  Constitution: ~B~n"
+         "  Dexterity: ~B~n"
+         "  Intelligence: ~B~n"
+         "  Strength: ~B~n"
+         "  Wisdom: ~B~n~n"
+         "Do you agree to these? y/n~n",
+         [Points || {_Name, Points} &lt;- lists:sort(Roll)]),
+    {noreply, S#state{next={stats, Roll}}};
+</pre>
+
+<img class="left" src="static/img/dice.png" width="177" height="151" alt="two dice, with a 5 rolled on each" />
+
+<p>The <a class="source" href="static/erlang/processquest/apps/processquest-1.0.0/src/pq_stats.erl">pq_stats</a> module contains functions to roll stats, and the whole clause is only being used to output the stats there. The <code>~B</code> format parameters means we want an integer to be printed out. The <code>next</code> part of the state is a bit overloaded here. Because we ask the user whether they agree or not, we will have to wait for them to tell us so, and either drop the stats and generate new ones, or pass them to the Process Quest character we'll no doubt start very soon.</p>
+
+<p>Let's listen to the user input, this time in the <code>handle_info</code> function:</p>
+
+<pre class="brush:erl">
+handle_info({tcp, Socket, Str}, S = #state{socket=Socket, next={stats, _}}) -&gt;
+    case line(Str) of
+        "y" -&gt;
+            gen_server:cast(self(), stats_accepted);
+        "n" -&gt;
+            gen_server:cast(self(), roll_stats);
+        _ -&gt; % ask again because we didn't get what we wanted
+            send(Socket, "Answer with y (yes) or n (no)", [])
+    end,
+    {noreply, S};
+</pre>
+
+<p>It would have been tempting to start the character in this direct function clause, but I decided against it: <code>handle_info</code> is to handle user input, <code>handle_cast</code> for Process Quest things. Separation of concerns! If the user denies the stats, we just call <code>roll_stats</code> again. Nothing new. When the user accepts, then we can start the Process Quest character and start waiting for events from there:</p>
+
+<pre class="brush:erl">
+%% The player has accepted the stats! Start the game!
+handle_cast(stats_accepted, S = #state{name=Name, next={stats, Stats}}) -&gt;
+    processquest:start_player(Name, [{stats,Stats},{time,?TIME},
+                                     {lvlexp, ?EXP}]),
+    processquest:subscribe(Name, sockserv_pq_events, self()),
+    {noreply, S#state{next=playing}};
+</pre>
+
+<p>Those are regular calls I defined for the game. You start a player, and subscribe to the events with the <a class="source" href="static/erlang/processquest/apps/sockserv-1.0.1/src/sockserv_pq_events.erl">sockserv_pq_events</a> event handler. The next state is <code>playing</code>, which means that all messages received are more than likely to be from the game:</p>
+
+<pre class="brush:erl">
+%% Events coming in from process quest
+%% We know this because all these events' tuples start with the
+%% name of the player as part of the internal protocol defined for us
+handle_cast(Event, S = #state{name=N, socket=Sock}) when element(1, Event) =:= N -&gt;
+    [case E of
+       {wait, Time} -&gt; timer:sleep(Time);
+       IoList -&gt; send(Sock, IoList, [])
+     end || E &lt;- sockserv_trans:to_str(Event)], % translate to a string
+    {noreply, S}.
+</pre>
+
+<p>I won't get into the details of how this works too much. Just know that <code>sockserv_trans:to_str(Event)</code> convert some game event to lists of IO lists or <code>{wait, Time}</code> tuples that represent delays to wait between parts of events (we print <samp>executing a ...</samp> messages a bit before showing what the item dropped by the enemy is).</p>
+
+<p>If you recall the list of steps to follow, we've covered them all except one. Quitting when a user tells us they want to. Put the following clause as the top one in <code>handle_info</code>:</p>
+
+<pre class="brush:erl">
+handle_info({tcp, _Socket, "quit"++_}, S) -&gt;
+    processquest:stop_player(S#state.name),
+    gen_tcp:close(S#state.socket),
+    {stop, normal, S};
+</pre>
+
+<p>Stop the character, close the socket, terminate the process. Hooray. Other reasons to quit include the TCP socket being closed by the client:</p>
+
+<pre class="brush:erl">
+handle_info({tcp_closed, _Socket}, S) -&gt;
+    {stop, normal, S};
+handle_info({tcp_error, _Socket, _}, S) -&gt;
+    {stop, normal, S};
+handle_info(E, S) -&gt;
+    io:format("unexpected: ~p~n", [E]),
+    {noreply, S}.
+</pre>
+
+<p>I also added an extra clause to handle unknown messages. If the user types in something we don't expect, we don't want to crash. Only the <code>terminate/2</code> and <code>code_change/3</code> functions are left to do:</p>
+
+<pre class="brush:erl">
+code_change(_OldVsn, State, _Extra) -&gt;
+    {ok, State}.
+
+terminate(normal, _State) -&gt;
+    ok;
+terminate(_Reason, _State) -&gt;
+    io:format("terminate reason: ~p~n", [_Reason]).
+</pre>
+
+<p>If you followed through the whole thing, you can try compiling this file and substituting it for the corresponding beam file in the release we had and see if it runs well. It should, if you copied things right (and if I did too).</p>
+
+
+<h3><a class="section" name="where-to-go-from-now">Where to go From Now?</a></h3>
+
+<p>Your next assignment, if you are to accept it, is to add a few more commands of your choice to the client: why not add things like 'pause' that will queue up actions for a while and then output them all once you resume the server? Or if you're bad ass enough, noting the levels and stats you have so far in the <a class="source" href="static/erlang/processquest/apps/sockserv-1.0.1/src/sockserv_serv.erl">sockserv_serv</a> module, and adding commands to fetch them from the client side. I always hated exercises left to the reader, but sometimes it's just too tempting to drop one here and there, so enjoy!</p>
+
+<p>Otherwise, reading the source of existing server implementations, programming some yourself and whatnot will all be good exercises. Rare are the languages where doing things like writing a web server is an exercise for amateurs, but Erlang is one of them. Practice a bit and it'll become like a second nature. Erlang communicating to the outside world is just one of the many steps we've done towards writing useful software.</p>
+				<ul class="navigation">
+											<li><a href="relups.html" title="Previous chapter">&lt; Previous</a></li>
+										
+					<li><a href="contents.html" title="Index">Index</a></li>
+					
+											<li><a href="eunit.html" title="Next chapter">Next &gt;</a></li>
+									</ul>
+			</div><!-- content -->
+			<div id="footer">
+				<a href="http://creativecommons.org/licenses/by-nc-nd/3.0/" title="Creative Commons License Details"><img src="static/img/cc.png" width="88" height="31" alt="Creative Commons Attribution Non-Commercial No Derivative License" /></a>
+				<p>Except where otherwise noted, content on this site is licensed under a Creative Commons Attribution Non-Commercial No Derivative License</p>
+			</div> <!-- footer -->
+		</div> <!-- wrapper -->
+		<div id="grass" />
+	<script type="text/javascript" src="static/js/shCore.js"></script>
+	<script type="text/javascript" src="static/js/shBrushErlang2.js%3F11"></script>
+	<script type="text/javascript">
+		SyntaxHighlighter.defaults.gutter = false;
+		SyntaxHighlighter.all();
+	</script>
+	</body>
+</html>

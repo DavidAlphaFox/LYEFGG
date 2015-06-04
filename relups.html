@@ -1,0 +1,689 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en" dir="ltr">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<meta http-equiv="Content-Style-Type" content="text/css" />
+		<meta name="keywords" content="Erlang, OTP, relup, appup, release, release_handler, upgrade, downgrade, reltool, boot file" />
+		<meta name="description" content="Finding how to take a complete release and then safely upgrade it without taking it down or losing data. Done with a Progress Quest clone." />
+        <meta name="google-site-verification" content="mi1UCmFD_2pMLt2jsYHzi_0b6Go9xja8TGllOSoQPVU" />
+		<link rel="stylesheet" type="text/css" href="static/css/screen.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/sh/shCore.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/sh/shThemeLYSE2.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/print.css" media="print" />
+		<link href="rss" type="application/rss+xml" rel="alternate" title="LYSE news" />
+		<link rel="icon" type="image/png" href="favicon.ico" />
+		<link rel="apple-touch-icon" href="static/img/touch-icon-iphone.png" />
+		<link rel="apple-touch-icon" sizes="72x72" href="static/img/touch-icon-ipad.png" />
+		<link rel="apple-touch-icon" sizes="114x114" href="static/img/touch-icon-iphone4.png" />
+		<title>Leveling Up in The Process Quest | Learn You Some Erlang for Great Good!</title>
+	</head>
+	<body>
+		<div id="wrapper">
+			<div id="header">
+				<h1>Learn you some Erlang</h1>
+				<span>for great good!</span>
+			</div> <!-- header -->
+			<div id="menu">
+				<ul>
+					<li><a href="content.html" title="Home">Home</a></li>
+					<li><a href="faq.html" title="Frequently Asked Questions">FAQ</a></li>
+					<li><a href="rss" title="Latest News">RSS</a></li>
+					<li><a href="static/erlang/learn-you-some-erlang.zip" title="Source Code">Code</a></li>
+				</ul>
+			</div><!-- menu -->
+			<div id="content">
+            <div class="noscript"><noscript>Hey there, it appears your Javascript is disabled. That's fine, the site works without it. However, you might prefer reading it with syntax highlighting, which requires Javascript!</noscript></div>
+<h2>Leveling Up in The Process Quest</h2>
+
+<h3><a class="section" name="the-hiccups-of-appups-and-relups">The Hiccups of Appups and Relups</a></h3>
+
+<p>Doing some code hot-loading is one of the simplest things in Erlang. You recompile, make a fully-qualified function call, and then enjoy. Doing it right and safe is much more difficult, though.</p>
+
+<p>There is one very simple challenge that makes code reloading problematic. Let's use our amazing Erlang-programming brain and have it imagine a gen_server process. This process has a <code>handle_cast/2</code> function that accepts one kind of argument. I update it to one that takes a different kind of argument, compile it, push it in production. All is fine and dandy, but because we have an application that we don't want to shut down, we decide to load it on the production VM to make it run.</p>
+
+<img class="left" src="static/img/evolve.png" width="402" height="173" alt="A chain of evolution/updates. First is a monkey, second is a human-like creature, both separated by an arrow with 'Update' written under it. Then appears an arrow with an explosion saying 'failed upgrade', pointing from the human-like creature to a pile of crap and a tombstone saying 'RIP, YOU'" />
+
+<p>Then a bunch of error reports start pouring in. It turns out that your different <code>handle_cast</code> functions are incompatible. So when they were called a second time, no clause matched. The customer is pissed off, so is your boss. Then the operations guy is also angry because he has to get on location and rollback the code, extinguish fires, etc. If you're lucky, you're that operations guy. You're staying late and ruining the janitor's night (he usually loves to hum along with his music and dance a little bit, but he feels ashamed in your presence). You come home late, your family/friends/WoW raid party/children are mad at you, they yell, scream, slam the door and you're left alone. You had promised that nothing could go wrong, no downtime. You're using Erlang after all, right? Oh but it didn't happen so. You're left alone, curled up in a ball in the corner of the kitchen, eating a frozen hot pocket.</p>
+
+<p>Of course things aren't always that bad, but the point stands. Doing live code upgrades on a production system can be very dangerous if you're changing the interface your modules give to the world: changing internal data structures, changing function names, modifying records (remember, they're tuples!), etc. They all have the potential to crash things.</p>
+
+<p>When we were first playing with code reloading, we had a process with some kind of hidden message to handle doing a fully-qualified call. If you recall, a process could have looked like this:</p>
+
+<pre class="brush:erl">
+loop(N) -&gt;
+    receive
+        some_standard_message -&gt; N+1;
+        other_message -&gt; N-1;
+        {get_count, Pid} -&gt;
+            Pid ! N,
+            loop(N);
+        update -&gt; ?MODULE:loop(N);
+    end.
+</pre>
+
+<p>However, this way of doing things wouldn't fix our problems if we were to change the arguments to <code>loop/1</code>. We'd need to extend it a bit like this:</p>
+
+<pre class="brush:erl">
+loop(N) -&gt;
+    receive
+        some_standard_message -&gt; N+1;
+        other_message -&gt; N-1;
+        {get_count, Pid} -&gt;
+            Pid ! N,
+            loop(N);
+        update -&gt; ?MODULE:code_change(N);
+    end.
+</pre>
+
+<p>And then <code>code_change/1</code> can take care of calling a new version of loop. But this kind of trick couldn't work with generic loops. See this example:</p>
+
+<pre class="brush:erl">
+loop(Mod, State) -&gt;
+    receive
+        {call, From, Msg} -&gt;
+            {reply, Reply, NewState} = Mod:handle_call(Msg, State),
+            From ! Reply,
+            loop(Mod, NewState);
+        update -&gt;
+            {ok, NewState} = Mod:code_change(State),
+            loop(Mod, NewState)
+    end.
+</pre>
+
+<p>See the problem? If we want to update <var>Mod</var> and load a new version, there is <em>no</em> way to do it safely with that implementation. The call <code>Mod:handle_call(Msg, State)</code> is already fully qualified and it's well possible that a message of the form <code>{call, From, Msg}</code> is received in between the time we reload the code and handle the <code>update</code> message. In that case, we'd update the module in an uncontrolled manner. Then we'd crash.</p>
+
+<p>The secret to getting it right is buried within the entrails of OTP. We must freeze the sands of time! To do so, we require more secret messages: messages to put a process on hold, messages to change the code, and then messages to resume the actions you had before. Deep inside OTP behaviours is hidden a special protocol to take care of all that kind of management. This is done through something called the <code><a class="docs" href="http://erldocs.com/17.3/stdlib/sys.html">sys</a></code> module and a second one called <code><a class="docs" href="http://erldocs.com/17.3/sasl/release_handler.html">release_handler</a></code>, part of the SASL (System Architecture Support Libraries) application. They take care of everything.</p>
+
+<p>The trick is that you can suspend OTP processes by calling <code>sys:suspend(PidOrName)</code> (you can find all of the processes using the supervision trees and looking at the children each supervisor has). Then you use <code>sys:change_code(PidOrName, Mod, OldVsn, Extra)</code> to force the process to update itself, and finally, you call <code>sys:resume(PidOrName)</code> to make things go again.</p>
+
+<p>It wouldn't be very practical for us to call these functions manually by writing ad-hoc scripts all the time. Instead, we can look at how relups are done.</p>
+
+
+<h3><a class="section" name="the-ninth-circle-of-erl">The 9th Circle of Erl</a></h3>
+
+<img class="center" src="static/img/9-circles-of-erl.png" width="576" height="598" alt="The 9 circles are: 0 (vestibule): handling syntax; 1. Records are tuples; 2. sharing nothing; 3. thinking asynchronously; 4. OTP behaviours (gen_server, gen_fsm, gen_event, supervisor); 5. OTP Applications; 6. Parse Transforms; 7. Common Test; 8. Releases; 9. Relups; and the center of erl is the distributed world with netsplits." />
+
+<p>The act of taking a running release, making a second version of it and updating it while it runs is perilous. What seems like a simple assembly of <em>appups</em> (files containing instructions on how to update individual applications) and <em>relups</em> (file containing instructions to update an entire release) quickly turns into a struggle through APIs and undocumented assumptions.</p>
+
+<p>We're getting into one of the most complex parts of OTP, difficult to comprehend and get right, on top of being time consuming. In fact, if you can avoid the whole procedure (which will be called <em>relup</em> from now on) and do simple rolling upgrades by restarting VMs and booting new applications, I would recommend you do so. Relups should be one of these 'do or die' tools. Something you use when you have few more choices.</p>
+
+<p>There are a bunch of different levels to have when dealing with release upgrades:</p>
+
+<ul>
+	<li>Write OTP applications</li>
+	<li>Turn a bunch of them into a release</li>
+	<li>Create new versions of one or more of the OTP applications</li>
+	<li>Create an <code>appup</code> file that explains what to change to make the transition between the old and the new application work</li>
+	<li>Create a new release with the new applications</li>
+	<li>Generate an appup file from these releases</li>
+	<li>Install the new app in a running Erlang shell</li>
+</ul>
+
+<p>Each of which can be more complex than the preceding one. We've only seen how to do the first 3 steps here. To be able to work with an application that is more adapted to long-running upgrades than the previous ones (eh, who cares about running regexes without restarting), we'll introduce a superb video game.</p>
+
+
+<h3><a class="section" name="progress-quest">Progress Quest</a></h3>
+
+<p><a class="external" href="http://progressquest.com">Progress Quest</a> is a revolutionary Role Playing Game. I would call it the OTP of RPGs in fact. If you've ever played an RPG before, you'll notice that many steps are similar: run around, kill enemies, gain experience, get money, level up, get skills, complete quests. Rinse and repeat forever. Power players will have shortcuts such as macros or even bots to go around and do their bidding for them.</p>
+
+<p>Progress Quest took all of these generic steps and turned them into one streamlined game where all you have to do is sit back and enjoy your character doing all the work:</p>
+
+<img class="center explanation" src="static/img/progressquest.jpg" width="500" height="418" alt="A screenshot of Progress Quest" />
+
+<p>With the permission of the creator of this fantastic game, Eric Fredricksen, I've made a very minimal Erlang clone of it called <em>Process Quest</em>. Process Quest is similar in principle to Progress Quest, but rather than being a single-player application, it's a server able to hold many raw socket connections (usable through <a class="external" href="http://en.wikipedia.org/wiki/Telnet#Telnet_clients">telnet</a>) to let someone use a terminal and temporarily play the game.</p>
+
+<p>The game is made of the following parts:</p>
+
+<h4>regis-1.0.0</h4>
+
+<p>The regis application is a process registry. It has an interface somewhat similar to the regular Erlang process registry, but it can accept any term at all and is meant to be dynamic. It might make things slower because all the calls will be serialized when they enter the server, but it will be better than using the regular process registry, which is not made for that kind of dynamic work. If this guide could automatically update itself with external libraries (it's too much work), I would have used <a class="external" href="https://github.com/uwiger/gproc">gproc</a> instead. It has a few modules, namely <a class="source" href="static/erlang/processquest/apps/regis-1.0.0/src/regis.erl">regis.erl</a>, <a class="source" href="static/erlang/processquest/apps/regis-1.0.0/src/regis_server.erl">regis_server.erl</a> and <a class="source" href="static/erlang/processquest/apps/regis-1.0.0/src/regis_sup.erl">regis_sup.erl</a>. The first one is a wrapper around the two other ones (and an application callback module), <code>regis_server</code> is the main registration gen_server, and <code>regis_sup</code> is the application's supervisor.</p>
+
+<h4>processquest-1.0.0</h4>
+
+<p>This is the core of the application. It includes all the game logic. Enemies, market, killing fields and statistics. The player itself is a gen_fsm that sends messages to itself in order to keep going all the time. It contains more modules than <code>regis</code>:</p>
+
+<dl>
+	<dt><a class="source" href="static/erlang/processquest/apps/processquest-1.0.0/src/pq_enemy.erl">pq_enemy.erl</a></dt>
+	<dd>This module randomly picks an enemy to fight, of the form <code>{&lt;&lt;"Name"&gt;&gt;, [{drop, {&lt;&lt;"DropName"&gt;&gt;, Value}}, {experience, ExpPoints}]}</code>. This lets the player fight an enemy.</dd>
+	
+	<dt><a class="source" href="static/erlang/processquest/apps/processquest-1.0.0/src/pq_market.erl">pq_market.erl</a></dt>
+	<dd>This implements a market that allows to find items of a given value and a given strength. All items returned are of the form <code>{&lt;&lt;"Name"&gt;&gt;, Modifier, Strength, Value}</code>. There are functions to fetch weapons, armors, shields and helmets.</dd>
+	
+	<dt><a class="source" href="static/erlang/processquest/apps/processquest-1.0.0/src/pq_stats.erl">pq_stats.erl</a></dt>
+	<dd>This is a small attribute generator for your character.</dd>
+	
+	<dt><a class="source" href="static/erlang/processquest/apps/processquest-1.0.0/src/pq_events.erl">pq_events.erl</a></dt>
+	<dd>A wrapper around a gen_event event manager. This acts as a generic hub to which subscribers connect themselves with their own handlers to receive events from each player. It also takes care of waiting a given delay for the player's actions to avoid the game being instantaneous.</dd>
+	
+	<dt><a class="source" href="static/erlang/processquest/apps/processquest-1.0.0/src/pq_player.erl">pq_player.erl</a></dt>
+	<dd>The central module. This is a gen_fsm that goes through the state loop of killing, then going to the market, then killing again, etc. It uses all of the above modules to function.</dd>
+	
+	<dt><a class="source" href="static/erlang/processquest/apps/processquest-1.0.0/src/pq_sup.erl">pq_sup.erl</a></dt>
+	<dd>A supervisor that sits above a pair of <code>pq_event</code> and <code>pq_player</code> processes. They both need to be together in order to work, otherwise the player process is useless and isolated or the event manager will never get any events.</dd>
+	
+	<dt><a class="source" href="static/erlang/processquest/apps/processquest-1.0.0/src/pq_supersup.erl">pq_supersup.erl</a></dt>
+	<dd>The top-level supervisor of the application. It sits over a bunch of <code>pq_sup</code> processes. This lets you spawn as many players as you'd like.</dd>
+	
+	<dt><a class="source" href="static/erlang/processquest/apps/processquest-1.0.0/src/processquest.erl">processquest.erl</a></dt>
+	<dd>A wrapper and application callback module. It gives the basic interface to a player: you start one, then subscribe to events.</dd>
+</dl>
+
+<h4>sockserv-1.0.0</h4>
+
+<img class="right" src="static/img/sock.png" width="179" height="176" alt="A rainbow-colored sock" />
+
+<p>A customized raw socket server, made to work only with the processquest app. It will spawn gen_servers each in charge of a TCP socket that will push strings to some client. Again, you may use telnet to work with it. Telnet was technically not made for raw socket connections and is its own protocol, but most modern clients accept it without a problem. Here are its modules:</p>
+
+<dl>
+	<dt><a class="source" href="static/erlang/processquest/apps/sockserv-1.0.0/src/sockserv_trans.erl">sockserv_trans.erl</a></dt>
+	<dd>This translates messages received from the player's event manager into printable strings.</dd>
+	
+	<dt><a class="source" href="static/erlang/processquest/apps/sockserv-1.0.0/src/sockserv_pq_events.erl">sockserv_pq_events.erl</a></dt>
+	<dd>A simple event handler that takes whatever events come from a player and casts them to the socket gen_server.</dd>
+	
+	<dt><a class="source" href="static/erlang/processquest/apps/sockserv-1.0.0/src/sockserv_serv.erl">sockserv_serv.erl</a></dt>
+	<dd>A gen_server in charge of accepting a connection, communicating with a client and forwarding information to it.</dd>
+	
+	<dt><a class="source" href="static/erlang/processquest/apps/sockserv-1.0.0/src/sockserv_sup.erl">sockserv_sup.erl</a></dt>
+	<dd>Supervises a bunch of socket servers.</dd>
+	
+	<dt><a class="source" href="static/erlang/processquest/apps/sockserv-1.0.0/src/sockserv.erl">sockserv.erl</a></dt>
+	<dd>Application callback module for the app as a whole.</dd>
+</dl>
+
+<h4>The release</h4>
+
+<p>I've set everything up in a directory called <a class="source" href="static/erlang/processquest.zip">processquest</a> with the following structure:</p>
+
+<pre class="expand">
+apps/
+ - processquest-1.0.0
+   - ebin/
+   - src/
+   - ...
+ - regis-1.0.0
+   - ...
+ - sockserv-1.0.0
+   - ...
+rel/
+  (will hold releases)
+processquest-1.0.0.config
+</pre>
+
+<p>Based on that, we can build a release.</p>
+
+<div class="note">
+	<p><strong>Note:</strong> if you go look into <a class="source" href="static/erlang/processquest/processquest-1.0.0.config">processquest-1.0.0.config</a>, you will see that applications such as <a class="docs" href="http://www.erlang.org/doc/man/crypto.html">crypto</a> and <a class="docs" href="http://erlang.org/doc/man/sasl_app.html">sasl</a> are included. Crypto is necessary to have good initialisation of pseudo-random number generators and SASL is mandatory to be able to do appups on a system. <em>If you forget to include SASL in your release, it will be impossible to upgrade the system</em></p>
+	
+	<p>A new filter has appeared in the config file: <code>{excl_archive_filters, [".*"]}</code>. This filter makes sure that no <code>.ez</code> file is generated, only regular files and directories. This is necessary because the tools we're going to use can not look into <code>.ez</code> files to find the items they need.</p>
+	
+	<p>You will also see that there are no instructions asking to strip the <code>debug_info</code>. Without <code>debug_info</code>, doing an appup will fail for some reason.</p>
+</div>
+
+<p>Following last chapter's instructions, we start by calling <code>erl -make</code> for all applications. Once this is done, start an Erlang shell from the <code>processquest</code> directory and type in the following:</p>
+
+<pre class="brush:eshell">
+1&gt; {ok, Conf} = file:consult("processquest-1.0.0.config"), {ok, Spec} = reltool:get_target_spec(Conf), reltool:eval_target_spec(Spec, code:root_dir(), "rel").
+ok
+</pre>
+
+<p>We should have a functional release. Let's try it. Start any version of the VM by doing <code>./rel/bin/erl -sockserv port 8888</code> (or any other port number you want. Default is 8082). This will show a lot of logs about processes being started (that's one of the functions of SASL), and then a regular Erlang shell. Start a telnet session on your localhost using whatever client you want:</p>
+
+<pre class="expand">
+$ telnet localhost 8888
+Trying 127.0.0.1...
+Connected to localhost.
+Escape character is '^]'.
+What's your character's name?
+hakvroot
+Stats for your character:
+  Charisma: 7
+  Constitution: 12
+  Dexterity: 9
+  Intelligence: 8
+  Strength: 5
+  Wisdom: 16
+
+Do you agree to these? y/n
+</pre>
+
+<p>That's a bit too much wisdom and charisma for me. I type in <code>n</code> then <code>&lt;Enter&gt;</code>:</p>
+
+<pre class="expand">
+n
+Stats for your character:
+  Charisma: 6
+  Constitution: 12
+  Dexterity: 12
+  Intelligence: 4
+  Strength: 6
+  Wisdom: 10
+
+Do you agree to these? y/n
+</pre>
+
+<p>Oh yes, that's ugly, dumb and weak. Exactly what I'm looking for in a hero based on me:</p>
+
+<pre class="expand">
+y
+Executing a Wildcat...
+Obtained Pelt.
+Executing a Pig...
+Obtained Bacon.
+Executing a Wildcat...
+Obtained Pelt.
+Executing a Robot...
+Obtained Chunks of Metal.
+...
+Executing a Ant...
+Obtained Ant Egg.
+Heading to the marketplace to sell loot...
+Selling Ant Egg
+Got 1 bucks.
+Selling Goblin hair
+Got 1 bucks.
+...
+Negotiating purchase of better equipment...
+Bought a plastic knife
+Heading to the killing fields...
+Executing a Pig...
+Obtained Bacon.
+Executing a Ant...
+</pre>
+
+
+<p>OK, that's enough for me. Type in <code>quit</code> then <code>&lt;Enter&gt;</code> to close the connection:</p>
+
+<pre class="expand">
+quit
+Connection closed by foreign host.
+</pre>
+
+<p>If you want, you can leave it open, see yourself level up, gain stats, etc. The game basically works, and you can try with many clients. It should keep going without a problem.</p>
+
+<p>Awesome right? Well...</p>
+
+
+<h3><a class="action" name="making-process-quest-better">Making Process Quest Better</a></h3>
+
+<img class="right" src="static/img/ant.png" width="271" height="270" alt="an ant being beheaded with a tiny axe" />
+
+<p>There are a few issues with the current versions of the applications of Process Quest. First of all, we have very little variety in terms of enemies to beat. Second, we have text that looks a bit weird (what is it with <samp>Executing a Ant...</samp>). A third issue is that the game is a bit too simple; let's add a mode for quests! Another one is that the value of items is directly bound to your level in the real game, while our version doesn't do it. Last of all, and you couldn't see this unless you read the code and tried to close the client on your own end, a client closing their connection will leave the player process alive on the server. Uh oh, memory leaks!</p>
+
+<p>I'll have to fix this! First, I started by making a new copy of both applications that need fixes. I now have <code>processquest-1.1.0</code> and <code>sockserv-1.0.1</code> on top of the others (I use the version scheme of <code>MajorVersion.Enhancements.BugFixes</code>). Then I implemented all the changes I needed. I won't go through all of them, because the details are too many for the purpose of this chapter &mdash; we're here to upgrade an app, not to know all its little details and intricacies. In the case you do want to know all the little intricacies, I made sure to comment all of the code in a decent way so that you might be able to find the information you need to understand it. First, the changes to <code>processquest-1.1.0</code>. All in all, changes were brought to <a class="source" href="static/erlang/processquest/apps/processquest-1.1.0/src/pq_enemy.erl">pq_enemy.erl</a>, <a class="source" href="static/erlang/processquest/apps/processquest-1.1.0/src/pq_events.erl">pq_events.erl</a>, <a class="source" href="static/erlang/processquest/apps/processquest-1.1.0/src/pq_player.erl">pq_player.erl</a> and I added a file named <a class="source" href="static/erlang/processquest/apps/processquest-1.1.0/src/pq_quest.erl">pq_quest.erl</a>, that implements quests based on how many enemies were killed by a player. Of these files, only <code>pq_player.erl</code> had changes incompatible that will require a time suspension. The change I brought was to change the record:</p>
+
+<pre class="brush:erl">
+-record(state, {name, stats, exp=0, lvlexp=1000, lvl=1,
+                equip=[], money=0, loot=[], bought=[], time=0}).
+</pre>
+
+<p>To this one:</p>
+
+<pre class="brush:erl">
+-record(state, {name, stats, exp=0, lvlexp=1000, lvl=1,
+                equip=[], money=0, loot=[], bought=[],
+                time=0, quest}).
+</pre>
+
+<p>Where the <code>quest</code> field will hold a value given by <code>pq_quest:fetch/0</code>. Because of that change, I'll need to modify the <code>code_change/4</code> function in the version 1.1.0. In fact I'll need to modify it twice: once in the case of an upgrade (moving from 1.0.0 to 1.1.0), and another time in the case of a downgrade (1.1.0 to 1.0.0). Fortunately, OTP will pass us different arguments in each case. When we upgrade, we get a version number for the module. We don't exactly care for that one at this point and we'll likely just ignore it. When we downgrade, we get <code>{down, Version}</code>. This lets us easily match on each operation:</p>
+
+<pre class="brush:erl">
+code_change({down, _}, StateName, State, _Extra) -&gt;
+    ...;
+code_change(_OldVsn, StateName, State, _Extra) -&gt;
+    ....
+</pre>
+
+<p>But hold on a second right there! We can't just blindly take the state as we usually do. We need to upgrade it. The problem is, we can't do something like:</p>
+
+<pre class="brush:erl">
+code_change(_OldVsn, StateName, S = #state{}, _Extra) -&gt;
+   ....
+</pre>
+
+<p>We have two options. The first one is to declare a new state record that will have a new form. We'd end up having something like:</p>
+
+<pre class="brush:erl">
+-record(state, {...}).
+-record(new_state, {...}).
+</pre>
+
+<p>And then we'd have to change the record in each of the function clauses of the module. That's annoying and not worth the risk. It will be simpler, instead, to expand the record to its underlying tuple form (remember <a class="chapter" href="a-short-visit-to-common-data-structures.html">A Short Visit to Common Data Structures</a>):</p>
+
+<pre class="brush:erl">
+code_change({down, _},
+            StateName,
+            #state{name=N, stats=S, exp=E, lvlexp=LE, lvl=L, equip=Eq,
+                   money=M, loot=Lo, bought=B, time=T},
+            _Extra) -&gt;
+    Old = {state, N, S, E, LE, L, Eq, M, Lo, B, T},
+    {ok, StateName, Old};
+code_change(_OldVsn,
+            StateName,
+            {state, Name, Stats, Exp, LvlExp, Lvl, Equip, Money, Loot,
+             Bought, Time},
+             _Extra) -&gt;
+    State = #state{
+        name=Name, stats=Stats, exp=Exp, lvlexp=LvlExp, lvl=Lvl, equip=Equip,
+        money=Money, loot=Loot, bought=Bought, time=Time, quest=pq_quest:fetch()
+    },
+    {ok, StateName, State}.
+</pre>
+
+<p>And there's our <code>code_change/4</code> function! All it does is convert between both tuple forms. For new versions, we also take care of adding a new quest &mdash; it would be boring to add quests but have all our existing players unable to use them. You'll notice that we still ignore the <var>_Extra</var> variable. This one is passed from the appup file (to be described soon), and you'll be the one to pick its value. For now, we don't care because we can only upgrade and downgrade to and from one release. In some more complex cases, you might want to pass release-specific information in there.</p>
+
+<p>For the <code>sockserv-1.0.1</code> application, only <a class="source" href="static/erlang/processquest/apps/sockserv-1.0.1/src/sockserv_serv.erl">sockserv_serv.erl</a> required changes. Fortunately, they didn't need a restart, only a new message to match on.</p>
+
+<p>The two versions of the two applications have been fixed. That's not enough to go on our merry way though. We have to find a way to let OTP know what kind of changes require different kinds of actions.</p>
+
+
+<h3><a class="section" name="appup-files">Appup Files</a></h3>
+
+<p>Appup files are lists of Erlang commands that need to be done to upgrade a given application. They contain lists of tuples and atoms telling what to do and in what case. The general format for them is:</p>
+
+<pre class="brush:erl">
+{NewVersion,
+ [{VersionUpgradingFrom, [Instructions]}]
+ [{VersionDownGradingTo, [Instructions]}]}.
+</pre>
+
+<p>They ask for lists of versions because it's possible to upgrade and downgrade to many different versions. In our case, for <code>processquest-1.1.0</code>, this would be:</p>
+
+<pre class="brush:erl">
+{"1.1.0",
+ [{"1.0.0", [Instructions]}],
+ [{"1.0.0", [Instructions]}]}.
+</pre>
+
+<p>The instructions contain both high-level and low-level commands. We usually only need to care about high-level ones, though.</p>
+
+<dl>
+	<dt>{add_module, Mod}</dt>
+	<dd>The module <var>Mod</var> is loaded for the first time.</dd>
+	
+	<dt>{load_module, Mod}</dt>
+	<dd>The module <var>Mod</var> is already loaded in the VM and has been modified.</dd>
+	
+	<dt>{delete_module, Mod}</dt>
+	<dd>The module <var>Mod</var> is removed from the VM.</dd>
+	
+	<dt>{update, Mod, {advanced, Extra}}</dt>
+	<dd>This will suspend all processes running <var>Mod</var>, call the <code>code_change</code> function of your module with <var>Extra</var> as the last argument, then resume all processes running <var>Mod</var>. <var>Extra</var> can be used to pass in arbitrary data to the <code>code_change</code> function, in case it's required for upgrades.</dd>
+	
+	<dt>{update, Mod, supervisor}</dt>
+	<dd>Calling this lets you re-define the <code>init</code> function of a supervisor to influence its restart strategy (<code>one_for_one</code>, <code>rest_for_one</code>, etc.) or change child specifications (this will not affect existing processes).</dd>
+	
+	<dt>{apply, {M, F, A}}</dt>
+	<dd>Will call <code>apply(M,F,A)</code>.</dd>
+	
+	<dt>Module dependencies</dt>
+	<dd>You can use <code>{load_module, Mod, [ModDependencies]}</code> or <code>{update, Mod, {advanced, Extra}, [ModDeps]}</code> to make sure that a command happens only after some other modules were handled beforehand. This is especially useful if <var>Mod</var> and its dependencies are <em>not</em> part of the same application. There is sadly no way to give similar dependencies to <code>delete_module</code> instructions.</dd>
+	
+	<dt>Adding or removing an application</dt>
+	<dd>When generating relups, we won't need any special instructions to remove or add applications. The function that generates <code>relup</code> files (files to upgrade releases) will take care of detecting this for us.</dd>
+</dl>
+
+<p>Using these instructions, we can write the two following appup files for our applications. The file must be named <code>NameOfYourApp.appup</code> and be put in the app's <code>ebin/</code> directory. Here's <a class="source" href="static/erlang/processquest/apps/processquest-1.1.0/ebin/processquest.appup">processquest-1.1.0's appup file</a>:</p>
+
+<pre class="brush:erl">
+{"1.1.0",
+ [{"1.0.0", [{add_module, pq_quest},
+             {load_module, pq_enemy},
+             {load_module, pq_events},
+             {update, pq_player, {advanced, []}, [pq_quest, pq_events]}]}],
+ [{"1.0.0", [{update, pq_player, {advanced, []}},
+             {delete_module, pq_quest},
+             {load_module, pq_enemy},
+             {load_module, pq_events}]}]}.
+</pre>
+
+<p>You can see that we need to add the new module, load the two ones that require no suspension, and then update <code>pq_player</code> in a safe manner. When we downgrade the code, we do the exact same thing, but in reverse. The funny thing is that in one case, <code>{load_module, Mod}</code> will load a new version, and in the other, it will load the old version. It all depends on the context between an upgrade and a downgrade.</p>
+
+<p>Because <code>sockserv-1.0.1</code> had only one module to change and that it required no suspension, its <a class="source" href="static/erlang/processquest/apps/sockserv-1.0.1/ebin/sockserv.appup">appup file</a> is only:</p>
+
+<pre class="brush:erl">
+{"1.0.1",
+ [{"1.0.0", [{load_module, sockserv_serv}]}],
+ [{"1.0.0", [{load_module, sockserv_serv}]}]}.
+</pre>
+
+<p>Woo! The next step is to build a new release using the new modules. Here's the file <a class="source" href="static/erlang/processquest/processquest-1.1.0.config">processquest-1.1.0.config</a>:</p>
+
+<pre class="brush:erl">
+{sys, [
+    {lib_dirs, ["/Users/ferd/code/learn-you-some-erlang/processquest/apps"]},
+    {erts, [{mod_cond, derived},
+            {app_file, strip}]},
+    {rel, "processquest", "1.1.0",
+     [kernel, stdlib, sasl, crypto, regis, processquest, sockserv]},
+    {boot_rel, "processquest"},
+    {relocatable, true},
+    {profile, embedded},
+    {app_file, strip},
+    {incl_cond, exclude},
+    {excl_app_filters, ["_tests.beam"]},
+    {excl_archive_filters, [".*"]},
+    {app, stdlib, [{incl_cond, include}]},
+    {app, kernel, [{incl_cond, include}]},
+    {app, sasl, [{incl_cond, include}]},
+    {app, crypto, [{incl_cond, include}]},
+    {app, regis, [{vsn, "1.0.0"}, {incl_cond, include}]},
+    {app, sockserv, [{vsn, "1.0.1"}, {incl_cond, include}]},
+    {app, processquest, [{vsn, "1.1.0"}, {incl_cond, include}]}
+]}.
+</pre>
+
+<p>It's a copy/paste of the old one with a few versions changed. First, compile both new applications with <code>erl -make</code>. If you have downloaded the <a class="source" href="static/erlang/processquest.zip">zip file earlier</a>, they were already there for you. Then we can generate a new release. First, compile the two new applications, and then type in the following:</p>
+
+<pre class="brush:eshell">
+$ erl -env ERL_LIBS apps/
+1&gt; {ok, Conf} = file:consult("processquest-1.1.0.config"), {ok, Spec} = reltool:get_target_spec(Conf), reltool:eval_target_spec(Spec, code:root_dir(), "rel").
+ok
+</pre>
+
+<div class="note koolaid">
+	<p><strong>Don't Drink Too Much Kool-Aid:</strong><br />
+	Why didn't we just use <code>systools</code>? Well systools has its share of issues. First of all, it will generate appup files that sometimes have weird versions in them and won't work perfectly. It will also assume a directory structure that is barely documented, but somewhat close to what reltool uses. The biggest issue, though, is that it will use your default Erlang install as the root directory, which might create all kinds of permission issues and whatnot when the time comes to unpack stuff.</p>
+	
+	<p>There's just no easy way with either tools and we'll require a lot of manual work for that. We thus make a chain of commands that uses both modules in a rather complex manner, because it ends up being a little bit less work.</p>
+</div>
+
+<p>But wait, there's more manual work required!</p>
+
+<ol>
+	<li>copy <code>rel/releases/1.1.0/processquest.rel</code> as <code>rel/releases/1.1.0/processquest-1.1.0.rel</code>.</li>
+	<li>copy <code>rel/releases/1.1.0/processquest.boot</code> as <code>rel/releases/1.1.0/processquest-1.1.0.boot</code>.</li>
+	<li>copy <code>rel/releases/1.1.0/processquest.boot</code> as <code>rel/releases/1.1.0/start.boot</code>.</li>
+	<li>copy <code>rel/releases/1.0.0/processquest.rel</code> as <code>rel/releases/1.0.0/processquest-1.0.0.rel</code>.</li>
+	<li>copy <code>rel/releases/1.0.0/processquest.boot</code> as <code>rel/releases/1.0.0/processquest-1.0.0.boot</code>.</li>
+	<li>copy <code>rel/releases/1.0.0/processquest.boot</code> as <code>rel/releases/1.0.0/start.boot</code>.</li>
+</ol>
+
+<p>Now we can generate the <code>relup</code> file. To do this, start an Erlang shell and call the following:</p>
+
+<pre class="brush:eshell">
+$ erl -env ERL_LIBS apps/ -pa apps/processquest-1.0.0/ebin/ -pa apps/sockserv-1.0.0/ebin/
+1&gt; systools:make_relup("./rel/releases/1.1.0/processquest-1.1.0", ["rel/releases/1.0.0/processquest-1.0.0"], ["rel/releases/1.0.0/processquest-1.0.0"]).
+ok
+</pre>
+
+<p>Because the <var>ERL_LIBS</var> env variable will only look for the newest versions of applications, we also need to add the <code>-pa &lt;Path to older applications&gt;</code> in there so that systools' relup generator will be able to find everything. Once this is done, move the relup file to <code>rel/releases/1.1.0/</code>. That directory will be looked into when updating the code in order to find the right stuff in there. One problem we'll have, though, is that the release handler module will depend on a bunch of files it assumes to be present, but won't necessarily be there.</p>
+
+<img class="center support" src="static/img/take-a-break.png" width="425" height="200" alt="A cup of coffee with cookies and a spoon. Text says 'take a break'" />
+
+<h3><a class="section" name="upgrading-the-release">Upgrading the Release</a></h3>
+
+<p>Sweet, we've got a relup file. There's still stuff to do before being able to use it though. The next step is to generate a tar file for the whole new version of the release:</p>
+
+<pre class="brush:eshell">
+2&gt; systools:make_tar("rel/releases/1.1.0/processquest-1.1.0").
+ok
+</pre>
+
+<p>The file will be in <code>rel/releases/1.1.0/</code>. We now need to manually move it to <code>rel/releases</code>, and rename it to add the version number when doing so. More hard-coded junk! <code>$ mv rel/releases/1.1.0/processquest-1.1.0.tar.gz rel/releases/</code> is our way out of this.</p>
+
+<p>Now this is a step you want to do at <em>any time before you start the real production application</em>. This is a step that needs to be done <em>before</em> you start the application as it will allow you to rollback to the initial version after a relup. If you do not do this, you will be able to downgrade production applications only to releases newer than the first one, but not the first one!</p>
+
+<p>Open a shell and run this:</p>
+
+<pre class="brush:eshell">
+1&gt; release_handler:create_RELEASES("rel", "rel/releases", "rel/releases/1.0.0/processquest-1.0.0.rel", [{kernel,"2.14.4", "rel/lib"}, {stdlib,"1.17.4","rel/lib"}, {crypto,"2.0.3","rel/lib"},{regis,"1.0.0", "rel/lib"}, {processquest,"1.0.0","rel/lib"},{sockserv,"1.0.0", "rel/lib"}, {sasl,"2.1.9.4", "rel/lib"}]).
+</pre>
+
+<p>The general format of the function is <code>release_handler:create_RELEASES(RootDir, ReleasesDir, Relfile, [{AppName, Vsn, LibDir}])</code>. This will create a file named <code>RELEASES</code> inside the <code>rel/releases</code> directory (or any other <var>ReleasesDir</var>) that will contain basic information on your releases when relup is looking for files and modules to reload.</p>
+
+<p>We can now start running the old version of the code. If you start <code>rel/bin/erl</code>, it will start the 1.1.0 release by default. That's because we built the new release before starting the VM. For this demonstration, we'll need to start the release with <code>./rel/bin/erl -boot rel/releases/1.0.0/processquest</code>. You should see everything starting up. Start a telnet client to connect to our socket server so we can see the live upgrade taking place.</p>
+
+<p>Whenever you feel ready for an upgrade, go to the Erlang shell currently running ProcessQuest, and call the following function:</p>
+
+<pre class="brush:eshell">
+1&gt; release_handler:unpack_release("processquest-1.1.0").
+{ok,"1.1.0"}
+2&gt; release_handler:which_releases().
+[{"processquest","1.1.0",
+  ["kernel-2.14.4","stdlib-1.17.4","crypto-2.0.3",
+   "regis-1.0.0","processquest-1.1.0","sockserv-1.0.1",
+   "sasl-2.1.9.4"],
+  unpacked},
+ {"processquest","1.0.0",
+  ["kernel-2.14.4","stdlib-1.17.4","crypto-2.0.3",
+   "regis-1.0.0","processquest-1.0.0","sockserv-1.0.0",
+   "sasl-2.1.9.4"],
+  permanent}]
+</pre>
+
+<p>The second prompt here tells you that the release is ready to be upgraded, but not installed nor made permanent yet. To install it, do:</p>
+
+<pre class="brush:eshell">
+3&gt; release_handler:install_release("1.1.0").
+{ok,"1.0.0",[]}
+4&gt; release_handler:which_releases().
+[{"processquest","1.1.0",
+  ["kernel-2.14.4","stdlib-1.17.4","crypto-2.0.3",
+   "regis-1.0.0","processquest-1.1.0","sockserv-1.0.1",
+   "sasl-2.1.9.4"],
+  current},
+ {"processquest","1.0.0",
+  ["kernel-2.14.4","stdlib-1.17.4","crypto-2.0.3",
+   "regis-1.0.0","processquest-1.0.0","sockserv-1.0.0",
+   "sasl-2.1.9.4"],
+  permanent}]
+</pre>
+
+<p>So now, the release 1.1.0 should be running, but it's still not there forever. Still, you could keep your application just running that way. Call the following function to make things permanent:</p>
+
+<pre class="brush:eshell">
+5&gt; release_handler:make_permanent("1.1.0").
+ok.
+</pre>
+
+<p>Ah damn. A bunch of our processes are dying now (error output removed from the sample above). Except that if you look at our telnet client, it did seem to upgrade fine. The issue is that all the gen_servers that were waiting for connections in sockserv could not listen to messages because accepting a TCP connection is a blocking operation. Thus, the servers couldn't upgrade when new versions of the code were loaded and were killed by the VM. See how we can confirm this:</p>
+
+<pre class="brush:eshell">
+6&gt; supervisor:which_children(sockserv_sup).
+[{undefined,&lt;0.51.0&gt;,worker,[sockserv_serv]}]
+7&gt; [sockserv_sup:start_socket() || _ &lt;- lists:seq(1,20)].
+[{ok,&lt;0.99.0&gt;},
+ {ok,&lt;0.100.0&gt;},
+ ...
+ {ok,&lt;0.117.0&gt;},
+ {ok,&lt;0.118.0&gt;}]
+8&gt; supervisor:which_children(sockserv_sup).
+[{undefined,&lt;0.112.0&gt;,worker,[sockserv_serv]},
+ {undefined,&lt;0.113.0&gt;,worker,[sockserv_serv]},
+ ...
+ {undefined,&lt;0.109.0&gt;,worker,[sockserv_serv]},
+ {undefined,&lt;0.110.0&gt;,worker,[sockserv_serv]},
+ {undefined,&lt;0.111.0&gt;,worker,[sockserv_serv]}]
+</pre>
+
+<p>The first command shows that all children that were waiting for connections have already died. The processes left will be those with an active session going on. This shows the importance of keeping code responsive. Had our processes been able to receive messages and act on them, things would have been fine.</p>
+
+<img class="right" src="static/img/couch.png" width="265" height="192" alt="A couch, with 'heaven' written on it" title="The paradize of the lazy" />
+
+<p>In the two last commands, I just start more workers to fix the problem. While this works, it requires manual action from the person running the upgrade. In any case, this is far from optimal. A better way to solve the problem would be to change the way our application works in order to have a monitor process watching how many children <code>sockserv_sup</code> has. When the number of children falls under a given threshold, the monitor starts more of them. Another strategy would be to change the code so accepting connections is done by blocking on intervals of a few seconds at a time, and keep retrying after pauses where messages can be received. This would give the gen_servers the time to upgrade themselves as required, assuming you'd wait the right delay between the installation of a release and making it permanent. Implementing either or both of these solutions is left as an exercise to the reader because I am somewhat lazy. These kinds of crashes are the reason why you want to test your code <em>before</em> doing these updates on a live system.</p>
+
+<p>In any case, we've solved the problem for now and we might want to check how the upgrade procedure went:</p>
+
+<pre class="brush:eshell">
+9&gt; release_handler:which_releases().
+[{"processquest","1.1.0",
+  ["kernel-2.14.4","stdlib-1.17.4","crypto-2.0.3",
+   "regis-1.0.0","processquest-1.1.0","sockserv-1.0.1",
+   "sasl-2.1.9.4"],
+  permanent},
+ {"processquest","1.0.0",
+  ["kernel-2.14.4","stdlib-1.17.4","crypto-2.0.3",
+   "regis-1.0.0","processquest-1.0.0","sockserv-1.0.0",
+   "sasl-2.1.9.4"],
+  old}]
+</pre>
+
+<p>That's worth a fist pump. You can try downgrading an installation by doing <code>release_handler:install(OldVersion).</code>. This should work fine, although it could risk killing more processes that never updated themselves.</p>
+
+<div class="note koolaid">
+	<p><strong>Don't Drink Too Much Kool-Aid:</strong><br />
+	If for some reason, rolling back always fails when trying to roll back to the first version of the release using the techniques shown in this chapter, you have probably forgotten to create the RELEASES file. You can know this if you see an empty list in <code>{YourRelease,Version,[],Status}</code> when calling <code>release_handler:which_releases()</code>. This is a list of where to find modules to load and reload, and it is first built when booting the VM and reading the RELEASES file, or when unpacking a new release.</p>
+</div>
+
+<p>Ok, so here's a list of all the actions that must be taken to have functional relups:</p>
+
+<ol>
+	<li>Write OTP applications for your first software iteration</li>
+	<li>Compile them</li>
+	<li>Build a release (1.0.0) using Reltool. It must have debug info and no <code>.ez</code> archive.</li>
+	<li>Make sure you create the RELEASES file at some point before starting your production application. You can do it with <code>release_handler:create_RELEASES(RootDir, ReleasesDir, Relfile, [{AppName, Vsn, LibDir}])</code>.</li>
+	<li>Run the release!</li>
+	<li>Find bugs in it</li>
+	<li>Fix bugs in new versions of applications</li>
+	<li>Write <code>appup</code> files for each of the applications</li>
+	<li>Compile the new applications</li>
+	<li>Build a new release (1.1.0 in our case). It must have debug info and no <code>.ez</code> archive</li>
+	<li>Copy <code>rel/releases/NewVsn/RelName.rel</code> as <code>rel/releases/NewVsn/RelName-NewVsn.rel</code></li>
+	<li>Copy <code>rel/releases/NewVsn/RelName.boot</code> as <code>rel/releases/NewVsn/RelName-NewVsn.boot</code></li>
+	<li>Copy <code>rel/releases/NewVsn/RelName.boot</code> as <code>rel/releases/NewVsn/start.boot</code></li>
+	<li>Copy <code>rel/releases/OldVsn/RelName.rel</code> as <code>rel/releases/OldVsn/RelName-OldVsn.rel</code></li>
+	<li>Copy <code>rel/releases/OldVsn/RelName.boot</code> as <code>rel/releases/OldVsn/RelName-OldVsn.boot</code></li>
+	<li>Copy <code>rel/releases/OldVsn/RelName.boot</code> as <code>rel/releases/OldVsn/start.boot</code></li>
+	<li>Generate a relup file with <code>systools:make_relup("rel/releases/Vsn/RelName-Vsn", ["rel/releases/OldVsn/RelName-OldVsn"], ["rel/releases/DownVsn/RelName-DownVsn"]).</code></li>
+	<li>Move the relup file to <code>rel/releases/Vsn</code></li>
+	<li>Generate a tar file of the new release with <code>systools:make_tar("rel/releases/Vsn/RelName-Vsn").</code></li>
+	<li>Move the tar file to <code>rel/releases/</code></li>
+	<li>Have some shell opened that still runs the first version of the release</li>
+	<li>Call <code>release_handler:unpack_release("NameOfRel-Vsn").</code></li>
+	<li>Call <code>release_handler:install_release(Vsn).</code></li>
+	<li>Call <code>release_handler:make_permanent(Vsn).</code></li>
+	<li>Make sure things went fine. If not, rollback by installing an older version.</li>
+</ol>
+
+<p>You might want to write a few scripts to automate this.</p>
+
+<img class="right" src="static/img/podium.png" width="184" height="178" alt="A podium with 3 positions: 1. you, 2. relups, 3. the author (3rd person)" title="if I were employing myself to write these visual puns, I'd have fired myself a long time ago" />
+
+<p>Again, relups are a very messy part of OTP, a part that is hard to grasp. You will likely find yourself finding plenty of new errors, which are all more impossible to understand than the previous ones. Some assumptions are made about how you're going to run things, and choosing different tools when creating releases will change how things should be done. You might be tempted to write your own update code using the <code>sys</code> module's functions even! Or maybe use tools like <em>rebar</em> which will automate some of the painful steps. In any case, this chapter and its examples have been written to the best knowledge of the author, a person who sometimes enjoys writing about himself in third person.</p>
+
+<p>If it is possible to upgrade your application in ways that do not require relups, I would recommend doing so. It is said that divisions of Ericsson that do use relups spend as much time testing them as they do testing their applications themselves. They are a tool to be used when working with products that can imperatively never be shut down. You will know when you will need them, mostly because you'll be ready to go through the hassle of using them (got to love that circular logic!) When the need arises, relups are entirely useful.</p>
+
+<p>How about we go learn about some friendlier features of Erlang, now?</p>
+				<ul class="navigation">
+											<li><a href="release-is-the-word.html" title="Previous chapter">&lt; Previous</a></li>
+										
+					<li><a href="contents.html" title="Index">Index</a></li>
+					
+											<li><a href="buckets-of-sockets.html" title="Next chapter">Next &gt;</a></li>
+									</ul>
+			</div><!-- content -->
+			<div id="footer">
+				<a href="http://creativecommons.org/licenses/by-nc-nd/3.0/" title="Creative Commons License Details"><img src="static/img/cc.png" width="88" height="31" alt="Creative Commons Attribution Non-Commercial No Derivative License" /></a>
+				<p>Except where otherwise noted, content on this site is licensed under a Creative Commons Attribution Non-Commercial No Derivative License</p>
+			</div> <!-- footer -->
+		</div> <!-- wrapper -->
+		<div id="grass" />
+	<script type="text/javascript" src="static/js/shCore.js"></script>
+	<script type="text/javascript" src="static/js/shBrushErlang2.js%3F11"></script>
+	<script type="text/javascript">
+		SyntaxHighlighter.defaults.gutter = false;
+		SyntaxHighlighter.all();
+	</script>
+	</body>
+</html>

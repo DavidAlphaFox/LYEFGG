@@ -1,0 +1,38 @@
+/* LYSE print template */
+/* thanks to http://www.alistapart.com/articles/goingtoprint/ for some tips! */
+div#menu, div#footer, ul.navigation, noscript { display: none;}
+code.number { display: none; }
+div.bar div.toolbar { display: none; }
+img { display: block; float: none !important; }
+
+#wrapper, #content {
+	width: auto;
+	border: 0;
+	margin: 0 5%;
+	padding: 0;
+	float: none !important;
+}
+div#content {
+	margin-left: 10%;
+	padding-top: 1em;
+	border-top: 1px solid #930;
+}
+a:link, a:visited {
+	color: #520;
+	background: transparent;
+	font-weight: bold;
+	text-decoration: underline;
+}
+#content a:link:after, #content a:visited:after {
+	content: " (" attr(href) ") ";
+	font-size: 90%;
+}
+#content a.local:after, #content a.local:after {
+	content: normal !important;
+}
+div#content p.question {
+	font-weight: bold;
+	font-size: 1.2em;
+	letter-spacing: -0.05em;
+	color: #8a8a8a;
+}

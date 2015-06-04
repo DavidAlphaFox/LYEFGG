@@ -1,0 +1,669 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en" dir="ltr">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<meta http-equiv="Content-Style-Type" content="text/css" />
+		<meta name="keywords" content="Erlang, OTP, application, .app file, behaviour, master, controller, supervisor, file, worker" />
+		<meta name="description" content="A more advanced approach to applications. We take the application from the previous chapter and build a new one that depends on it" />
+        <meta name="google-site-verification" content="mi1UCmFD_2pMLt2jsYHzi_0b6Go9xja8TGllOSoQPVU" />
+		<link rel="stylesheet" type="text/css" href="static/css/screen.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/sh/shCore.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/sh/shThemeLYSE2.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/print.css" media="print" />
+		<link href="rss" type="application/rss+xml" rel="alternate" title="LYSE news" />
+		<link rel="icon" type="image/png" href="favicon.ico" />
+		<link rel="apple-touch-icon" href="static/img/touch-icon-iphone.png" />
+		<link rel="apple-touch-icon" sizes="72x72" href="static/img/touch-icon-ipad.png" />
+		<link rel="apple-touch-icon" sizes="114x114" href="static/img/touch-icon-iphone4.png" />
+		<title>The Count of Applications | Learn You Some Erlang for Great Good!</title>
+	</head>
+	<body>
+		<div id="wrapper">
+			<div id="header">
+				<h1>Learn you some Erlang</h1>
+				<span>for great good!</span>
+			</div> <!-- header -->
+			<div id="menu">
+				<ul>
+					<li><a href="content.html" title="Home">Home</a></li>
+					<li><a href="faq.html" title="Frequently Asked Questions">FAQ</a></li>
+					<li><a href="rss" title="Latest News">RSS</a></li>
+					<li><a href="static/erlang/learn-you-some-erlang.zip" title="Source Code">Code</a></li>
+				</ul>
+			</div><!-- menu -->
+			<div id="content">
+            <div class="noscript"><noscript>Hey there, it appears your Javascript is disabled. That's fine, the site works without it. However, you might prefer reading it with syntax highlighting, which requires Javascript!</noscript></div>
+<h2>The Count of Applications</h2>
+
+<h3><a class="section" name="from-otp-application-to-real-application">From OTP Application to Real Application</a></h3>
+
+<img class="right" src="static/img/files.png" width="179" height="220" alt="A file cabinet with files scattered on the ground" />
+
+<p>Our ppool app has become a valid OTP application and we are now able to understand what this means. It would be nice to build something that actually uses our process pool to do anything useful, though. To push our knowledge of applications a bit further, we will write a second application. This one will depend on <code>ppool</code>, but will be able to benefit from some more automation than our 'nagger'.</p>
+
+<p>This application, that I will name <code>erlcount</code>, will have a somewhat simple objective: recursively look into some directory, find all Erlang files (ending in <code>.erl</code>) and then run a regular expression over it to count all instances of a given string within the modules. The results are then accumulated to give the final result, which will be output to the screen.</p>
+
+<p>This specific application will be relatively simple, relying heavily on our process pool instead. It will have a structure as follows:</p>
+
+<img class="center explanation" src="static/img/erlcount-sups.png" width="485" height="176" alt="'erlcount_sup' supervises 'erlcount_dispatch', and 'ppool' stands in a cloudy shape, supervising 'erlcount_counter'" />
+
+<p>In the diagram above, <code>ppool</code> represents the whole application, but only means to show that <code>erlcount_counter</code> will be the worker for the process pool. This one will open files, run the regular expression and return the count. The process/module <code>erlcount_sup</code> will be our supervisor, and <code>erlcount_dispatch</code> will be a single server in charge of browsing the directories, asking <code>ppool</code> to schedule workers and compiling the results. We'll also add an <code>erlcount_lib</code> module, taking charge of hosting all the functions to read directories, compile data and whatnot, leaving the other modules with the responsibility of coordinating these calls. Last will be an <code>erlcount</code> module with the single purpose of being the application callback module.</p>
+
+<p>The first step, as for our last app, is to create the directory structure needed. You can also add a few file stubs if you feel like doing so:</p>
+
+<pre class="expand">
+ebin/
+ - erlcount.app
+include/
+priv/
+src/
+ - erlcount.erl
+ - erlcount_counter.erl
+ - erlcount_dispatch.erl
+ - erlcount_lib.erl
+ - erlcount_sup.erl
+test/
+Emakefile
+</pre>
+
+<p>Nothing too different from what we had before, you can even copy the Emakefile we had before.</p>
+
+<p>We can probably start writing most parts of the application pretty quickly. The <code>.app</code> file, the counter, library and supervisor should be relatively simple. On the other hand, the dispatch module will have to accomplish some complex tasks if we want things to be worth it. Let's start with <a class="source" href="static/erlang/erlcount-1.0/ebin/erlcount.app">the app file</a>:</p>
+
+<pre class="brush:erl">
+{application, erlcount,
+ [{vsn, "1.0.0"},
+  {modules, [erlcount, erlcount_sup, erlcount_lib,
+             erlcount_dispatch, erlcount_counter]},
+  {applications, [ppool]},
+  {registered, [erlcount]},
+  {mod, {erlcount, []}},
+  {env,
+   [{directory, "."},
+    {regex, ["if\\s.+-&gt;", "case\\s.+\\sof"]},
+    {max_files, 10}]}
+ ]}.
+</pre>
+
+<p>This app file is a bit more complex than the <code>ppool</code> one. We can still recognize some of the fields as being the same: this app will also be in version 1.0.0, the modules listed are all the same as above. The next part is something we didn't have: an application dependency. As explained earlier, the <code>applications</code> tuple gives a list of all the applications that should be started before <code>erlcount</code>. If you try to start it without that, you'll get an error message. We then have to count the registered processes with <code>{registered, [erlcount]}</code>. Technically none of our modules started as part of the <code>erlcount</code> app will need a name. Everything we do can be anonymous. However, because we know <code>ppool</code> registers the <code>ppool_serv</code> to the name we give it and because we know we will use a process pool, then we're going to call it <code>erlcount</code> and note it there. If all applications that use <code>ppool</code> do the same, we should be able to detect conflicts in the future. The <code>mod</code> tuple is similar as before; we define the application behaviour callback module there.</p>
+
+<img class="right" src="static/img/snowman.png" width="166" height="244" alt="A snowman made of regular expression characters" title="Now you've got two problems" />
+
+<p>The last new thing in here is the <code>env</code> tuple. As seen earlier, this entire tuple gives us a key/value store for application-specific configuration variables. These variables will be accessible from all the processes running within the application, stored in memory for your convenience. They can basically be used as substitute configuration file for your app.</p>
+
+<p>In this case, we define three variables: <code>directory</code>, which tells the app where to look for <code>.erl</code> files (assuming we run the app from the erlcount-1.0 directory, this means the <a class="source" href="static/erlang/learn-you-some-erlang.zip"><code>learn-you-some-erlang</code> root</a>), then we have <code>max_files</code> telling us how many file descriptors should be opened at once. We don't want to open 10,000 files at once if we end up have that many, so this variable will match the maximum number of workers in <code>ppool</code>. Then the most complex variable is <code>regex</code>. This one will contain a list of all regular expressions we want to run over each of the files to count the results.</p>
+
+<p>I won't get into the long explaining of the syntax of <a class="external" href="http://en.wikipedia.org/wiki/PCRE">Perl Compatible Regular Expressions</a> (if you're interested, the <code><a class="docs" href="http://erldocs.com/17.3/stdlib/re.html">re</a></code> module contains some documentation), but will still explain what we're doing here. In this case, the first regular expression says "look for a string that contains 'if' followed by any single white space character (<code>\s</code>, with a second backslash for escaping purposes), and finishes with <code>-&gt;</code>. Moreover there can be anything in between the 'if' and the <code>-&gt;</code> (<code>.+</code>)". The second regular expression says "look for a string that contains 'case' followed by any single whitespace character (<code>\s</code>), and finishes with 'of' preceded by single whitespace character. Between the 'case ' and the ' of', there can be anything (<code>.+</code>)". To make things simple, we'll try to count how many times we use <code>case ... of</code> vs. how many times we use <code>if ... end</code> in our libraries.</p>
+
+
+<div class="note koolaid">
+    <p><strong>Don't Drink Too Much Kool-Aid:</strong><br />
+    Using regular expressions is not an optimal choice to analyse Erlang code. The problem is there are lots of cases that will make our results inaccurate, including strings in the text and comments that match the patterns we're looking for but are technically not code.</p>
+
+    <p>To get more accurate results, we would need to look at the parsed and the expanded version of our modules, directly in Erlang. While more complex (and outside the scope of this text), this would make sure that we handle everything like macros, exclude comments, and just generally do it the right way.</p>
+</div>
+
+<p>With this file out of the way, we can start the <a class="source" href="static/erlang/erlcount-1.0/src/erlcount.erl">application callback module</a>. It won't be complex, basically only starting the supervisor:</p>
+
+<pre class="brush:erl">
+-module(erlcount).
+-behaviour(application).
+-export([start/2, stop/1]).
+
+start(normal, _Args) -&gt;
+    erlcount_sup:start_link().
+
+stop(_State) -&gt;
+    ok.
+</pre>
+
+<p>And now <a class="source" href="static/erlang/erlcount-1.0/src/erlcount_sup.erl">the supervisor itself</a>:</p>
+
+<pre class="brush:erl">
+-module(erlcount_sup).
+-behaviour(supervisor).
+-export([start_link/0, init/1]).
+
+start_link() -&gt;
+    supervisor:start_link(?MODULE, []).
+
+init([]) -&gt;
+    MaxRestart = 5,
+    MaxTime = 100,
+    {ok, {{one_for_one, MaxRestart, MaxTime},
+     [{dispatch,
+       {erlcount_dispatch, start_link, []},
+        transient,
+        60000,
+        worker,
+        [erlcount_dispatch]}]}}.
+</pre>
+
+<p>This is a standard supervisor, which will be in charge of only <code>erlcount_dispatch</code>, as it was shown on the previous little schema. The <var>MaxRestart</var>, <var>MaxTime</var> and the 60 seconds value for shutdown were chosen pretty randomly, but in real cases you'd want to study the needs you have. Because this is a demo application, it didn't seem that important at the time. The author keeps himself the right to laziness.</p>
+
+<p>We can get to the next process and module in the chain, the dispatcher. The dispatcher will have a few complex requirements to fulfill for it to be useful:</p>
+
+<ul>
+    <li>When we go through directories to find files ending in <code>.erl</code>, we should only go through the whole list of directories once, even when we apply multiple regular expressions;</li>
+    <li>We should be able to start scheduling files for result counting as soon as we find there's one that matches our criteria. We should not need to wait for a complete list to do so.</li>
+    <li>We need to hold a counter per regular expression so we can compare the results in the end</li>
+    <li>It is possible we start getting results from the <code>erlcount_counter</code> workers before we're done looking for <code>.erl</code> files</li>
+    <li>It is possible that many <code>erlcount_counter</code>s will be running at once</li>
+    <li>It is likely we will keep getting result after we finished looking files up in the directories (especially if we have many files or complex regular expressions).</li>
+</ul>
+
+<p>The two big points we have to consider right now is how we're going to go through a directory recursively while still being able to get results from there in order to schedule them, and then accept results back while that goes on, without getting confused.</p>
+
+<img class="right" src="static/img/continue.png" width="308" height="238" alt="A game over screen with a pixelated LYSE squid with 3 lifes. The screen asks 'CONTINUE?'" />
+
+<p>At a first look, the way that looks the simplest to gain the ability to return results while in the middle of recursion would be to use a process to do it. However, it's a bit annoying to change our previous structure just to be able to add another process to the supervision tree, then to get them working together. There is, in fact, a simpler way to do things.</p>
+
+<p>This is a style of programming called <em>Continuation-Passing Style</em>. The basic idea behind it is to take one function that's usually deeply recursive and break every step down. We return each step (which would usually be the accumulator), and then a function that will allow us to keep going after that. In our case, our function will basically have two possible return values:</p>
+
+<pre class="expand">
+{continue, Name, NextFun}
+done
+</pre>
+
+<p>Whenever we receive the first one, we can schedule <var>FileName</var> into <code>ppool</code> and then call <var>NextFun</var> to keep looking for more files. We can implement this function into <a class="source" href="static/erlang/erlcount-1.0/src/erlcount_lib.erl">erlcount_lib</a>:</p>
+
+<pre class="brush:erl">
+-module(erlcount_lib).
+-export([find_erl/1]).
+-include_lib("kernel/include/file.hrl").
+
+%% Finds all files ending in .erl
+find_erl(Directory) -&gt;
+    find_erl(Directory, queue:new()).
+</pre>
+
+<p>Ah, something new there! What a surprise, my heart is racing and my blood is pumping. The include file up there is something given to us by the <code>file</code> module. It contains a record (<code>#file_info{}</code>) with a bunch of fields explaining details about the file, including its type, size, permissions, and so on. </p>
+
+<p>Our design here includes a queue. Why is that? Well it is entirely possible that a directory contains more than one file. So when we hit a directory and it contains something like 15 files, we want to handle the first one (and if it's a directory, open it, look inside, etc.) and then handle the 14 others later. In order to do so, we will just store their names in memory until we have the time process them. We use a queue for that, but a stack or any other data structure would still be fine given we don't really care about the order in which we read files. Anyway, the point is, this queue acts a bit like a to-do list for files in our algorithm.</p>
+
+<p>Alright so let's start by reading the first file passed from the first call:</p>
+
+<pre class="brush:erl">
+%%% Private
+%% Dispatches based on file type
+find_erl(Name, Queue) -&gt;
+    {ok, F = #file_info{}} = file:read_file_info(Name),
+    case F#file_info.type of
+        directory -&gt; handle_directory(Name, Queue);
+        regular -&gt; handle_regular_file(Name, Queue);
+        _Other -&gt; dequeue_and_run(Queue)
+    end.
+</pre>
+
+<p>This function tells us few things: we only want to deal with regular files and directories. In each case we will write ourselves a function to handle these specific occurrences (<code>handle_directory/2</code> and <code>handle_regular_file/2</code>). For other files, we will dequeue anything we had prepared before with the help of <code>dequeue_and_run/1</code> (we'll see what this one is about soon). For now, we first start dealing with directories:</p>
+
+<pre class="brush:erl">
+%% Opens directories and enqueues files in there
+handle_directory(Dir, Queue) -&gt;
+    case file:list_dir(Dir) of
+        {ok, []} -&gt;
+            dequeue_and_run(Queue);
+        {ok, Files} -&gt;
+            dequeue_and_run(enqueue_many(Dir, Files, Queue))
+    end.
+</pre>
+
+<p>So if there are no files, we keep searching with <code>dequeue_and_run/1</code>, and if there are many, we enqueue them before doing so. Let me explain this. The function <code>dequeue_and_run</code> will take the queue of file names and get one element out of it. The file name it fetches out from there will be used by calling <code>find_erl(Name, Queue)</code> and we just keep going as if we were just getting started:</p>
+
+<pre class="brush:erl">
+%% Pops an item from the queue and runs it.
+dequeue_and_run(Queue) -&gt;
+    case queue:out(Queue) of
+        {empty, _} -&gt; done;
+        {{value, File}, NewQueue} -&gt; find_erl(File, NewQueue)
+    end.
+</pre>
+
+<p>Note that if the queue is empty (<code>{empty, _}</code>), the function considers itself <code>done</code> (a keyword chosen for our CPS function), otherwise we keep going over again.</p>
+
+<p>The other function we had to consider was <code>enqueue_many/3</code>. This one is designed to enqueue all the files found in a given directory and works as follows:</p>
+
+<pre class="brush:erl">
+%% Adds a bunch of items to the queue.
+enqueue_many(Path, Files, Queue) -&gt;
+    F = fun(File, Q) -&gt; queue:in(filename:join(Path,File), Q) end,
+    lists:foldl(F, Queue, Files).
+</pre>
+
+<p>Basically, we use the function <code><a class="docs" href="http://erldocs.com/17.3/stdlib/filename.html#join/2">filename:join/2</a></code> to merge the directory's path to each file name (so that we get a complete path). We then add this new full path to a file to the queue. We use a fold to repeat the same procedure with all the files in a given directory. The new queue we get out of it is then used to run <code>find_erl/2</code> again, but this time with all the new files we found added to the to-do list.</p>
+
+<p>Whoa, we digressed a bit. Where were we? Oh yes, we were handling directories and now we're done with them. We then need to check for regular files and whether they end in <code>.erl</code> or not.</p>
+
+<pre class="brush:erl">
+%% Checks if the file finishes in .erl
+handle_regular_file(Name, Queue) -&gt;
+    case filename:extension(Name) of
+        ".erl" -&gt;
+            {continue, Name, fun() -&gt; dequeue_and_run(Queue) end};
+        _NonErl -&gt;
+            dequeue_and_run(Queue)
+    end.
+</pre>
+
+<p>You can see that if the name matches (according to <code><a class="docs" href="http://erldocs.com/17.3/stdlib/filename.html#extension/1">filename:extension/1</a></code>), we return our continuation. The continuation gives the <var>Name</var> to the caller, and then wraps the operation <code>dequeue_and_run/1</code> with the queue of files left to visit into a fun. That way, the user can call that fun and keep going as if we were still in the recursive call, while still getting results in the mean time. In the case where the file name doesn't end in <code>.erl</code>, then the user has no interest in us returning yet and we keep going by dequeuing more files. That's it.</p>
+
+<p>Hooray, the CPS thing is done. We can then focus on the other issue. How are we going to design the dispatcher so that it can both dispatch and receive at once? My suggestion, which you will no doubt accept because I'm the one writing the text, is to use a finite state machine. It will have two states. The first one will be the 'dispatching' state. It's the one used whenever we're waiting for our <code>find_erl</code> CPS function to hit the <samp>done</samp> entry. While we're in there, we will never think about us being done with the counting. That will only happen in the second and final state, 'listening', but we will still receive notices from ppool all the time:</p>
+
+<img class="center explanation" src="static/img/erlcount-events.png" width="387" height="177" alt="illustrated as bubbles and arrows: the event 'get files' only sends messages to the 'dispatching' state (which itself asks for files). The dispatching state then points to a 'dispatching' event, which itself leads to 'results from ppool'. The results from ppool point to both the dispatching state and the listening state" />
+
+<p>This will thus require us to have:</p>
+
+<ol>
+    <li>A dispatching state with an asynchronous event for when we get new files to dispatch</li>
+    <li>A dispatching state with an asynchronous event for when we are done getting new files</li>
+    <li>A listening state with an asynchronous event for when we're done getting new files</li>
+    <li>A global event to be sent by the ppool workers when they're done running their regular expression.</li>
+</ol>
+
+<p>We'll slowly start building <a class="source" href="static/erlang/erlcount-1.0/src/erlcount_dispatch.erl">our gen_fsm</a>:</p>
+
+<pre class="brush:erl">
+-module(erlcount_dispatch).
+-behaviour(gen_fsm).
+-export([start_link/0, complete/4]).
+-export([init/1, dispatching/2, listening/2, handle_event/3,
+        handle_sync_event/4, handle_info/3, terminate/3, code_change/4]).
+
+-define(POOL, erlcount).
+</pre>
+
+<p>Our API will thus have two functions: one for the supervisor (<code>start_link/0</code>) and one for the ppool callers (<code>complete/4</code>, we'll see the arguments when we get there). The other functions are the standard gen_fsm callbacks, including our <code>listening/2</code> and <code>dispatching/2</code> asynchronous state handlers. I also defined a <var>?POOL</var> macro, used to give our ppool server the name 'erlcount'.</p>
+
+<p>What should the gen_fsm's data look like, though? Because we're going asynchronous and we are going to always call <code>ppool:run_async/2</code> instead of anything else, we will have no real way of knowing if we're ever done scheduling files or not. Basically we could have a timeline like this:</p>
+
+<img class="center explanation" src="static/img/dispatch-async.png" width="450" height="276" alt="A diagram that shows that once you dispatch events, if you do not track them, there is no way to know if only some of them completed or if they all did" />
+
+<p>One way to solve the problem could be to use a timeout, but this is always annoying: is the timeout too long or too short? Has something crashed? This much uncertainty is probably as fun as a toothbrush made of lemon. Instead, we could use a concept where each worker is given some kind of identiy, which we can track and associate with a reply, a bit like a secret password to enter the private club of 'workers who succeeded'. This concept will let us match one-on-one whatever message we get and let us know when we are absolutely done. We now know what our state data might look like this:</p>
+
+<pre class="brush:erl">
+-record(data, {regex=[], refs=[]}).
+</pre>
+
+<p>The first list will be tuples of the form <code>{RegularExpression, NumberOfOccurrences}</code>, while the second will be a list of some kind of references to the messages. Anything will do, as long as it's unique. We can then add the two following API functions:</p>
+
+<pre class="brush:erl">
+%%% PUBLIC API
+start_link() -&gt;
+    gen_fsm:start_link(?MODULE, [], []).
+
+complete(Pid, Regex, Ref, Count) -&gt;
+    gen_fsm:send_all_state_event(Pid, {complete, Regex, Ref, Count}).
+</pre>
+
+<p>And here is our secret <code>complete/4</code> function. Unsurprisingly, the workers will only have to send back 3 pieces of data: what regular expression they were running, what their associated score was, and then the reference mentioned above. Awesome, we can get into the real interesting stuff!</p>
+
+<pre class="brush:erl">
+init([]) -&gt;
+    %% Move the get_env stuff to the supervisor's init.
+    {ok, Re} = application:get_env(regex),
+    {ok, Dir} = application:get_env(directory),
+    {ok, MaxFiles} = application:get_env(max_files),
+    ppool:start_pool(?POOL, MaxFiles, {erlcount_counter, start_link, []}),
+    case lists:all(fun valid_regex/1, Re) of
+        true -&gt;
+            self() ! {start, Dir},
+            {ok, dispatching, #data{regex=[{R,0} || R &lt;- Re]}};
+        false -&gt;
+           {stop, invalid_regex}
+    end.
+</pre>
+
+<p>The init function first loads all the info we need to run from the application file. Once that's done, we plan on starting the process pool with <code>erlcount_counter</code> as a callback module. The last step before actually going is to make sure all regular expressions are valid. The reason for this is simple. If we do not check it right now, then we will have to add error handling call somewhere else instead. This is likely going to be in the <code>erlcount_counter</code> worker. Now if it happens there, we now have to define what do we do when the workers start crashing because of that and whatnot. It's just simpler to handle when starting the app. Here's the <code>valid_regex/1</code> function:</p>
+
+<pre class="brush:erl">
+valid_regex(Re) -&gt;
+    try re:run("", Re) of
+        _ -&gt; true
+    catch
+        error:badarg -&gt; false
+    end.
+</pre>
+
+<!-- we could try to compile the regular expressions -->
+
+<p>We only try to run the regular expression on an empty string. This will take no time and let the <code>re</code> module try and run things. So the regexes are valid and we start the app by sending ourselves <code>{start, Directory}</code> and with a state defined by <code>[{R,0} || R &lt;- Re]</code>. This will basically change a list of the form <code>[a,b,c]</code> to the form <code>[{a,0},{b,0},{c,0}]</code>, the idea being to add a counter to each of the regular expressions.</p>
+
+<p>The first message we have to handle is <code>{start, Dir}</code> in <code>handle_info/2</code>. Remember, because Erlang's behaviours are pretty much all based on messages, we have to do the ugly step of sending ourselves messages if we want to trigger a function call and do things our way. Annoying, but manageable:</p>
+
+<pre class="brush:erl">
+handle_info({start, Dir}, State, Data) -&gt;
+    gen_fsm:send_event(self(), erlcount_lib:find_erl(Dir)),
+    {next_state, State, Data}.
+</pre>
+
+<p>We send ourselves the result of <code>erlcount_lib:find_erl(Dir)</code>. It will be received in the <code>dispatching</code>, given that's the value of <var>State</var>, as it was set by the <code>init</code> function of the FSM. This snippet solves our problem, but also illustrates the general pattern we'll have during the whole FSM. Because our <code>find_erl/1</code> function is written in a Continuation-Passing Style, we can just send ourselves an asynchronous event and deal with it in each of the right callback states. It is likely that the first result of our continuation will be <code>{continue, File, Fun}</code>. We will also be in the 'dispatching' state, because that's what we put as the initial state in the init function:</p>
+
+<pre class="brush:erl">
+dispatching({continue, File, Continuation}, Data = #data{regex=Re, refs=Refs}) -&gt;
+    F = fun({Regex, _Count}, NewRefs) -&gt;
+        Ref = make_ref(),
+        ppool:async_queue(?POOL, [self(), Ref, File, Regex]),
+        [Ref|NewRefs]
+    end,
+    NewRefs = lists:foldl(F, Refs, Re),
+    gen_fsm:send_event(self(), Continuation()),
+    {next_state, dispatching, Data#data{refs = NewRefs}};
+</pre>
+
+<p>That's a bit ugly. For each of the regular expressions, we create a unique reference, schedule a ppool worker that knows this reference, and then store this reference (to know if a worker has finished). I chose to do this in a foldl in order to make it easier to accumulate all the new references. Once that dispatching is done, we call the continuation again to get more results, and then wait for the next message with the new references as our state.</p>
+
+<p>What's the next kind of message we can get? We have two choices here. Either none of the workers have given us our results back (even though they have not been implemented yet) or we get the <code>done</code> message because all files have been looked up. Let's go the second type to finish implementing the <code>dispatching/2</code> function:</p>
+
+<pre class="brush:erl">
+dispatching(done, Data) -&gt;
+    %% This is a special case. We can not assume that all messages have NOT
+    %% been received by the time we hit 'done'. As such, we directly move to
+    %% listening/2 without waiting for an external event.
+    listening(done, Data).
+</pre>
+
+<p>The comment is pretty explicit as to what is going on, but let me explain anyway. When we schedule jobs, we can receive results while in <code>dispatching/2</code> or while in <code>listening/2</code>. This can take the following form:</p>
+
+<img class="center explanation" src="static/img/erlcount-race1.png" width="371" height="276" alt="A diagram showing the following sequence of events between a FSM and workers. The FSM starts in the 'dispatch' and add workers (twice). Part of the results come in, and then the FSM is done dispatching and goes to the 'listening' state. At this point the rest of the results are in and we know that for sure." />
+
+<p>In this case, the 'listening' state can just wait for results and declare everything is in. But remember, this is Erlang Land (<em>Erland</em>) and we work in parallel and asynchronously! This scenario is as probable:</p>
+
+<img class="center explanation" src="static/img/erlcount-race2.png" width="382" height="342" alt="A diagram showing the following sequence of events between a FSM and workers. The FSM starts in the 'dispatch' and add workers (twice). All the results are in as soon as the FSM is done dispatching. It then goes to the 'listening' state. There are no more events left to trigger the final check in 'listening'" />
+
+<p>Ouch. Our application would then be hanging forever, waiting for messages. This is the reason why we need to manually call <code>listening/2</code>: we will force it to do some kind of result detection to make sure everything has been received, just in case we already have all the results. Here's what this looks like:</p>
+
+<pre class="brush:erl">
+listening(done, #data{regex=Re, refs=[]}) -&gt; % all received!
+    [io:format("Regex ~s has ~p results~n", [R,C]) || {R, C} &lt;- Re],
+    {stop, normal, done};
+listening(done, Data) -&gt; % entries still missing
+    {next_state, listening, Data}.
+</pre>
+
+<p>If no <em>refs</em> are left, then everything was received and we can output the results. Otherwise, we can keep listening to messages. If you take another look at <code>complete/4</code> and this diagram:</p>
+
+<img class="center explanation" src="static/img/erlcount-events.png" width="387" height="177" alt="illustrated as bubbles and arrows: the event 'get files' only sends messages to the 'dispatching' state (which itself asks for files). The dispatching state then points to a 'dispatching' event, which itself leads to 'results from ppool'. The results from ppool point to both the dispatching state and the listening state" />
+
+<p>The result messages are global, because they can be received in either 'dispatching' or 'listening' states. Here's the implementation:</p>
+
+<pre class="brush:erl">
+handle_event({complete, Regex, Ref, Count}, State, Data = #data{regex=Re, refs=Refs}) -&gt;
+    {Regex, OldCount} = lists:keyfind(Regex, 1, Re),
+    NewRe = lists:keyreplace(Regex, 1, Re, {Regex, OldCount+Count}),
+    NewData = Data#data{regex=NewRe, refs=Refs--[Ref]},
+    case State of
+        dispatching -&gt;
+            {next_state, dispatching, NewData};
+        listening -&gt;
+            listening(done, NewData)
+    end.
+</pre>
+
+<p>The first thing this does is find the regular expression that just completed in the <var>Re</var> list, which also contains the count for all of them. We extract that value (<var>OldCount</var>) and update it with the new count (<code>OldCount+Count</code>) with the help of <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#keyreplace/4">lists:keyreplace/4</a></code>. We update our <var>Data</var> record with the new scores while removing the <var>Ref</var> of the worker, and then send ourselves to the next state.</p>
+
+<p>In normal FSMs, we would just have done <code>{next_state, State, NewData}</code>, but here, because of the problem mentioned with regards to knowing when we're done or not, we have to manually call <code>listening/2</code> again. Such a pain, but alas, a necessary step.</p>
+
+<p>And that's it for the dispatcher. We just add in the rest of the filler behaviour functions:</p>
+
+<pre class="brush:erl">
+handle_sync_event(Event, _From, State, Data) -&gt;
+    io:format("Unexpected event: ~p~n", [Event]),
+    {next_state, State, Data}.
+
+terminate(_Reason, _State, _Data) -&gt;
+    ok.
+
+code_change(_OldVsn, State, Data, _Extra) -&gt;
+    {ok, State, Data}.
+</pre>
+
+<p>And we can then move on to the counter. You might want to take a little break before then. Hardcore readers can go bench press their own weight a few times to relax themselves and then come back for more.</p>
+
+
+<h4>The Counter</h4>
+
+<p>The counter is simpler than the dispatcher. While we still need a behaviour to do things (in this case, a gen_server), it will be quite minimalist. We only need it to do three things:</p>
+
+<ol>
+    <li>Open a file</li>
+    <li>Run a regex on it and count the instances</li>
+    <li>Give the result back.</li>
+</ol>
+
+<p>For the first point, we have plenty of functions in <code>file</code> to help us do that. For the number 3, we defined <code>erlcount_dispatch:complete/4</code> to do it. For the number 2, we can use the <code>re</code> module with <code><a class="docs" href="stdlib/re.html#run/2">run/2-3</a></code>, but it doesn't quite do what we need:</p>
+
+<pre class="brush:eshell">
+1&gt; re:run(&lt;&lt;"brutally kill your children (in Erlang)"&gt;&gt;, "a"). 
+{match,[{4,1}]}
+2&gt; re:run(&lt;&lt;"brutally kill your children (in Erlang)"&gt;&gt;, "a", [global]).
+{match,[[{4,1}],[{35,1}]]}
+3&gt; re:run(&lt;&lt;"brutally kill your children (in Erlang)"&gt;&gt;, "a", [global, {capture, all, list}]).
+{match,[["a"],["a"]]}
+4&gt; re:run(&lt;&lt;"brutally kill your children (in Erlang)"&gt;&gt;, "child", [global, {capture, all, list}]).
+{match,[["child"]]}
+</pre>
+
+<p>While it does take the arguments we need (<code>re:run(String, Pattern, Options)</code>), it doesn't give us the correct count. Let's add the following function to <a class="source" href="static/erlang/erlcount-1.0/src/erlcount_lib.erl">erlcount_lib</a> so we can start writing the counter:</p>
+
+<pre class="brush:erl">
+regex_count(Re, Str) -&gt;
+    case re:run(Str, Re, [global]) of
+        nomatch -&gt; 0;
+        {match, List} -&gt; length(List)
+    end.
+</pre>
+
+<p>This one basically just counts the results and returns that. Don't forget to add it to the export form. </p>
+
+<p>Ok, on with <a class="source" href="static/erlang/erlcount-1.0/src/erlcount_counter.erl">the worker</a>:</p>
+
+<pre class="brush:erl">
+-module(erlcount_counter).
+-behaviour(gen_server).
+-export([start_link/4]).
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2,
+        terminate/2, code_change/3]).
+
+-record(state, {dispatcher, ref, file, re}).
+
+start_link(DispatcherPid, Ref, FileName, Regex) -&gt;
+    gen_server:start_link(?MODULE, [DispatcherPid, Ref, FileName, Regex], []).
+
+init([DispatcherPid, Ref, FileName, Regex]) -&gt;
+    self() ! start,
+    {ok, #state{dispatcher=DispatcherPid,
+                ref = Ref,
+                file = FileName,
+                re = Regex}}.
+
+handle_call(_Msg, _From, State) -&gt;
+    {noreply, State}.
+
+handle_cast(_Msg, State) -&gt;
+    {noreply, State}.
+
+handle_info(start, S = #state{re=Re, ref=Ref}) -&gt;
+    {ok, Bin} = file:read_file(S#state.file),
+    Count = erlcount_lib:regex_count(Re, Bin),
+    erlcount_dispatch:complete(S#state.dispatcher, Re, Ref, Count),
+    {stop, normal, S}.
+
+terminate(_Reason, _State) -&gt;
+    ok.
+
+code_change(_OldVsn, State, _Extra) -&gt;
+    {ok, State}.
+</pre>
+
+<p>The two interesting sections here are the <code>init/1</code> callback, where we order ourselves to start, and then a single <code>handle_info/2</code> clause where we open the file (<code>file:read_file(Name)</code>), get a binary back, which we pass to our new <code>regex_count/2</code> function, and then send it back with <code>complete/4</code>. We then stop the worker. The rest is just standard OTP callback stuff.</p>
+
+<p>We can now compile and run the whole thing!</p>
+
+<pre class="brush:eshell">
+$ erl -make
+Recompile: src/erlcount_sup
+Recompile: src/erlcount_lib
+Recompile: src/erlcount_dispatch
+Recompile: src/erlcount_counter
+Recompile: src/erlcount
+Recompile: test/erlcount_tests
+</pre>
+
+<p>Hell yes. Pop the champagne because we have no whine!</p>
+<!-- badum tsh -->
+
+<h3><a class="section" name="run-app-run">Run App Run</a></h3>
+
+<p>There are many ways to get our app running. Make sure you're in a directory where you somehow have these two directories next to each other:</p>
+
+<pre class="expand">
+erlcount-1.0
+ppool-1.0
+</pre>
+
+<p>Now start Erlang the following way:</p>
+
+<pre class="expand">
+$ erl -env ERL_LIBS "."
+</pre>
+
+<p>The <var>ERL_LIBS</var> variable is a special variable defined in your environment that lets you specify where Erlang can find OTP applications. The VM is then able to automatically look in there to find the <code>ebin/</code> directories for you. <code>erl</code> can also take an argument of the form <code>-env NameOFVar Value</code> to override this setting quickly, so that's what I used here. The <var>ERL_LIBS</var> variable is pretty useful, especially when installing libraries, so try to remember it!</p>
+
+<p>With the VM we started, we can test that the modules are all there:</p>
+
+<pre class="brush:eshell">
+1&gt; application:load(ppool).
+ok
+</pre>
+
+<p>This function will try to load all the application modules in memory if they can be found. If you don't call it, it will be done automatically when starting the application, but this provides an easy way to test our paths. We can start the apps:</p>
+
+<pre class="brush:eshell">
+2&gt; application:start(ppool), application:start(erlcount).
+ok
+Regex if\s.+-&gt; has 20 results
+Regex case\s.+\sof has 26 results
+</pre>
+
+<p>Your results may vary depending on what you have in your directories. Note that depending how many files you have, this can take longer.</p>
+
+<img class="left" src="static/img/pope.png" width="188" height="173" alt="A pope shocked by profanities" title="The pope is shocked because these are not characters in the Bible, for the most part" />
+
+<p>What if we want different variables to be set for our applications, though? Do we need to change the application file all the time? No we don't! Erlang also supports that. So let's say I wanted to see how many times the Erlang programmers are angry in their source files?</p>
+
+<p>The <code>erl</code> executable supports a special set of arguments of the form <code>-AppName Key1 Val1 Key2 Val2 ... KeyN ValN</code>. In this case, we could then run the following regular expression over the Erlang source code from the R14B02 distribution with 2 regular expressions as follows:</p>
+
+<pre class="brush:eshell">
+$ erl -env ERL_LIBS "." -erlcount directory '"/home/ferd/otp_src_R14B02/lib/"' regex '["shit","damn"]'
+...
+1&gt; application:start(ppool), application:start(erlcount).
+ok
+Regex shit has 3 results
+Regex damn has 1 results
+2&gt; q().
+ok
+</pre>
+
+<p>Note that in this case, all expressions I give as arguments are wrapped in single quotation marks (<code>'</code>). That's because I want them to be taken literally by my Unix shell. Different shells might have different rules.</p>
+
+<p>We could also try our search with more general expressions (allowing values to start with capital letters) and with more file descriptors allowed:</p>
+
+<pre class="brush:eshell">
+$ erl -env ERL_LIBS "." -erlcount directory '"/home/ferd/otp_src_R14B02/lib/"' regex '["[Ss]hit","[Dd]amn"]' max_files 50
+...
+1&gt; application:start(ppool), application:start(erlcount).
+ok
+Regex [Ss]hit has 13 results
+Regex [Dd]amn has 6 results
+2&gt; q().
+ok
+</pre>
+
+<p>Oh, OTP programmers. What makes you so angry? ("Working with Erlang" not being an acceptable answer)</p>
+
+<p>This one might take even longer to run due to the more complex checks required over the hundreds of files there. This all works pretty good, but there are a few annoying things there. Why are we always manually starting both applications? isn't there something better?</p>
+
+
+<h3><a class="section" name="included-applications">Included Applications</a></h3>
+
+<p>Included applications are one way to get things working. The basic idea of an included application is that you define an application (in this case <code>ppool</code>) as an application that is part of another one (<code>erlcount</code>, here). To do this, a bunch of changes need to be made to both applications.</p>
+
+<p>The gist of it is that you modify your application file a bit, and then you need to add something called <em>start phases</em> to them, etc.</p>
+
+<img class="right" src="static/img/club.png" width="234" height="176" alt="Parody of the Simpson's 'No Homers Club' with a sign that instead says 'No Included Apps Club'" title="There is an S there because we accept the Included applications in the OTP test suite and nothing else." />
+
+<p>It is more and more recommended <strong>not</strong> to use included applications for a simple reason: they seriously limit code reuse. Think of it this way. We've spent a lot of time working on ppool's architecture to make it so anybody can use it, get their own pool and be free to do whatever they want with it. If we were to push it into an included application, then it can no longer be included in any other application on this VM, and if erlcount dies, then ppool will be taken down with it, ruining the work of any third party application that wanted to use ppool.</p>
+
+<p>For these reasons, included applications are usually excluded from many Erlang programmers' toolbox. As we will see in the following chapter, releases can basically help us do the same (and much more) in a more generic manner.</p>
+
+<p>Before that, we have a one more topic left to discuss in applications though.</p>
+
+
+<h3><a class="section" name="complex-terminations">Complex Terminations</a></h3>
+
+<p>There are cases where we need more steps to be done before terminating our application. The <code>stop/1</code> function from the application callback module might not be enough, especially since it gets called <strong>after</strong> the application has already terminated. What do we do if we need to clean things up before the application is actually gone?</p>
+
+<p>The trick is simple. Just add a function <code>prep_stop(State)</code> to your application callback module. <var>State</var> will be the state returned by your <code>start/2</code> function, and whatever <code>prep_stop/1</code> returns will be passed to <code>stop/1</code>. The function <code>prep_stop/1</code> thus technically inserts itself between <code>start/2</code> and <code>stop/1</code> and is executed while your application is still alive, but just before it shuts down.</p>
+
+<p>This is the kind of callback that you will know when you need to use it, but that we don't require for our application right now.</p>
+
+<div class="note koolaid">
+    <p><strong>Don't drink too much Kool-Aid:</strong><br />
+	A real world use case of the <code>prep_stop/1</code> callback came to me when I was helping <a class="external" href="http://about.me/yrashk">Yurii Rashkosvkii (yrashk)</a> debug a problem with <a class="external" href="http://erlagner.com">agner</a>, a package manager for Erlang. The problems encountered are a bit complex and have to do with weird interactions between <code>simple_one_for_one</code> supervisors and the application master, so feel free to skip this part of the text.</p>
+
+    <p>Agner is basically structured in a way where the application is started, starts a top-level supervisor, which starts a server and another supervisor, which in turn spawns the dynamic children</p>
+
+    <img class="center explanation" src="static/img/agner1.png" width="432" height="102" alt="A diagram representing a supervision tree. The App supervises a process named 'TopSup', which supervises 'SomeWorker' and 'Sup', another supervisor. 'Sup' supervises 'SimpleOneForOneWorkers', many simple one for one workers." />
+
+
+    <p>Now the thing is that the documentation says the following:</p>
+
+	<blockquote>Important note on simple-one-for-one supervisors: The dynamically created child processes of a simple-one-for-one supervisor are not explicitly killed, regardless of shutdown strategy, but are expected to terminate when the supervisor does (that is, when an exit signal from the parent process is received).</blockquote>
+
+    <p>And indeed they are not. The supervisor just kills its regular children and then disappears, leaving it to the simple-one-for-one children's behaviours to catch the exit message and leave. This, alone is fine.</p>
+
+	<p>As seen earlier, for each application, we have an application master. This application master acts as a group leader. As a reminder, the application master is linked both to its parent (the application controller) and its direct child (the app's top-level supervisor) and monitors both of them. When any of them fails, the master terminates its own execution, using its status as a group leader to terminate all of the leftover children. Again, this alone is fine.</p>
+
+	<p>However, if you mix in both features, and then decide to shut the application down with <code>application:stop(agner)</code>,  you end up in a very troublesome situation:</p>
+
+    <img class="center explanation" src="static/img/agner2.png" width="432" height="102" alt="A diagram representing a supervision tree. The App supervises a process named 'TopSup', which supervises 'SomeWorker' and 'Sup', another supervisor. 'Sup' supervises 'SimpleOneForOneWorkers', many simple one for one workers. In this case though, TopSup, Sup and SomeWorker are dead." />
+
+    <p>At this precise point in time, both supervisors are dead, as well as the regular worker in the app. The simple-one-for-one workers are currently dying, each catching the <code>EXIT</code> signal sent by their direct ancestor.</p>
+
+	<p>At the same time, though, The application master gets wind of its direct child dying and ends up killing every one of the simple-one-for-one workers that weren't dead yet.</p>
+
+	<p>The result is a bunch of workers which managed to clean up after themselves, and a bunch of others that didn't manage to do so. This is highly timing dependent, hard to debug and easy to fix.</p>
+
+	<p>Yurii and I basically fixed this by using the <code>ApplicationCallback:prep_stop(State)</code> function to fetch a list of all the dynamic simple-one-for-one children, monitor them, and then wait for all of them to die in the <code>stop(State)</code> callback function. This forces the application controller to stay alive until all of the dynamic children were dead. You can see the actual file on <a class="external" href="https://github.com/agner/agner/blob/db2527cfa2133a0679d8da999d1c37567151b49f/src/agner_app.erl">Agner's github repository</a></p>
+</div>
+
+<img class="center" src="static/img/trainwreck.png" width="219" height="270" alt="A trainwreck with 3 wagons, a fire and flying debris" title="This was my opinion of the whole ordeal" />
+
+<p>What an ugly thing! Hopefully, people very rarely run into this kind of issue and you hopefully won't. You can go put some soap in your eyes to wash away the terrible pictures of using <code>prep_stop/1</code> to get things working, even though it sometimes makes sense and is desirable. When you're back, we're going to start thinking about packaging our applications into releases.</p>
+
+<div class="note update">
+	<p><strong>update:</strong><br />
+	Since version R15B, the issue above has been resolved. The termination of dynamic children appears to be synchronous in the case of a supervisor shutdown.</p>
+</div>
+				<ul class="navigation">
+											<li><a href="building-otp-applications.html" title="Previous chapter">&lt; Previous</a></li>
+										
+					<li><a href="contents.html" title="Index">Index</a></li>
+					
+											<li><a href="release-is-the-word.html" title="Next chapter">Next &gt;</a></li>
+									</ul>
+			</div><!-- content -->
+			<div id="footer">
+				<a href="http://creativecommons.org/licenses/by-nc-nd/3.0/" title="Creative Commons License Details"><img src="static/img/cc.png" width="88" height="31" alt="Creative Commons Attribution Non-Commercial No Derivative License" /></a>
+				<p>Except where otherwise noted, content on this site is licensed under a Creative Commons Attribution Non-Commercial No Derivative License</p>
+			</div> <!-- footer -->
+		</div> <!-- wrapper -->
+		<div id="grass" />
+	<script type="text/javascript" src="static/js/shCore.js"></script>
+	<script type="text/javascript" src="static/js/shBrushErlang2.js%3F11"></script>
+	<script type="text/javascript">
+		SyntaxHighlighter.defaults.gutter = false;
+		SyntaxHighlighter.all();
+	</script>
+	</body>
+</html>

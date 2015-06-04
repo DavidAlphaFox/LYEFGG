@@ -1,0 +1,506 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en" dir="ltr">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<meta http-equiv="Content-Style-Type" content="text/css" />
+		<meta name="keywords" content="Erlang, exception, error, exit, trap_exit, link, monitor, restart, crash, process" />
+		<meta name="description" content="Error management with multiple processes in Erlang: links, monitors, exit signals (and how to trap them), the logic behind being able to give names to processes." />
+        <meta name="google-site-verification" content="mi1UCmFD_2pMLt2jsYHzi_0b6Go9xja8TGllOSoQPVU" />
+		<link rel="stylesheet" type="text/css" href="static/css/screen.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/sh/shCore.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/sh/shThemeLYSE2.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/print.css" media="print" />
+		<link href="rss" type="application/rss+xml" rel="alternate" title="LYSE news" />
+		<link rel="icon" type="image/png" href="favicon.ico" />
+		<link rel="apple-touch-icon" href="static/img/touch-icon-iphone.png" />
+		<link rel="apple-touch-icon" sizes="72x72" href="static/img/touch-icon-ipad.png" />
+		<link rel="apple-touch-icon" sizes="114x114" href="static/img/touch-icon-iphone4.png" />
+		<title>Errors and Processes | Learn You Some Erlang for Great Good!</title>
+	</head>
+	<body>
+		<div id="wrapper">
+			<div id="header">
+				<h1>Learn you some Erlang</h1>
+				<span>for great good!</span>
+			</div> <!-- header -->
+			<div id="menu">
+				<ul>
+					<li><a href="content.html" title="Home">Home</a></li>
+					<li><a href="faq.html" title="Frequently Asked Questions">FAQ</a></li>
+					<li><a href="rss" title="Latest News">RSS</a></li>
+					<li><a href="static/erlang/learn-you-some-erlang.zip" title="Source Code">Code</a></li>
+				</ul>
+			</div><!-- menu -->
+			<div id="content">
+            <div class="noscript"><noscript>Hey there, it appears your Javascript is disabled. That's fine, the site works without it. However, you might prefer reading it with syntax highlighting, which requires Javascript!</noscript></div>
+<h2>Errors and Processes</h2>
+
+<h3><a class="section" name="links">Links</a></h3>
+
+<p>A link is a specific kind of relationship that can be created between two processes. When that relationship is set up and one of the processes dies from an unexpected throw, error or exit (see <a class="chapter" href="errors-and-exceptions.html">Errors and Exceptions</a>), the other linked process also dies.</p>
+
+<p>This is a useful concept from the perspective of failing as soon as possible to stop errors: if the process that has an error crashes but those that depend on it don't, then all these depending processes now have to deal with a dependency disappearing. Letting them die and then restarting the whole group is usually an acceptable alternative. Links let us do exactly this.</p>
+
+<p>To set a link between two processes, Erlang has the primitive function <a class="docs" href="http://erldocs.com/17.3/erts/erlang.html#link/1" title="Not the Zelda kind of link">link/1</a>, which takes a Pid as an argument. When called, the function will create a link between the current process and the one identified by <var>Pid</var>. To get rid of a link, use <a class="docs" href="http://erldocs.com/17.3/erts/erlang.html#unlink/1" title="Even more unlike Zelda">unlink/1</a>. When one of the linked processes crashes, a special kind of message is sent, with information relative to what happened. No such message is sent if the process dies of natural causes (read: is done running its functions.) I'll first introduce this new function as part of <a class="source" href="static/erlang/linkmon.erl">linkmon.erl</a>:</p>
+
+<pre class="brush:erl">
+myproc() -&gt;
+    timer:sleep(5000),
+    exit(reason).
+</pre>
+
+<p>If you try the next following calls (and wait 5 seconds between each spawn command), you should see the shell crashing for 'reason' only when a link has been set between the two processes.</p>
+
+<pre class="brush:eshell">
+1&gt; c(linkmon).
+{ok,linkmon}
+2&gt; spawn(fun linkmon:myproc/0).
+&lt;0.52.0&gt;
+3&gt; link(spawn(fun linkmon:myproc/0)).
+true
+** exception error: reason
+</pre>
+
+<p>Or, to put it in picture:</p>
+
+<img class="center explanation" src="static/img/link-exit.png" width="337" height="178" alt="A process receiving an exit signal" />
+
+<p>However, this <code>{'EXIT', B, Reason}</code> message can not be caught with a <code>try ... catch</code> as usual. Other mechanisms need to be used to do this. We'll see them later.</p>
+
+<p>It's important to note that links are used to establish larger groups of processes that should all die together:</p>
+
+<pre class="brush:erl">
+chain(0) -&gt;
+    receive
+        _ -&gt; ok
+    after 2000 -&gt;
+        exit("chain dies here")
+    end;
+chain(N) -&gt;
+    Pid = spawn(fun() -&gt; chain(N-1) end),
+    link(Pid),
+    receive
+        _ -&gt; ok
+    end.
+</pre>
+
+<p>This function will take an integer <var>N</var>, start <var>N</var> processes linked one to the other. In order to be able to pass the <var>N-1</var> argument to the next 'chain' process (which calls <code>spawn/1</code>), I wrap the call inside an anonymous function so it doesn't need arguments anymore. Calling <code>spawn(?MODULE, chain, [N-1])</code> would have done a similar job.</p>
+
+<p>Here, I'll have many processes linked together, dying as each of their successors exits:</p>
+
+<pre class="brush:eshell">
+4&gt; c(linkmon).               
+{ok,linkmon}
+5&gt; link(spawn(linkmon, chain, [3])).
+true
+** exception error: "chain dies here"
+</pre>
+
+<p>And as you can see, the shell does receive the death signal from some other process. Here's a drawn representation of the spawned processes and links going down:</p>
+
+<pre class="expand">
+[shell] == [3] == [2] == [1] == [0]
+[shell] == [3] == [2] == [1] == *dead*
+[shell] == [3] == [2] == *dead*
+[shell] == [3] == *dead*
+[shell] == *dead*
+*dead, error message shown*
+[shell] &lt;-- restarted
+</pre>
+
+<p>After the process running <code>linkmon:chain(0)</code> dies, the error is propagated down the chain of links until the shell process itself dies because of it. The crash could have happened in any of the linked processes; because links are bidirectional, you only need one of them to die for the others to follow suit.</p>
+
+<div class="note">
+    <p><strong>Note:</strong> If you wanted to kill another process from the shell, you could use the function <a class="docs" href="http://erldocs.com/17.3/erts/erlang.html#exit/2" title="Erlang's handgun">exit/2</a>, which is called this way: <code>exit(Pid, Reason)</code>. Try it if you wish.</p>
+</div>
+
+<div class="note">
+    <p><strong>Note:</strong> Links can not be stacked. If you call <code>link/1</code> 15 times for the same two processes, only one link will still exist between them and a single call to <code>unlink/1</code> will be enough to tear it down.</p>
+</div>
+
+<p>Its important to note that <code>link(spawn(Function))</code> or <code>link(spawn(M,F,A))</code> happens in more than one step. In some cases, it is possible for a process to die before the link has been set up and then provoke unexpected behavior. For this reason, the function <a class="docs" href="http://erldocs.com/17.3/erts/erlang.html#spawn_link/1" title="Not the Spawn from comic books (or Zelda)">spawn_link/1-3</a> has been added to the language. It takes the same arguments as <code>spawn/1-3</code>, creates a process and links it as if <code>link/1</code> had been there, except it's all done as an atomic operation (the operations are combined as a single one, which can either fail or succeed, but nothing else). This is generally considered safer and you save a set of parentheses too.</p>
+
+<img class="right" src="static/img/ackbar.jpg" width="307" height="281" alt="Admiral Ackbar" title="It's a trap! (that took forever to trace)" />
+
+<h3><a class="section" name="its-a-trap">It's a Trap!</a></h3>
+
+<p>Now to get back to links and processes dying. Error propagation across processes is done through a process similar to message passing, but with a special type of message called signals. Exit signals are 'secret' messages that automatically act on processes, killing them in the action.</p>
+
+<p>I have mentioned many times already that in order to be reliable, an application needs to be able to both kill and restart a process quickly. Right now, links are alright to do the killing part. What's missing is the restarting.</p>
+
+<p>In order to restart a process, we need a way to first know that it died. This can be done by adding a layer on top of links (the delicious frosting on the cake) with a concept called <em>system processes</em>. System processes are basically normal processes, except they can convert exit signals to regular messages. This is done by calling <code>process_flag(trap_exit, true)</code> in a running process. Nothing speaks as much as an example, so we'll go with that. I'll just redo the chain example with a system process at the beginning:</p>
+
+<pre class="brush:eshell">
+1&gt; process_flag(trap_exit, true).
+true
+2&gt; spawn_link(fun() -&gt; linkmon:chain(3) end).
+&lt;0.49.0&gt;
+3&gt; receive X -&gt; X end.
+{'EXIT',&lt;0.49.0&gt;,"chain dies here"}
+</pre>
+
+<p>Ah! Now things get interesting. To get back to our drawings, what happens is now more like this:</p>
+
+<pre class="expand">
+[shell] == [3] == [2] == [1] == [0]
+[shell] == [3] == [2] == [1] == *dead*
+[shell] == [3] == [2] == *dead*
+[shell] == [3] == *dead*
+[shell] &lt;-- {'EXIT,Pid,"chain dies here"} -- *dead*
+[shell] &lt;-- still alive!
+</pre>
+
+<p>And this is the mechanism allowing for a quick restart of processes. By writing programs using system processes, it is easy to create a process whose only role is to check if something dies and then restart it whenever it fails. We'll cover more of this in the next chapter, when we really apply these techniques.</p>
+
+<p>For now, I want to come back to the exception functions seen in the <a class="chapter" href="errors-and-exceptions.html">exceptions chapter</a> and show how they behave around processes that trap exits. Let's first set the bases to experiment without a system process. I'll successively show the results of uncaught throws, errors and exits in neighboring processes:</p>
+
+<dl>
+    <dt>Exception source: <code>spawn_link(fun() -&gt; ok end)</code></dt>
+    <dd><strong>Untrapped Result</strong>: - nothing - </dd>
+    <dd><strong>Trapped Result</strong>: <samp>{'EXIT', &lt;0.61.0&gt;, normal}</samp></dd>
+    <dd>The process exited normally, without a problem. Note that this looks a bit like the result of <code>catch exit(normal)</code>, except a PID is added to the tuple to know what processed failed.</dd>
+
+    <dt>Exception source: <code>spawn_link(fun() -&gt; exit(reason) end)</code></dt>
+    <dd><strong>Untrapped Result</strong>: <samp>** exception exit: reason</samp></dd>
+    <dd><strong>Trapped Result</strong>: <samp>{'EXIT', &lt;0.55.0&gt;, reason}</samp></dd>
+    <dd>The process has terminated for a custom reason. In this case, if there is no trapped exit, the process crashes. Otherwise, you get the above message.</dd>
+
+    <dt>Exception source: <code>spawn_link(fun() -&gt; exit(normal) end)</code></dt>
+    <dd><strong>Untrapped Result</strong>: - nothing -</dd>
+    <dd><strong>Trapped Result</strong>: <samp>{'EXIT', &lt;0.58.0&gt;, normal}</samp></dd>
+    <dd>This successfully emulates a process terminating normally. In some cases, you might want to kill a process as part of the normal flow of a program, without anything exceptional going on. This is the way to do it.</dd>
+
+    <dt>Exception source: <code>spawn_link(fun() -&gt; 1/0 end)</code></dt>
+    <dd><strong>Untrapped Result</strong>: <samp>Error in process &lt;0.44.0&gt; with exit value: {badarith, [{erlang, '/', [1,0]}]}</samp></dd>
+    <dd><strong>Trapped Result</strong>: <samp>{'EXIT', &lt;0.52.0&gt;, {badarith, [{erlang, '/', [1,0]}]}}</samp></dd>
+    <dd>The error (<code>{badarith, Reason}</code>) is never caught by a <code>try ... catch</code> block and bubbles up into an <samp>'EXIT'</samp>. At this point, it behaves exactly the same as <code>exit(reason)</code> did, but with a stack trace giving more details about what happened.</dd>
+
+    <dt>Exception source: <code>spawn_link(fun() -&gt; erlang:error(reason) end)</code></dt>
+    <dd><strong>Untrapped Result</strong>: <samp>Error in process &lt;0.47.0&gt; with exit value: {reason, [{erlang, apply, 2}]}</samp></dd>
+    <dd><strong>Trapped Result</strong>: <samp>{'EXIT', &lt;0.74.0&gt;, {reason, [{erlang, apply, 2}]}}</samp></dd>
+    <dd>Pretty much the same as with <code>1/0</code>. That's normal, <code>erlang:error/1</code> is meant to allow you to do just that.</dd>
+
+    <dt>Exception source: <code>spawn_link(fun() -&gt; throw(rocks) end)</code></dt>
+    <dd><strong>Untrapped Result</strong>: <samp>Error in process &lt;0.51.0&gt; with exit value: {{nocatch, rocks}, [{erlang, apply, 2}]}</samp></dd>
+    <dd><strong>Trapped Result</strong>: <samp>{'EXIT', &lt;0.79.0&gt;, {{nocatch, rocks}, [{erlang, apply, 2}]}}</samp></dd>
+    <dd>Because the <code>throw</code> is never caught by a <code>try ... catch</code>, it bubbles up into an error, which in turn bubbles up into an <samp>EXIT</samp>. Without trapping exit, the process fails. Otherwise it deals with it fine.</dd>
+</dl>
+
+<p>And that's about it for usual exceptions. Things are normal: everything goes fine. Exceptional stuff happens: processes die, different signals are sent around.</p>
+
+<p>Then there's <code>exit/2</code>. This one is the Erlang process equivalent of a gun. It allows a process to kill another one from a distance, safely. Here are some of the possible calls:</p>
+
+<dl>
+    <dt>Exception source: <code>exit(self(), normal)</code></dt>
+    <dd><strong>Untrapped Result</strong>: <samp>** exception exit: normal</samp></dd>
+    <dd><strong>Trapped Result</strong>: <samp>{'EXIT', &lt;0.31.0&gt;, normal}</samp></dd>
+    <dd>When not trapping exits, <code>exit(self(), normal)</code> acts the same as <code>exit(normal)</code>. Otherwise, you receive a message with the same format you would have had by listening to links from foreign processes dying.</dd>
+
+    <dt>Exception source: <code>exit(spawn_link(fun() -&gt; timer:sleep(50000) end), normal)</code></dt>
+    <dd><strong>Untrapped Result</strong>: - nothing -</dd>
+    <dd><strong>Trapped Result</strong>: - nothing -</dd>
+    <dd>This basically is a call to <code>exit(Pid, normal)</code>. This command doesn't do anything useful, because a process can not be remotely killed with the reason <code>normal</code> as an argument.</dd>
+
+    <dt>Exception source: <code>exit(spawn_link(fun() -&gt; timer:sleep(50000) end), reason)</code></dt>
+    <dd><strong>Untrapped Result</strong>: <samp>** exception exit: reason</samp></dd>
+    <dd><strong>Trapped Result</strong>: <samp>{'EXIT', &lt;0.52.0&gt;, reason}</samp></dd>
+    <dd>This is the foreign process terminating for <samp>reason</samp> itself. Looks the same as if the foreign process called <code>exit(reason)</code> on itself.</dd>
+
+    <dt>Exception source: <code>exit(spawn_link(fun() -&gt; timer:sleep(50000) end), kill)</code></dt>
+    <dd><strong>Untrapped Result</strong>: <samp>** exception exit: killed</samp></dd>
+    <dd><strong>Trapped Result</strong>: <samp>{'EXIT', &lt;0.58.0&gt;, killed}</samp></dd>
+    <dd>Surprisingly, the message gets changed from the dying process to the spawner. The spawner now receives <code>killed</code> instead of <code>kill</code>. That's because <code>kill</code> is a special exit signal. More details on this later.</dd>
+
+    <dt>Exception source: <code>exit(self(), kill)</code></dt>
+    <dd><strong>Untrapped Result</strong>: <samp>** exception exit: killed</samp></dd>
+    <dd><strong>Trapped Result</strong>: <samp>** exception exit: killed</samp></dd>
+    <dd>Oops, look at that. It seems like this one is actually impossible to trap. Let's check something.</dd>
+
+    <dt>Exception source: <code>spawn_link(fun() -&gt; exit(kill) end)</code></dt>
+    <dd><strong>Untrapped Result</strong>: <samp>** exception exit: killed</samp></dd>
+    <dd><strong>Trapped Result</strong>: <samp>{'EXIT', &lt;0.67.0&gt;, kill}</samp></dd>
+    <dd>Now that's getting confusing. When another process kills itself with <code>exit(kill)</code> and we don't trap exits, our own process dies with the reason <code>killed</code>. However, when we trap exits, things don't happen that way.</dd>
+</dl>
+
+<p>While you can trap most exit reasons, there are situations where you might want to brutally murder a process: maybe one of them is trapping exits but is also stuck in an infinite loop, never reading any message. The <code>kill</code> reason acts as a special signal that can't be trapped. This ensures any process you terminate with it will really be dead. Usually, <code>kill</code> is a bit of a last resort, when everything else has failed.</p>
+
+<img class="right" src="static/img/trap.png" width="260" height="195" alt="A mouse trap with a beige laptop on top" title="You know you want that beige laptop" /> 
+
+<p>As the <code>kill</code> reason can never be trapped, it needs to be changed to <code>killed</code> when other processes receive the message. If it weren't changed in that manner, every other process linked to it would in turn die for the same <code>kill</code> reason and would in turn kill its neighbors, and so on. A death cascade would ensue.</p>
+
+<p>This also explains why <code>exit(kill)</code> looks like <code>killed</code> when received from another linked process (the signal is modified so it doesn't cascade), but still looks like <code>kill</code> when trapped locally.</p>
+
+<p>If you find this all confusing, don't worry. Many programmers feel the same. Exit signals are a bit of a funny beast. Luckily there aren't many more special cases than the ones described above. Once you understand those, you can understand most of Erlang's concurrent error management without a problem.</p>
+
+
+<h3><a class="section" name="monitors">Monitors</a></h3>
+
+<p>So yeah. Maybe murdering processes isn't what you want. Maybe you don't feel like taking the world down with you once you're gone. Maybe you're more of a stalker. In that case, monitors might be what you want.</p>
+
+<p>More seriously, monitors are a special type of link with two differences:</p>
+
+<ul>
+    <li>they are unidirectional;</li>
+    <li>they can be stacked.</li>
+</ul>
+
+<img class="left" src="static/img/homer.png" width="164" height="379" alt="Ugly Homer Simpson parody" title="Not an example of a good monitor" />
+
+<p>Monitors are what you want when a process wants to know what's going on with a second process, but neither of them really are vital to each other.</p>
+
+<p>Another reason, as listed above, is stacking the references. Now this might seem useless from a quick look, but it is great for writing libraries which need to know what's going on with other processes.</p>
+
+<p>You see, links are more of an organizational construct. When you design the architecture of your application, you determine which process will do which jobs, and what will depend on what. Some processes will supervise others, some couldn't live without a twin process, etc. This structure is usually something fixed, known in advance. Links are useful for that and should not necessarily be used outside of it.</p>
+
+<p>But what happens if you have 2 or 3 different libraries that you call and they all need to know whether a process is alive or not? If you were to use links for this, you would quickly hit a problem whenever you needed to unlink a process. Now, links aren't stackable, so the moment you unlink one, you unlink them all and mess up all the assumptions put up by the other libraries. That's pretty bad. So you need stackable links, and monitors are your solution. They can be removed individually. Plus, being unidirectional is handy in libraries because other processes shouldn't have to be aware of said libraries.</p>
+
+<p>So what does a monitor look like? Easy enough, let's set one up. The function is <a class="docs" href="http://erldocs.com/17.3/erts/erlang.html#monitor/2" title="I seeee youuu">erlang:monitor/2</a>, where the first argument is the atom <samp>process</samp> and the second one is the pid:</p>
+
+<pre class="brush:eshell">
+1&gt; erlang:monitor(process, spawn(fun() -&gt; timer:sleep(500) end)).
+#Ref&lt;0.0.0.77&gt;
+2&gt; flush().
+Shell got {'DOWN',#Ref&lt;0.0.0.77&gt;,process,&lt;0.63.0&gt;,normal}
+ok
+</pre>
+
+<p>Every time a process you monitor goes down, you will receive such a message. The message is <code>{'DOWN', MonitorReference, process, Pid, Reason}</code>. The reference is there to allow you to demonitor the process. Remember, monitors are stackable, so it's possible to take more than one down. References allow you to track each of them in a unique manner. Also note that as with links, there is an atomic function to spawn a process while monitoring it, <a class="docs" href="http://erldocs.com/17.3/erts/erlang.html#spawn_monitor/1" title="">spawn_monitor/1-3</a>:</p>
+
+<pre class="brush:eshell">
+3&gt; {Pid, Ref} = spawn_monitor(fun() -&gt; receive _ -&gt; exit(boom) end end).
+{&lt;0.73.0&gt;,#Ref&lt;0.0.0.100&gt;}
+4&gt; erlang:demonitor(Ref).
+true
+5&gt; Pid ! die.
+die
+6&gt; flush().
+ok
+</pre>
+
+<p>In this case, we demonitored the other process before it crashed and as such we had no trace of it dying. The function <a class="docs" href="http://erldocs.com/17.3/erts/erlang.html#demonitor/2" title="I can't seeee youuuuuu">demonitor/2</a> also exists and gives a little bit more information. The second parameter can be a list of options. Only two exist, <code>info</code> and <code>flush</code>:</p>
+
+<pre class="brush:eshell">
+7&gt; f().
+ok
+8&gt; {Pid, Ref} = spawn_monitor(fun() -&gt; receive _ -&gt; exit(boom) end end). 
+{&lt;0.35.0&gt;,#Ref&lt;0.0.0.35&gt;}
+9&gt; Pid ! die.
+die
+10&gt; erlang:demonitor(Ref, [flush, info]).
+false
+11&gt; flush().
+ok
+</pre>
+
+<p>The <code>info</code> option tells you if a monitor existed or not when you tried to remove it. This is why the expression 10 returned <code>false</code>. Using <code>flush</code> as an option will remove the <code>DOWN</code> message from the mailbox if it existed, resulting in <code>flush()</code> finding nothing in the current process' mailbox.</p>
+
+
+<h3><a class="section" name="naming-processes">Naming Processes</a></h3>
+
+<p>With links and monitors understood, there is another problem still left to be solved. Let's use the following functions of the <a class="source" href="static/erlang/linkmon.erl">linkmon.erl</a> module:</p>
+
+<pre class="brush:erl">
+start_critic() -&gt;
+    spawn(?MODULE, critic, []).
+
+judge(Pid, Band, Album) -&gt;
+    Pid ! {self(), {Band, Album}},
+    receive
+        {Pid, Criticism} -&gt; Criticism
+    after 2000 -&gt;
+        timeout
+    end.
+
+critic() -&gt;
+    receive
+        {From, {"Rage Against the Turing Machine", "Unit Testify"}} -&gt;
+            From ! {self(), "They are great!"};
+        {From, {"System of a Downtime", "Memoize"}} -&gt;
+            From ! {self(), "They're not Johnny Crash but they're good."};
+        {From, {"Johnny Crash", "The Token Ring of Fire"}} -&gt;
+            From ! {self(), "Simply incredible."};
+        {From, {_Band, _Album}} -&gt;
+            From ! {self(), "They are terrible!"}
+    end,
+    critic().
+</pre>
+
+<p>Now we'll just pretend we're going around stores, shopping for music. There are a few albums that sound interesting, but we're never quite sure. You decide to call your friend, the critic.</p>
+
+<pre class="brush:eshell">
+1&gt; c(linkmon).                         
+{ok,linkmon}
+2&gt; Critic = linkmon:start_critic().
+&lt;0.47.0&gt;
+3&gt; linkmon:judge(Critic, "Genesis", "The Lambda Lies Down on Broadway").
+"They are terrible!"
+</pre>
+
+<p>Because of a solar storm (I'm trying to find something realistic here), the connection is dropped:</p>
+
+<pre class="brush:eshell">
+4&gt; exit(Critic, solar_storm).
+true
+5&gt; linkmon:judge(Critic, "Genesis", "A trick of the Tail Recursion").
+timeout
+</pre>
+
+<p>Annoying. We can no longer get criticism for the albums. To keep the critic alive, we'll write a basic 'supervisor' process whose only role is to restart it when it goes down:</p>
+
+<pre class="brush:erl">
+start_critic2() -&gt;
+    spawn(?MODULE, restarter, []).
+
+restarter() -&gt;
+    process_flag(trap_exit, true),
+    Pid = spawn_link(?MODULE, critic, []),
+    receive
+        {'EXIT', Pid, normal} -&gt; % not a crash
+            ok;
+        {'EXIT', Pid, shutdown} -&gt; % manual termination, not a crash
+            ok;
+        {'EXIT', Pid, _} -&gt;
+            restarter()
+    end.
+</pre>
+
+<p>Here, the restarter will be its own process. It will in turn start the critic's process and if it ever dies of abnormal cause, <code>restarter/0</code> will loop and create a new critic. Note that I added a clause for <code>{'EXIT', Pid, shutdown}</code> as a way to manually kill the critic if we ever need to.</p>
+
+<p>The problem with our approach is that there is no way to find the Pid of the critic, and thus we can't call him to have his opinion. One of the solutions Erlang has to solve this is to give names to processes.</p>
+
+<p>The act of giving a name to a process allows you to replace the unpredictable pid by an atom. This atom can then be used exactly as a Pid when sending messages. To give a process a name, the function <a class="docs" href="http://erldocs.com/17.3/erts/erlang.html#register/2" title="here be a title. Enjoy">erlang:register/2</a> is used. If the process dies, it will automatically lose its name or you can also use <a class="docs" href="http://erldocs.com/17.3/erts/erlang.html#unregister/1" title="hooray for links">unregister/1</a> to do it manually. You can get a list of all registered processes with <a class="docs" href="http://erldocs.com/17.3/erts/erlang.html#registered/0" title="gotta list em all">registered/0</a> or a more detailed one with the shell command <code>regs()</code>. Here we can rewrite the <code>restarter/0</code> function as follows:</p>
+
+<pre class="brush:erl">
+restarter() -&gt;
+    process_flag(trap_exit, true),
+    Pid = spawn_link(?MODULE, critic, []),
+    register(critic, Pid),
+    receive
+        {'EXIT', Pid, normal} -&gt; % not a crash
+            ok;
+        {'EXIT', Pid, shutdown} -&gt; % manual termination, not a crash
+            ok;
+        {'EXIT', Pid, _} -&gt;
+            restarter()
+    end. 
+</pre>
+
+<p>So as you can see, <code>register/2</code> will always give our critic the name 'critic', no matter what the Pid is. What we need to do is then remove the need to pass in a Pid from the abstraction functions. Let's try this one:</p>
+
+<pre class="brush:erl">
+judge2(Band, Album) -&gt;
+    critic ! {self(), {Band, Album}},
+    Pid = whereis(critic),
+    receive
+        {Pid, Criticism} -&gt; Criticism
+    after 2000 -&gt;
+        timeout
+    end.
+</pre>
+
+<p>Here, the line <code>Pid = whereis(critic)</code> is used to find the critic's process identifier in order to pattern match against it in the <code>receive</code> expression. We want to match with this pid, because it makes sure we will match on the right message (there could be 500 of them in the mailbox as we speak!) This can be the source of a problem though. The code above assumes that the critic's pid will remain the same between the first two lines of the function. However, it is completely plausible the following will happen:</p>
+
+<pre class="expand">
+  1. critic ! Message
+                        2. critic receives
+                        3. critic replies
+                        4. critic dies
+  5. whereis fails
+                        6. critic is restarted
+  7. code crashes
+</pre>
+
+<p>Or yet, this is also a possibility:</p>
+
+<pre class="expand">
+  1. critic ! Message
+                           2. critic receives
+                           3. critic replies
+                           4. critic dies
+                           5. critic is restarted
+  6. whereis picks up
+     wrong pid
+  7. message never matches
+</pre>
+            
+<p>The possibility that things go wrong in a different process can make another one go wrong if we don't do things right. In this case, the value of the <samp>critic</samp> atom can be seen from multiple processes. This is known as <em>shared state</em>. The problem here is that the value of <samp>critic</samp> can be accessed <em>and</em> modified by different processes at virtually the same time, resulting in inconsistent information and software errors. The common term for such things is a <em>race condition</em>. Race conditions are particularly dangerous because they depend on the timing of events. In pretty much every concurrent and parallel language out there, this timing depends on unpredictable factors such as how busy the processor is, where the processes go, and what data is being processed by your program.</p>
+
+<div class="note koolaid">
+    <p><strong>Don't drink too much kool-aid:</strong><br />
+    You might have heard that Erlang is usually free of race conditions or deadlocks and makes parallel code safe. This is true in many circumstances, but never assume your code is really that safe. Named processes are only one example of the multiple ways in which parallel code can go wrong.</p>
+
+    <p>Other examples include access to files on the computer (to modify them), updating the same database records from many different processes, etc.</p>
+</div>
+
+<p>Luckily for us, it's relatively easy to fix the code above if we don't assume the named process remains the same. Instead, we'll use references (created with <code>make_ref()</code>) as unique values to identify messages. We'll need to rewrite the <code>critic/0</code> function into <code>critic2/0</code> and <code>judge/3</code> into <code>judge2/2</code>:</p>
+
+<pre class="brush:erl">
+judge2(Band, Album) -&gt;
+    Ref = make_ref(),
+    critic ! {self(), Ref, {Band, Album}},
+    receive
+        {Ref, Criticism} -&gt; Criticism
+    after 2000 -&gt;
+        timeout
+    end.
+
+critic2() -&gt;
+    receive
+        {From, Ref, {"Rage Against the Turing Machine", "Unit Testify"}} -&gt;
+            From ! {Ref, "They are great!"};
+        {From, Ref, {"System of a Downtime", "Memoize"}} -&gt;
+            From ! {Ref, "They're not Johnny Crash but they're good."};
+        {From, Ref, {"Johnny Crash", "The Token Ring of Fire"}} -&gt;
+            From ! {Ref, "Simply incredible."};
+        {From, Ref, {_Band, _Album}} -&gt;
+            From ! {Ref, "They are terrible!"}
+    end,
+    critic2().
+</pre>
+
+<p>And then change <code>restarter/0</code> to fit by making it spawn <code>critic2/0</code> rather than <code>critic/0</code>. Now the other functions should keep working fine. The user won't see a difference. Well, they will because we renamed functions and changed the number of parameters, but they won't know what implementation details were changed and why it was important. All they'll see is that their code got simpler and they no longer need to send a pid around function calls:</p>
+
+<pre class="brush:eshell">
+6&gt; c(linkmon).
+{ok,linkmon}
+7&gt; linkmon:start_critic2().
+&lt;0.55.0&gt;
+8&gt; linkmon:judge2("The Doors", "Light my Firewall").
+"They are terrible!"
+9&gt; exit(whereis(critic), kill).
+true
+10&gt; linkmon:judge2("Rage Against the Turing Machine", "Unit Testify").     
+"They are great!"
+</pre>
+
+<p>And now, even though we killed the critic, a new one instantly came back to solve our problems. That's the usefulness of named processes. Had you tried to call <code>linkmon:judge/2</code> without a registered process, a <samp>bad argument</samp> error would have been thrown by the <code>!</code> operator inside the function, making sure that processes that depend on named ones can't run without them.</p>
+
+<div class="note">
+    <p><strong>Note:</strong> If you remember earlier texts, atoms can be used in a limited (though high) number. You shouldn't ever create dynamic atoms. This means naming processes should be reserved to important services unique to an instance of the VM and processes that should be there for the whole time your application runs.</p>
+
+    <p>If you need named processes but they are transient or there isn't any of them which can be unique to the VM, it may mean they need to be represented as a group instead. Linking and restarting them together if they crash might be the sane option, rather than trying to use dynamic names.</p>
+</div>
+
+<p>In the next chapter, we'll put the recent knowledge we gained on concurrent programming with Erlang to practice by writing a real application.</p>
+				<ul class="navigation">
+											<li><a href="more-on-multiprocessing.html" title="Previous chapter">&lt; Previous</a></li>
+										
+					<li><a href="contents.html" title="Index">Index</a></li>
+					
+											<li><a href="designing-a-concurrent-application.html" title="Next chapter">Next &gt;</a></li>
+									</ul>
+			</div><!-- content -->
+			<div id="footer">
+				<a href="http://creativecommons.org/licenses/by-nc-nd/3.0/" title="Creative Commons License Details"><img src="static/img/cc.png" width="88" height="31" alt="Creative Commons Attribution Non-Commercial No Derivative License" /></a>
+				<p>Except where otherwise noted, content on this site is licensed under a Creative Commons Attribution Non-Commercial No Derivative License</p>
+			</div> <!-- footer -->
+		</div> <!-- wrapper -->
+		<div id="grass" />
+	<script type="text/javascript" src="static/js/shCore.js"></script>
+	<script type="text/javascript" src="static/js/shBrushErlang2.js%3F11"></script>
+	<script type="text/javascript">
+		SyntaxHighlighter.defaults.gutter = false;
+		SyntaxHighlighter.all();
+	</script>
+	</body>
+</html>

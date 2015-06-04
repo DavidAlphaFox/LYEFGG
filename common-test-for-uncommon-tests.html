@@ -1,0 +1,875 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en" dir="ltr">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<meta http-equiv="Content-Style-Type" content="text/css" />
+		<meta name="keywords" content="Erlang, Common Test, test specification, suite, group, case, test framework, ct_run, run_test, ct_master" />
+		<meta name="description" content="A smooth introduction for Common Test, a testing framework for blackbox and whitebox testing in Erlang, including distributed tests." />
+        <meta name="google-site-verification" content="mi1UCmFD_2pMLt2jsYHzi_0b6Go9xja8TGllOSoQPVU" />
+		<link rel="stylesheet" type="text/css" href="static/css/screen.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/sh/shCore.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/sh/shThemeLYSE2.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/print.css" media="print" />
+		<link href="rss" type="application/rss+xml" rel="alternate" title="LYSE news" />
+		<link rel="icon" type="image/png" href="favicon.ico" />
+		<link rel="apple-touch-icon" href="static/img/touch-icon-iphone.png" />
+		<link rel="apple-touch-icon" sizes="72x72" href="static/img/touch-icon-ipad.png" />
+		<link rel="apple-touch-icon" sizes="114x114" href="static/img/touch-icon-iphone4.png" />
+		<title>Common Test For Uncommon Tests | Learn You Some Erlang for Great Good!</title>
+	</head>
+	<body>
+		<div id="wrapper">
+			<div id="header">
+				<h1>Learn you some Erlang</h1>
+				<span>for great good!</span>
+			</div> <!-- header -->
+			<div id="menu">
+				<ul>
+					<li><a href="content.html" title="Home">Home</a></li>
+					<li><a href="faq.html" title="Frequently Asked Questions">FAQ</a></li>
+					<li><a href="rss" title="Latest News">RSS</a></li>
+					<li><a href="static/erlang/learn-you-some-erlang.zip" title="Source Code">Code</a></li>
+				</ul>
+			</div><!-- menu -->
+			<div id="content">
+            <div class="noscript"><noscript>Hey there, it appears your Javascript is disabled. That's fine, the site works without it. However, you might prefer reading it with syntax highlighting, which requires Javascript!</noscript></div>
+<h2>Common Test for Uncommon Tests</h2>
+
+<p>A few chapters ago, we've seen how to use EUnit to do unit and module testing, and even some concurrent testing. At that point, EUnit started to show its limits. Complex setups and longer tests that needed to interact between each other became problematic. Plus, there was nothing in there to handle our new knowledge of distributed Erlang and all of its power. Fortunately, there's another test framework that exists, this one more appropriate to the heavy lifting we now want to do.</p>
+
+<img class="right" src="static/img/black-box.png" width="191" height="198" alt="A black box with a heart on it, sitting on a pink heart also." />
+
+<h3><a class="section" name="what-is-common-test">What is Common Test</a></h3>
+
+<p>As programmers, we enjoy treating our programs as black boxes. Many of us would define the core principle behind a good abstraction as being able to replace whatever it is we've written by an anonymous black box. You put something in the box, you get something out of it. You don't care how it works on the inside, as long as you get what you want.</p>
+
+<p>In the testing world, this has an important connection to how we like to test systems. When we were working with EUnit, we've seen how to treat a module as a <em>black box</em>: you only test the exported functions and none of the ones inside, which are not exported. I've also given examples on testing items as a <em>white box</em>, like in the case of the process quest player module's tests, where we looked at the innards of the module to make its testing simpler. This was necessary because the interaction of all the moving parts inside the box made testing it from the outside very complex.</p>
+
+<p>That was for modules and functions. What if we zoom out a bit? Let's fiddle with our scope in order to see the broader picture. What if what we want to test is a library? What if it's an application? Even broader, what if it's a complete system? Then what we need is a tool that's more adept at doing something called <em>system testing</em>.</p>
+
+<p>EUnit is a pretty good tool for white box testing at a module level. It's a decent tool to test libraries and OTP applications. It's possible to do system testing and black box testing, but it's not optimal.</p>
+
+<p>Common Test, however, is pretty damn good at system testing. It's decent for testing libraries and OTP applications, and it's possible, but not optimal, to use it to test individual modules. So the smaller what you test is, the more appropriate (and flexible, and fun) EUnit will be. The larger your test is, the more appropriate (and flexible, and, uh, somewhat fun) Common Test will be.</p>
+
+<p>You might have heard of Common Test before and tried to understand it from the documentation given with Erlang/OTP. Then you likely gave up real quick. Don't worry. The problem is that Common Test is very powerful and has an accordingly long user guide, and that at the time of this writing, most of its documentation appears to be coming from internal documentation from the days when it was used only within the walls of Ericsson. In fact, its documentation is more of a reference manual for people who already understand it than a tutorial.</p>
+
+<p>In order to properly learn Common Test, we'll have to start from the simplest parts of it and slowly grow our way to system tests.</p>
+
+
+<h3><a class="section" name="common-test-cases">Common Test Cases</a></h3>
+
+<p>Before even getting started, I have to give you a little overview of how Common Test organises its things. First of all, because Common Test is appropriate for system testing, it will assume two things:</p>
+
+<ol>
+	<li>We will need data to instantiate our stuff</li>
+	<li>We will need a place to store all that side-effecty stuff we do, because we're messy people.</li>
+</ol>
+
+<p>Because of this, Common Test will regularly be organized as follows:</p>
+
+<img class="center explanation" src="static/img/ct-struct.png" width="293" height="194" alt="A diagram showing nested boxes. On the outmost level is the test root, labeled (1). Inside that one is the Test Object Diretory, labeled (2). Inside (2) is the test suite (3), and the innermost box, inside the suite, is the test case (4)." />
+
+<p>The test case is the simplest one. It's a bit of code that either fails or succeeds. If the case crashes, the test is unsuccessful (how surprising). Otherwise, the test case is thought to be successful. In Common Test, test cases are single functions. All these functions live in a test suite (3), a module that takes care of regrouping related test cases together. Each test suite will then live in a directory, the Test Object Directory (2). The test root (1) is a directory that contains many test object directories, but due to the nature of OTP applications often being developed individually, many Erlang programmers tend to omit that layer.</p>
+
+<p>In any case, now that we understand that organisation, we can go back to our two assumptions (we need to instantiate stuff, and then mess stuff up). Each test suite is a module that ends with <code>_SUITE</code>. If I were to test the magic 8-ball application from last chapter, I might thus call my suite <code>m8ball_SUITE</code>. Related to that one is a directory called the <em>data directory</em>. Each suite is allowed to have one such directory, usually named <code>Module_SUITE_data/</code>. In the case of the magic 8-ball app, it would have been <code>m8ball_SUITE_data/</code>. That directory contains anything you want.</p>
+
+<p>What about the side-effects? Well because we might run tests many times, Common Test develops its structure a bit more:</p>
+
+<img class="center explanation" src="static/img/ct-logs.png" width="579" height="189" alt="Same diagram (nested boxes) as earlier, but an arrow with 'running' tests points to a new box (Log directory) with two smaller boxes inside: priv dir and HTML files." />
+
+<p>Whenever you run the tests, Common Test will find some place to log stuff (usually the current directory, but we'll see how to configure it later). When doing so, it will create a unique directory where you can store your data. That directory (<em>Priv Dir</em> above), along with the data directory, will be passed as part of some initial state to each of your tests. You're then free to write whatever you want in that private directory, and then inspect it later, without running the risk of overwriting something important or the results of former test runs.</p>
+
+<p>Enough with this architectural material; we're ready to write our first simple test suite. Create a directory named <code>ct/</code> (or whatever you'd like, this is hopefully a free country, after all). That directory will be our test root. Inside of it, we can then make a directory named <code>demo/</code> for the simpler tests we'll use as examples. This will be our test object directory.</p>
+
+<p>Inside the test object directory, we'll begin with a module named <a class="source" href="static/erlang/ct/demo/basic_SUITE.erl">basic_SUITE.erl</a>, to see the most basic stuff possible. You can omit creating the <code>basic_SUITE_data/</code> directory &mdash; we won't need it for this run. Common Test won't complain.</p>
+
+<p>Here's what the module looks like:</p>
+
+<pre class="brush:erl">
+-module(basic_SUITE).
+-include_lib("common_test/include/ct.hrl").
+-export([all/0]).
+-export([test1/1, test2/1]).
+
+all() -&gt; [test1,test2].
+
+test1(_Config) -&gt;
+    1 = 1.
+
+test2(_Config) -&gt;
+    A = 0,
+    1/A.
+</pre>
+
+<p>Let's study it step by step. First of all, we've got to include the file <code>"common_test/include/ct.hrl"</code>. That file gives a few useful macros, and even though <code>basic_SUITE</code> doesn't use them, it's usually a good habit of including that file.</p>
+
+<p>Then we have the function <code>all/0</code>. That function returns a list of test cases. It's basically what tells Common Test "hey, I want to run these test cases!". EUnit would do it based on the name (<code>*_test()</code> or <code>*_test_()</code>); Common Test does it with an explicit function call.</p>
+
+<img class="left" src="static/img/priv_dir.png" width="306" height="270" alt="Folders on the floor with paper everywhere. One of the folder has the label 'DATA', and another one has the label 'not porn'" />
+
+<p>What about these <var>_Config</var> variables? They're unused for now, but for your own personal knowledge, they contain the initial state your test cases will require. That state is literally a proplist, and it initially contains two values, <code>data_dir</code> and <code>priv_dir</code>, the two directories we have for our static data and the one where we can mess around.</p>
+
+<p>We can run the tests either from the command line or from an Erlang shell. If you use the command line, you can call <code>$ ct_run -suite Name_SUITE</code>. In Erlang/OTP versions before R15 (released around December 2011), the default command was <code>run_test</code> instead of <code>ct_run</code> (although some systems had both already). The name was changed with the objective of minimizing the risk of name clashes with other applications by moving to a slightly less generic name. Running it, we find:</p>
+
+<pre class="brush:eshell">
+ct_run -suite basic_SUITE
+...
+Common Test: Running make in test directories...
+Recompile: basic_SUITE
+...
+Testing ct.demo.basic_SUITE: Starting test, 2 test cases
+
+- - - - - - - - - - - - - - - - - - - - - - - - - -
+basic_SUITE:test2 failed on line 13
+Reason: badarith
+- - - - - - - - - - - - - - - - - - - - - - - - - -
+
+Testing ct.demo.basic_SUITE: *** FAILED *** test case 2 of 2
+Testing ct.demo.basic_SUITE: TEST COMPLETE, 1 ok, 1 failed of 2 test cases
+
+Updating /Users/ferd/code/self/learn-you-some-erlang/ct/demo/index.html... done
+Updating /Users/ferd/code/self/learn-you-some-erlang/ct/demo/all_runs.html... done
+</pre>
+
+<p>And we find that one of our two test cases fails. We also see that we apparently inherited a bunch of HTML files. Before looking to know what this is about, let's see how to run the tests from the Erlang shell:</p>
+
+<pre class="brush:eshell">
+$ erl
+...
+1&gt; ct:run_test([{suite, basic_SUITE}]).
+...
+Testing ct.demo.basic_SUITE: Starting test, 2 test cases
+
+- - - - - - - - - - - - - - - - - - - - - - - - - -
+basic_SUITE:test2 failed on line 13
+Reason: badarith
+- - - - - - - - - - - - - - - - - - - - - - - - - -
+...
+Updating /Users/ferd/code/self/learn-you-some-erlang/ct/demo/index.html... done
+Updating /Users/ferd/code/self/learn-you-some-erlang/ct/demo/all_runs.html... done
+ok
+</pre>
+
+<p>I've removed a bit of the output above, but it gives exactly the same result as the command line version. Let's see what's going on with these HTML files:</p>
+
+<pre class="brush:eshell">
+$ ls
+all_runs.html
+basic_SUITE.beam
+basic_SUITE.erl
+ct_default.css
+ct_run.NodeName.YYYY-MM-DD_20.01.25/
+ct_run.NodeName.YYYY-MM-DD_20.05.17/
+index.html
+variables-NodeName
+</pre>
+
+<p>Oh what the hell did Common Test do to my beautiful directory? It is a shameful thing to look at. We've got two directories there. Feel free to explore them if you feel adventurous, but all the cowards like me will prefer to instead look at either the <code>all_runs.html</code> or the <code>index.html</code> files. The former will link to indexes of all iterations of the tests you ran while the latter will link to the newest runs only. Pick one, and then click around in a browser (or press around if you don't believe in mice as an input device) until you find the test suite with its two tests:</p>
+
+<img class="center explanation" src="static/img/ct-log-screen.png" width="556" height="167" alt="A screenshot of the HTML log from a browser" title="I hope you didn't try to click this. IT'S A PICTURE, BUDDY!" />
+
+<p>You see that <code>test2</code> failed. if you click on the underlined line number, you'll see a raw copy of the module. If you instead click on the <code>test2</code> link, you'll see a detailed log of what happened:</p>
+
+<pre class="brush:eshell">
+=== source code for basic_SUITE:test2/1 
+=== Test case started with:
+basic_SUITE:test2(ConfigOpts)
+=== Current directory is "Somewhere on my computer"
+=== Started at 2012-01-20 20:05:17
+[Test Related Output]
+=== Ended at 2012-01-20 20:05:17
+=== location [{basic_SUITE,test2,13},
+              {test_server,ts_tc,1635},
+              {test_server,run_test_case_eval1,1182},
+              {test_server,run_test_case_eval,1123}]
+=== reason = bad argument in an arithmetic expression
+  in function  basic_SUITE:test2/1 (basic_SUITE.erl, line 13)
+  in call from test_server:ts_tc/3 (test_server.erl, line 1635)
+  in call from test_server:run_test_case_eval1/6 (test_server.erl, line 1182)
+  in call from test_server:run_test_case_eval/9 (test_server.erl, line 1123)
+</pre>
+
+<p>The log lets you know precisely what failed, and it is much more detailed than whatever we had in the Erlang shell. This is important to remember because if you're a shell user, you'll find Common Test extremely painful to use. If you're a person more prone to use GUIs anyway, then it'll be pretty fun for you.</p>
+
+<p>But enough wandering around pretty HTML files, let's see how to test with some more state.</p>
+
+<div class="note">
+	<p><strong>Note:</strong> if you ever feel like traveling back in time without the help of a time machine, download a version of Erlang prior to R15B and use Common Test with it. You'll be astonished to see that your browser and the logs' style brought you back into the late 1990s.</p>
+</div>
+
+<h3><a class="section" name="testing-with-state">Testing With State</a></h3>
+
+<p>If you have read the EUnit chapter (and haven't skipped around), you'll remember that EUnit had these things called <em>fixtures</em>, where we'd give a test case some special instantiation (setup) and teardown code to be called before and after the case, respectively.</p>
+
+<p>Common Test follows that concept. Instead of having EUnit-style fixtures, it instead relies on two functions. The first is the setup function, called <code>init_per_testcase/2</code> and the second one is the teardown function, called <code>end_per_testcase/2</code>. To see how they're used, create a new test suite called <a class="source" href="static/erlang/ct/demo/state_SUITE.erl">state_SUITE</a> (still under the <code>demo/</code> directory), add the following code:</p>
+
+<pre class="brush:erl">
+-module(state_SUITE).
+-include_lib("common_test/include/ct.hrl").
+
+-export([all/0, init_per_testcase/2, end_per_testcase/2]).
+-export([ets_tests/1]).
+
+all() -&gt; [ets_tests].
+
+init_per_testcase(ets_tests, Config) -&gt;
+    TabId = ets:new(account, [ordered_set, public]),
+    ets:insert(TabId, {andy, 2131}),
+    ets:insert(TabId, {david, 12}),
+    ets:insert(TabId, {steve, 12943752}),
+    [{table,TabId} | Config].
+
+end_per_testcase(ets_tests, Config) -&gt;
+    ets:delete(?config(table, Config)).
+
+ets_tests(Config) -&gt;
+    TabId = ?config(table, Config),
+    [{david, 12}] = ets:lookup(TabId, david),
+    steve = ets:last(TabId),
+    true = ets:insert(TabId, {zachary, 99}),
+    zachary = ets:last(TabId).
+</pre>
+
+<p>This is a little normal ETS test checking a few <code>ordered_set</code> concepts. What's interesting about it is the two new functions, <code>init_per_testcase/2</code> and <code>end_per_testcase/2</code>. Both functions need to be exported in order to be called. If they're exported, the functions are going to be called for <em>all</em> test cases in a module. You can separate them based on the arguments. The first one is the name of the test case (as an atom), and the second one is the <var>Config</var> proplist that you can modify.</p>
+
+<div class="note">
+	<p><strong>Note:</strong> to read from <var>Config</var>, rather than using <code>proplists:get_value/2</code>, the Common test include file has a <code>?config(Key, List)</code> macro that returns the value matching the given key. The macro is in fact equivalent to <code>proplists:get_value/2</code> and is documented as such, so you know you can deal with <var>Config</var> as a proplist without worrying about it ever breaking.</p>
+</div>
+
+<p>As an example, if I had tests <code>a</code>, <code>b</code>, and <code>c</code> and only wanted a setup and teardown function for the first two tests, my init function might look like this:</p>
+
+<pre class="brush:erl">
+init_per_testcase(a, Config) -&gt;
+    [{some_key, 124} | Config];
+init_per_testcase(b, Config) -&gt;
+    [{other_key, duck} | Config];
+init_per_testcase(_, Config) -&gt;
+    %% ignore for all other cases
+    Config.
+</pre>
+
+<p>And similarly for the <code>end_per_testcase/2</code> function.</p>
+
+<p>Looking back at <code>state_SUITE</code>, you can see the test case, but what's interesting to note is how I instantiate the ETS table. I specify no heir, and yet, the tests run without a problem after the init function is done.</p>
+
+<p>You'll remember that we've seen, in the <a class="chapter local" href="ets.html">ETS chapter</a>, that ETS tables are usually owned by the process that started them. In this case, we leave the table as it is. If you run the tests, you'll see the suite succeeds.</p>
+
+<p>What we can infer from this is that the <code>init_per_testcase</code> and <code>end_per_testcase</code> functions run in the same process as the test case itself. You can thus safely do things like set links, start tables and whatnot without worrying about different processes breaking your things. What about errors in the test case? Fortunately, crashing in your test case won't stop Common Test from cleaning up and calling the <code>end_per_testcase</code> function, with the exception of <code>kill</code> exit signals.</p>
+
+<p>We're now pretty much equal to EUnit with Common Test, at least in terms of flexibility, if not more. Although we haven't got all the nice assertion macros, we have fancier reports, similar fixtures, and that private directory where we can write stuff from scratch. What more do we want?</p>
+
+<div class="note">
+	<p><strong>Note:</strong> if you end up feeling like outputting stuff to help you debug things or just show progress in your tests, you'll quickly find out that <code>io:format/1-2</code> prints only in the HTML logs but not the Erlang shell. If you want to do both (with free time stamps included), use the function <code><a class="docs" href="http://erldocs.com/17.3/common_test/ct.html#pal/2">ct:pal/1-2</a></code>. It works like <code>io:format/1-2</code>, but prints to both the shell and logs.</p>
+</div>
+
+<h3><a class="section" name="test-groups">Test Groups</a></h3>
+
+<p>Right now, our test structure within a suite might look at best like this:</p>
+
+<img class="center explanation" src="static/img/ct-cases.png" width="128" height="96" alt="Sequence of [init]->[test]->[end] in a column" />
+
+<p>What if we have many test cases with similar needs in term of some init functions, but some different parts in them? Well, the easy way to do it is to copy/paste and modify, but this will be a real pain to maintain.</p>
+
+<p>Moreover, what if what we want to do with many tests is to run them in parallel or in random order instead of one after the other? Then there's no easy way to do that based on what we've seen so far. This was pretty much the same kind of problem that could limit our use of EUnit, too.</p>
+
+<p>To solve these issues, we've got something called test groups. Common Test test groups allow us to regroup some tests hierarchically. Even more, they can regroup some groups within other groups:</p>
+
+<img class="center explanation" src="static/img/ct-groups.png" width="211" height="164" alt="The sequence of [init]->[test]->[end] from the previous illustration is now integrated within a [group init]->[previous picture]->[group end]" />
+
+<p>To make this work, we need to be able to declare the groups. The way to do it is to add a group function to declare all of them:</p>
+
+<pre class="brush:erl">
+groups() -&gt; ListOfGroups.
+</pre>
+
+<p>Well, there's a <code>groups()</code> function. Here's what <var>ListOfGroups</var> should be:</p>
+
+<pre class="brush:erl">
+[{GroupName, GroupProperties, GroupMembers}]
+</pre>
+
+<p>And more in detail, here's what this could look like:</p>
+
+<pre class="brush:erl">
+[{test_case_street_gang,
+  [],
+  [simple_case, more_complex_case]}].
+</pre>
+
+<p>That's a tiny test case street gang. Here's a more complex one:</p>
+
+<pre class="brush:erl">
+[{test_case_street_gang,
+  [shuffle, sequence],
+  [simple_case, more_complex_case,
+   emotionally_complex_case,
+   {group, name_of_another_test_group}]}].
+</pre>
+
+<p>That one specifies two properties, <code>shuffle</code> and <code>sequence</code>. We'll see what they mean soon. The example also shows a group including another group. This assumes that the group function might be a bit like this:</p>
+
+<pre class="brush:erl">
+groups() -&gt;
+    [{test_case_street_gang,
+      [shuffle, sequence],
+      [simple_case, more_complex_case, emotionally_complex_case,
+       {group, name_of_another_test_group}]},
+     {name_of_another_test_group,
+      [],
+      [case1, case2, case3]}].
+</pre>
+
+<p>What you can do is also define the group inline within another group:</p>
+
+<pre class="brush:erl">
+[{test_case_street_gang,
+  [shuffle, sequence],
+  [simple_case, more_complex_case,
+   emotionally_complex_case,
+   {name_of_another_test_group,
+    [],
+    [case1, case2, case3]}
+  ]}].
+</pre>
+
+<p>That's getting a bit complex, right? Read them carefully, it should be simpler with time. In any case, nested groups are not a mandatory thing and you can avoid them if you find them confusing.</p>
+
+<p>But wait, how do you use such a group? Well, by putting them in the <code>all/0</code> function:</p>
+
+<pre class="brush:erl">
+all() -&gt; [some_case, {group, test_case_street_gang}, other_case].
+</pre>
+
+<p>And that way, Common Test will be able to know whether it needs to run a test case or not.</p>
+
+<p>I've quickly skipped over the group properties. We've seen <code>shuffle</code>, <code>sequence</code> and an empty list. Here's what they stand for:</p>
+
+<dl>
+	<dt>empty list / no option</dt>
+	<dd>The test cases in the group are run one after the other. If a test fails, the others after it in the list are run.</dd>
+	
+	<dt>shuffle</dt>
+	<dd>Runs the test in a random order. The random seed (the initialization value) used for the sequence will be printed in the HTML logs, of the form <code>{A,B,C}</code>. If a particular sequence of tests fails and you want to reproduce it, use that seed in the HTML logs and change the <code>shuffle</code> option to instead be <code>{shuffle, {A,B,C}}</code>. That way you can reproduce random runs in their precise order if you ever need to.</dd>
+	
+	<dt>parallel</dt>
+	<dd>The tests are run in different processes. Be careful because if you forget to export the <code>init_per_group</code> and <code>end_per_group</code> functions, Common Test will silently ignore this option.</dd>
+	
+	<dt>sequence</dt>
+	<dd>Doesn't necessarily mean that the tests are run in order, but rather that if a test fails in the group's list, then all the other subsequent tests are skipped. This option can be combined with <code>shuffle</code> if you want any random test failing to stop the ones after.</dd>
+	
+	<dt>{repeat, Times}</dt>
+    <dd>Repeats the group <var>Times</var> times. You could thus run all test cases in the group in parallel 9 times in a row by using the group properties <code>[parallel, {repeat, 9}]</code>. <var>Times</var> can also have the value <code>forever</code>, although 'forever' is a bit of a lie as it can't defeat concepts such as hardware failure or heat death of the Universe (ahem).</dd>
+	
+	<dt>{repeat_until_any_fail, N}</dt>
+	<dd>Runs all the tests until one of them fails or they have been run <var>N</var> times. <var>N</var> can also be <code>forever</code>.</dd>
+	
+	<dt>{repeat_until_all_fail, N}</dt>
+	<dd>Same as above, but the tests may run until all cases fail.</dd>
+	
+	<dt>{repeat_until_any_succeed, N}</dt>
+	<dd>Same as before, except the tests may run until at least one case succeeds.</dd>
+	
+	<dt>{repeat_until_all_succeed, N}</dt>
+	<dd>I think you can guess this one by yourself now, but just in case, it's the same as before except that the test cases may run until they all succeed.</dd>
+</dl>
+
+<p>Well, that's something. Honestly, that's quite a bit of content for test groups and I feel an example would be appropriate here.</p>
+
+<img class="center" src="static/img/shuffling.png" width="356" height="293" alt="LMFAO-like golden robot saying 'every day I'm shuffling (test cases)' " />
+
+<h3><a class="section" name="the-meeting-room">The Meeting Room</a></h3>
+
+<p>To first use test groups, we'll create a meeting room booking module.</p>
+
+<pre class="brush:erl">
+-module(meeting).
+-export([rent_projector/1, use_chairs/1, book_room/1,
+         get_all_bookings/0, start/0, stop/0]).
+-record(bookings, {projector, room, chairs}).
+
+start() -&gt;
+    Pid = spawn(fun() -&gt; loop(#bookings{}) end),
+    register(?MODULE, Pid).
+
+stop() -&gt;
+    ?MODULE ! stop.
+
+rent_projector(Group) -&gt;
+    ?MODULE ! {projector, Group}.
+
+book_room(Group) -&gt;
+    ?MODULE ! {room, Group}.
+
+use_chairs(Group) -&gt;
+    ?MODULE ! {chairs, Group}.
+</pre>
+
+
+<p>These basic functions will call a central registry process. They'll do things like allowing us to book the room, rent a projector, and put dibs on chairs. For the sake of the exercise, we're in a large organization with one hell of a corporate structure. Because of this, there are three different people responsible for the projector, the room and the chairs, but one central registry. As such, you can't book all items at once, but must do it by sending three different messages.</p>
+
+<p>To know who booked what, we can send a message to the registry in order to get all the values:</p>
+
+<pre class="brush:erl">
+get_all_bookings() -&gt;
+    Ref = make_ref(),
+    ?MODULE ! {self(), Ref, get_bookings},
+    receive
+        {Ref, Reply} -&gt;
+            Reply
+    end.
+</pre>
+
+<p>The registry itself looks like this:</p>
+
+<pre class="brush:erl">
+loop(B = #bookings{}) -&gt;
+    receive
+        stop -&gt; ok;
+        {From, Ref, get_bookings} -&gt;
+            From ! {Ref, [{room, B#bookings.room},
+                          {chairs, B#bookings.chairs},
+                          {projector, B#bookings.projector}]},
+            loop(B);
+        {room, Group} -&gt;
+            loop(B#bookings{room=Group});
+        {chairs, Group} -&gt;
+            loop(B#bookings{chairs=Group});
+        {projector, Group} -&gt;
+            loop(B#bookings{projector=Group})
+    end.
+</pre>
+
+<p>And that's it. To book everything for a successful meeting, we'd need to successively call:</p>
+
+<pre class="brush:eshell">
+1&gt; c(meeting).
+{ok,meeting}
+2&gt; meeting:start().
+true
+3&gt; meeting:book_room(erlang_group).
+{room,erlang_group}
+4&gt; meeting:rent_projector(erlang_group).
+{projector,erlang_group}
+5&gt; meeting:use_chairs(erlang_group).
+{chairs,erlang_group}
+6&gt; meeting:get_all_bookings().
+[{room,erlang_group},
+ {chairs,erlang_group},
+ {projector,erlang_group}]
+</pre>
+
+<p>Great. This does seem wrong, though. You've possibly got this lingering feeling that things could go wrong. In many cases, if we make the three calls fast enough, we should obtain everything we want from the room without a problem. If two people do it at once and there are short pauses between the calls, it seems possible that two (or more) groups might try to rent the same equipment at once.</p>
+
+<p>Oh no! Suddenly, the programmers might end up having the projector, while the board of directors has the room, and the human resources department managed to rent all chairs at once. All resources are tied up, but nobody can do anything useful!</p>
+
+<p>We won't worry about fixing that problem. Instead we'll work on trying to demonstrate that it's present with a Common Test suite.</p>
+
+<p>The suite, named <a class="source" href="static/erlang/ct/meeting/meeting_SUITE.erl">meeting_SUITE.erl</a>, will be based on the simple idea of trying to provoke a race condition that will mess up with the registration. We'll thus have three test cases, each representing a group. Carla will represent women, Mark will represent men, and a dog will represent a group of animals that somehow decided it wanted to hold a meeting with human-made tools:</p>
+
+<pre class="brush:erl">
+-module(meeting_SUITE).
+-include_lib("common_test/include/ct.hrl").
+
+...
+
+carla(_Config) -&gt;
+    meeting:book_room(women),
+    timer:sleep(10),
+    meeting:rent_projector(women),
+    timer:sleep(10),
+    meeting:use_chairs(women).
+
+mark(_Config) -&gt;
+    meeting:rent_projector(men),
+    timer:sleep(10),
+    meeting:use_chairs(men),
+    timer:sleep(10),
+    meeting:book_room(men).
+
+dog(_Config) -&gt;
+    meeting:rent_projector(animals),
+    timer:sleep(10),
+    meeting:use_chairs(animals),
+    timer:sleep(10),
+    meeting:book_room(animals).
+</pre>
+
+<p>We don't care whether these tests actually test something or not. They are just there to use the <code>meeting</code> module (which we'll see how to put in place for the tests soon) and try to generate wrong reservations.</p>
+
+<p>To find out if we had a race condition or not between all of these tests, we'll make use of the <code>meeting:get_all_bookings()</code> function in a fourth and final test:</p>
+
+<pre class="brush:erl">
+all_same_owner(_Config) -&gt;
+    [{_, Owner}, {_, Owner}, {_, Owner}] = meeting:get_all_bookings().
+</pre>
+
+<img class="right" src="static/img/dog-meeting.png" width="202" height="249" alt="A dog with glasses standing at a podium where 'DOGS UNITED' is written" title="Let me tell you about roofing" />
+
+<p>This one does a pattern matching on the owners of all different objects that can be booked, trying to see whether they are actually booked by the same owner. This is a desirable thing if we are looking for efficient meetings.</p>
+
+<p>How do we move from having four test cases in a file to something that works? We'll need to make clever use of test groups.</p>
+
+<p>First of all, because we need a race condition, we know we'll need to have a bunch of tests running in parallel. Secondly, given we have a requirement to see the problem from these race conditions, we'll need to either run <code>all_same_owner</code> many times during the whole debacle, or only after it to look with despair at the aftermath.</p>
+
+<p>I chose the latter. This would give us this:</p>
+
+<pre class="brush:erl">
+all() -&gt; [{group, clients}, all_same_owner].
+
+groups() -&gt; [{clients,
+              [parallel, {repeat, 10}],
+              [carla, mark, dog]}].
+</pre>
+
+<p>This creates a <code>clients</code> group of tests, with the individual tests being <code>carla</code>, <code>mark</code>, and <code>dog</code>. They're going to run in parallel, 10 times each.</p>
+
+<p>You see that I include the group in the <code>all/0</code> function, and then put <code>all_same_owner</code>. That's because by default, Common Test will run the tests and groups in <code>all/0</code> in the order they were declared.</p>
+
+<p>But wait. We forgot to start and stop the <code>meeting</code> process itself. To do it, we'll need to have a way to keep a process alive for all tests, regardless of whether they're in the 'clients' group or not. The solution to this problem is to nest things one level deeper, in another group:</p>
+
+<pre class="brush:erl">
+all() -&gt; [{group, session}].
+
+groups() -&gt; [{session,
+              [],
+              [{group, clients}, all_same_owner]},
+             {clients,
+              [parallel, {repeat, 10}],
+              [carla, mark, dog]}].
+
+init_per_group(session, Config) -&gt;
+    meeting:start(),
+    Config;
+init_per_group(_, Config) -&gt;
+    Config.
+
+end_per_group(session, _Config) -&gt;
+    meeting:stop();
+end_per_group(_, _Config) -&gt;
+    ok.
+</pre>
+
+<p>We use the <code>init_per_group</code> and <code>end_per_group</code> functions to specify that the <code>session</code> group (which now runs <code>{group, clients}</code> and <code>all_same_owner</code>) will work with an active meeting. Don't forget to export the two setup and teardown functions, otherwise nothing will run in parallel.</p>
+
+<p>Alright, let's run the tests and see what we get:</p>
+
+<pre class="brush:eshell">
+1&gt; ct_run:run_test([{suite, meeting_SUITE}]).
+...
+Common Test: Running make in test directories...
+...
+TEST INFO: 1 test(s), 1 suite(s)
+
+Testing ct.meeting.meeting_SUITE: Starting test (with repeated test cases)
+
+- - - - - - - - - - - - - - - - - - - - - - - - - -
+meeting_SUITE:all_same_owner failed on line 50
+Reason: {badmatch,[{room,men},{chairs,women},{projector,women}]}
+- - - - - - - - - - - - - - - - - - - - - - - - - -
+
+Testing ct.meeting.meeting_SUITE: *** FAILED *** test case 31
+Testing ct.meeting.meeting_SUITE: TEST COMPLETE, 30 ok, 1 failed of 31 test cases
+...
+ok
+</pre>
+
+<p>Interesting. The problem is a badmatch with three tuples with different items owned by different people. Moreover, the output tells us it's the <code>all_same_owner</code> test that failed. I think that's a pretty good sign that <code>all_same_owner</code> crashed as planned.</p>
+
+<p>If you go look at the HTML log, you'll be able to see all the runs with the exact test that failed, and for what reason. Click on the test name and you'll get the right test run.</p>
+
+<div class="note">
+    <p><strong>Note:</strong> one last (and very important) thing to know about before moving on from test groups is that while the init functions of test cases ran in the same process as the test case, the init functions of groups run in distinct processes from the tests. This means that whenever you initialize actors that get linked to the process that spawned them, you have to make sure to first unlink them. In the case of ETS tables, you have to define a heir to make sure it doesn't disappear. And so on for all other concepts that get attached to a process (sockets, file descriptors, etc.).</p>
+</div>
+
+<h3><a class="section" name="test-suites">Test Suites</a></h3>
+
+<p>What can we add to our test suites that is better than nesting of groups and manipulations of how one runs things in terms of hierarchy? Not much, but we'll add another level anyway with the test suite itself:</p>
+
+<img class="center explanation" src="static/img/ct-suite.png" width="245" height="252" alt="Similar to the earlier groups and test cases nesting illustrations, this one shows groups being wrapped in suites: [suite init] -> [group] -> [suite end]" />
+
+<p>We have two additional functions, <code>init_per_suite(Config)</code> and <code>end_per_suite(Config)</code>. These, like all the other init and end functions, aim to give more control over initialization of data and processes.</p>
+
+<p>The <code>init_per_suite/1</code> and <code>end_per_suite/1</code> functions will run only once, respectively before and after all of the groups or test cases. They'll be mostly useful when dealing with general state and dependencies that will be required for all tests. This can include manually starting applications you depend on, for example.</p>
+
+
+<h3><a class="section" name="test-specifications">Test Specifications</a></h3>
+
+<p>There's a thing you might have found pretty annoying if you looked at your test directory after running tests. There's a ton of files scattered around the directory for your logs. CSS files, HTML logs, directories, test run histories, etc. It would be pretty neat to have a nice way to store these files in a single directory.</p>
+
+<p>Another thing is that so far we've run tests from a test suite. We've not really seen a good way to do it with many test suites at once, or even ways to only run one or two cases, or groups from a suite (or from many suites).</p>
+
+ <p>Of course, if I'm saying this, it's because I've got a solution for these issues. There are ways to do it both from the command line and from the Erlang shell, and you can find them in the documentation for <a class="docs" href="http://www.erlang.org/doc/man/ct_run.html">ct_run</a>. However, instead of going into ways to manually specify everything for each time you run the tests, we'll see something called <em>test specifications</em>.</p>
+
+<img class="right" src="static/img/ct-specs.png" width="155" height="106" alt="a button labeled 'do everything'" />
+
+<p>Test specifications are special files that let you detail everything about how you want to have the tests run, and they work with the Erlang shell and the command line. The test specification can be put in a file with any extension you want (although I personally fancy <code>.spec</code> files). The spec files will contain Erlang tuples, much like a consult file. Here's a few of the items it can have:</p>
+
+<dl>
+	<dt><code>{include, IncludeDirectories}</code></dt>
+	<dd>When Common Test automatically compiles suites, this option lets you specify where it should look for include files in order to make sure they're there. The <var>IncludeDirectories</var> value has to be a string (list) or a list of strings (list of lists).</dd>
+
+	<dt><code>{logdir, LoggingDirectory}</code></dt>
+	<dd>When logging, all logs should be moved to the <var>LoggingDirectory</var>, a string. Note that the directory must exist before the tests are run, otherwise Common Test will complain.</dd>
+
+	<dt><code>{suites, Directory, Suites}</code></dt>
+	<dd>Finds the given suites in <var>Directory</var>. <var>Suites</var> can be an atom (<code>some_SUITE</code>), a list of atoms, or the atom <code>all</code> to run all the suites in a directory.</dd>
+
+	<dt><code>{skip_suites, Directory, Suites, Comment}</code></dt>
+	<dd>This subtracts a list of suites from those previously declared and skips them. The <var>Comment</var> argument is a string explaining why you decided to skip them. This comment will be put in the final HTML logs. The tables will show a yellow 'SKIPPED: Reason' where <var>Reason</var> is whatever <var>Comment</var> contained.</dd>
+
+	<dt><code>{groups, Directory, Suite, Groups}</code></dt>
+	<dd>This is an option to pick only a few groups from a given suite. The <var>Groups</var> variable can be a single atom (the group name) or <code>all</code> for all groups. The value can also be more complex, letting you override the group definitions inside <code>groups()</code> within the test case by picking a value like <code>{GroupName, [parallel]}</code>, which will override <var>GroupName</var>'s options for <code>parallel</code>, without needing to recompile tests.</dd>
+
+	<dt><code>{groups, Directory, Suite, Groups, {cases,Cases}}</code></dt>
+	<dd>Similar to the one above, but it lets you specify some test cases to include in the tests by substituting <var>Cases</var> by a single case name (an atom), a list of names, or the atom <code>all</code>.</dd>
+
+    <dt><code>{skip_groups, Directory, Suite, Groups, Comment}</code></dt>
+    <dd>This command was only added in R15B and documented in R15B01. It allows one to skip test groups, much like the <code>skip_suites</code> for suites. There is no explanation as to why it wasn't there before then.</dd>
+
+    <dt><code>{skip_groups, Directory, Suite, Groups, {cases,Cases}, Comment}</code></dt>
+    <dd>Similar to the one above, but with specific test cases to skip on top of it. Also only available since R15B.</dd>
+
+	<dt><code>{cases, Directory, Suite, Cases}</code></dt>
+	<dd>Runs specific test cases from a given suite. <var>Cases</var> can be an atom, a list of atoms, or <code>all</code>.</dd>
+
+	<dt><code>{skip_cases, Directory, Suite, Cases, Comment}</code></dt>
+	<dd>This is similar to <code>skip_suites</code>, except we choose specific test cases to avoid with this one.</dd>
+
+	<dt><code>{alias, Alias, Directory}</code></dt>
+	<dd>Because it gets very annoying to write all these directory names (especially if they're full names), Common Test lets you substitute them with aliases (atoms). This is pretty useful in order to be concise.</dd>
+</dl>
+
+<p>Before showing a simple example, you should add a <code>logs/</code> directory above the <code>demo/</code> one (<code>ct/</code> in my files). Unsurprisingly, that's where our Common Test logs will be moved to. Here's what a possible test specification could look like for all our tests so far, under the imaginative name of <code>spec.spec</code>:</p>
+
+
+<pre class="brush:erl">
+{alias, demo, "./demo/"}.
+{alias, meeting, "./meeting/"}.
+{logdir, "./logs/"}.
+
+{suites, meeting, all}.
+{suites, demo, all}.
+{skip_cases, demo, basic_SUITE, test2, "This test fails on purpose"}.
+</pre>
+
+<p>This spec file declares two aliases, <code>demo</code> and <code>meeting</code>, which point to the two test directories we have. We put the logs inside <code>ct/logs/</code>, our newest directory. Then we ask to run all suites in the meeting directory, which, coincidentally is the <code>meeting_SUITE</code> suite. Next on the list are the two suites inside the demo directory. Moreover, we ask to skip <code>test2</code> from the <code>basic_SUITE</code> suite, given it contains a division by zero that we know will fail.</p>
+
+<p>To run the tests, you can either use <code>$ ct_run -spec spec.spec</code> (or <code>run_test</code> for versions of Erlang before R15), or you can use the function <code>ct:run_test([{spec, "spec.spec"}]).</code> from the Erlang shell:</p>
+
+<pre class="brush:eshell">
+Common Test: Running make in test directories...
+...
+TEST INFO: 2 test(s), 3 suite(s)
+
+Testing ct.meeting: Starting test (with repeated test cases)
+
+- - - - - - - - - - - - - - - - - - - - - - - - - -
+meeting_SUITE:all_same_owner failed on line 51
+Reason: {badmatch,[{room,men},{chairs,women},{projector,women}]}
+- - - - - - - - - - - - - - - - - - - - - - - - - -
+
+Testing ct.meeting: *** FAILED *** test case 31
+Testing ct.meeting: TEST COMPLETE, 30 ok, 1 failed of 31 test cases
+
+Testing ct.demo: Starting test, 3 test cases
+Testing ct.demo: TEST COMPLETE, 2 ok, 0 failed, 1 skipped of 3 test cases
+
+Updating /Users/ferd/code/self/learn-you-some-erlang/ct/logs/index.html... done
+Updating /Users/ferd/code/self/learn-you-some-erlang/ct/logs/all_runs.html... done
+</pre>
+
+<p>If you take the time to look at the logs, you'll see two directories for the different test runs. One of them will have a failure; that's the meeting that fails as expected. The other one will have one success, and one skipped case, of the form <code>1 (1/0)</code>. Generally, the format is <code>TotalSkipped (IntentionallySkipped/SkippedDueToError)</code>. In this case the skip happened from the spec file, so it goes on the left. If it happened because one of the many init functions failed, then it'd be on the right.</p>
+
+<p>Common Test is starting to look like a pretty decent testing framework, but it'd be pretty nice to be able to use our distributed programming knowledge and apply it.</p>
+
+
+<img class="right" src="static/img/ct-large-scale.png" width="289" height="334" alt="a circus ride-like scale with a card that says 'you must be this tall to test'" />
+
+<h3><a class="section" name="large-scale-testing">Large Scale Testing</a></h3>
+
+<p>Common Test does support having distributed tests. Before going hog wild and writing a bunch of code, let's see what's offered. Well, there isn't <em>that</em> much. The gist of it is that Common Test lets you start tests on many different nodes, but also has ways to dynamically start these nodes and have them watch each other.</p>
+
+<p>As such, the distributed features of Common Test are really useful when you have large test suites that should be run in parallel on many nodes. This is often worth it to save time or because the code will run in production environments that are on different computers &mdash; automated tests that reflect this are desired.</p>
+
+<p>When tests go distributed, Common Test requires the presence of a central node (the <em>CT master</em>) in charge of all the other ones. Everything's going to be directed from there, from starting nodes, ordering tests to be run, gathering logs, etc.</p>
+
+<p>The first step to get things going that way is to expand our test specifications so they become distributed. We're going to add a few new tuples:</p>
+
+<dl>
+	<dt><code>{node, NodeAlias, NodeName}</code></dt>
+	<dd>Much like <code>{alias, AliasAtom, Directory}</code> for test suites, groups, and cases, except it's used for node names. Both <var>NodeAlias</var> and <var>NodeName</var> need to be atoms. This tuple is especially useful because <var>NodeName</var> needs to be a long node name, and in some cases this can be quite long.</dd>
+	
+	<dt><code>{init, NodeAlias, Options}</code></dt>
+	<dd>This is a more complex one. This is the option that lets you start nodes. <var>NodeAlias</var> can be a single node alias, or a list of many of them. The <var>Options</var> are those available to the <code><a class="docs" href="http://www.erlang.org/doc/man/ct_slave.html">ct_slave</a></code> module:</dd>
+</dl>
+
+<p>Here are a few of the options available:</p>
+
+<dl>
+	<dt><code>{username, UserName}</code> and <code>{password, Password}</code></dt>
+	<dd>Using the host part of the node given by <var>NodeAlias</var>, Common Test will try to connect to the given host over SSH (on port 22) using the user name and password and run from there.</dd>
+	
+	<dt><code>{startup_functions, [{M,F,A}]}</code></dt>
+	<dd>This option defines a list of functions to be called as soon as the other node has booted.</dd>
+	
+	<dt><code>{erl_flags, String}</code></dt>
+	<dd>This sets standard flags that we'd want to pass to the <code>erl</code> application when we start it. For example, if we wanted to start a node with <code>erl -env ERL_LIBS ../ -config conf_file</code>, the option would be <code>{erl_flags, "-env ERL_LIBS ../ -config config_file"}</code>.</dd>
+	
+	<dt><code>{monitor_master, true | false}</code></dt>
+	<dd>If the CT master stops running and the option is set to <code>true</code>, then the slave node will also be taken down. I do recommend using this option if you're spawning the remote nodes; otherwise they'll keep running in the background if the master dies. Moreover, if you run tests again, Common Test will be able to connect to these nodes, and there will be some state attached to them.</dd>
+	
+	<dt><code>{boot_timeout, Seconds}</code>,<br /><code>{init_timeout, Seconds}</code>,<br /><code>{startup_timeout, Seconds}</code></dt>
+    <dd>These three options let you wait for different parts of the starting of a remote node. The boot timeout is about how long it takes before the node becomes pingable, with a default value of 3 seconds. The init timeout is an internal timer where the new remote node calls back the CT master to tell it it's up. By default, it lasts one second. Finally, the startup timeout tells Common Test how long to wait for the functions we defined earlier as part of the <code>startup_functions</code> tuple.</dd>
+	
+	<dt><code>{kill_if_fail, true | false}</code></dt>
+	<dd>This option will react to one of the three timeouts above. If any of them are triggered, Common Test will abort the connection, skip tests, etc. but not necessarily kill the node, unless the option is set to <code>true</code>. Fortunately, that's the default value.</dd>
+</dl>
+
+<div class="note">
+	<p><strong>Note:</strong> all these options are provided by the <code>ct_slave</code> module. It is possible to define your own module to start slave nodes, as long as it respects the right interface.</p>
+</div>
+
+<p>That makes for quite a lot of options for remote nodes, but that's partially what gives Common Test its distributed power; you're able to boot nodes with pretty much as much control as what you'd get doing it by hand in the shell. Still, there are more options for distributed tests, although they're not for booting nodes:</p>
+
+<pre class="expand">
+{include, Nodes, IncludeDirs}
+{logdir, Nodes, LogDir}
+{suites, Nodes, DirectoryOrAlias, Suites}
+{groups, Nodes, DirectoryOrAlias, Suite, Groups}
+{groups, Nodes, DirectoryOrAlias, Suite, GroupSpec, {cases,Cases}}
+{cases, Nodes, DirectoryOrAlias, Suite, Cases}
+{skip_suites, Nodes, DirectoryOrAlias, Suites, Comment}
+{skip_cases, Nodes, DirectoryOrAlias, Suite, Cases, Comment}
+</pre>
+
+<p>These are pretty much the same as what we've already seen, except that they can optionally take a node argument to add more detail. That way you can decide to run some suites on a given node, others on different nodes, etc. This could be useful when doing system testing with different nodes running different environments or parts of the system (such as databases, external applications, etc.)</p>
+
+<p>As a simple way to see how this works, let's turn the previous <code>spec.spec</code> file into a distributed one. Copy it as <code>dist.spec</code> and then change it until it looks like this:</p>
+
+<pre class="brush:erl">
+{node, a, 'a@ferdmbp.local'}.
+{node, b, 'b@ferdmbp.local'}.
+
+{init, [a,b], [{node_start, [{monitor_master, true}]}]}.
+
+{alias, demo, "./demo/"}.
+{alias, meeting, "./meeting/"}.
+
+{logdir, all_nodes, "./logs/"}.
+{logdir, master, "./logs/"}.
+
+{suites, [b], meeting, all}.
+{suites, [a], demo, all}.
+{skip_cases, [a], demo, basic_SUITE, test2, "This test fails on purpose"}.
+</pre>
+
+<p>This changes it a bit. We define two slave nodes, <code>a</code> and <code>b</code>, that need to be started for the tests. They do nothing special but make sure to die if the master dies. The aliases for directories remain the same as they were.</p>
+
+<p>The <code>logdir</code> values are interesting. We declared no node alias as <code>all_nodes</code> or <code>master</code>, but yet, here they are. The <code>all_nodes</code> alias stands for all non-master nodes for Common Test, while <code>master</code> stands for the master node itself. To truly include all nodes, both <code>all_nodes</code> and <code>master</code> are required. No clear explanation as to why these names were picked.</p>
+
+<img class="left" src="static/img/venn-ref.png" width="251" height="157" alt="A Venn diagram with two categories: boring drawings and self-referential drawings. The intersection of the two sets is 'this'." />
+
+<p>The reason why I put all values there is that Common Test will generate logs (and directories) for each of the slave nodes, and it will also generate a master set of logs, referring to the slave ones. I don't want any of these in directories other than <code>logs/</code>. Note that the logs for the slave nodes will be stored on each of the slave nodes individually. In that case, unless all nodes share the same filesystem, the HTML links in the master's logs won't work and you'll have to access each of the nodes to get their respective logs.</p>
+
+<p>Last of all are the <code>suites</code> and <code>skip_cases</code> entries. They're pretty much the same as the previous ones, but adapted for each node. This way, you can skip some entries only on given nodes (which you know might be missing libraries or dependencies), or maybe more intensive ones where the hardware isn't up to the task.</p>
+
+<p>To run distributed tests of the sort, we must start a distributed node with <code>-name</code> and use <code>ct_master</code> to run the suites:</p>
+
+<pre class="brush:eshell">
+$ erl -name ct
+Erlang R15B (erts-5.9) [source] [64-bit] [smp:4:4] [async-threads:0] [hipe] [kernel-poll:false]
+
+Eshell V5.9  (abort with ^G)
+(ct@ferdmbp.local)1&gt; ct_master:run("dist.spec").
+=== Master Logdir ===
+/Users/ferd/code/self/learn-you-some-erlang/ct/logs
+=== Master Logger process started ===
+&lt;0.46.0&gt;
+Node 'a@ferdmbp.local' started successfully with callback ct_slave
+Node 'b@ferdmbp.local' started successfully with callback ct_slave
+=== Cookie ===
+'PMIYERCHJZNZGSRJPVRK'
+=== Starting Tests ===
+Tests starting on: ['b@ferdmbp.local','a@ferdmbp.local']
+=== Test Info ===
+Starting test(s) on 'b@ferdmbp.local'...
+=== Test Info ===
+Starting test(s) on 'a@ferdmbp.local'...
+=== Test Info ===
+Test(s) on node 'a@ferdmbp.local' finished.
+=== Test Info ===
+Test(s) on node 'b@ferdmbp.local' finished.
+=== TEST RESULTS ===
+a@ferdmbp.local_________________________finished_ok
+b@ferdmbp.local_________________________finished_ok
+
+=== Info ===
+Updating log files
+Updating /Users/ferd/code/self/learn-you-some-erlang/ct/logs/index.html... done
+Updating /Users/ferd/code/self/learn-you-some-erlang/ct/logs/all_runs.html... done
+Logs in /Users/ferd/code/self/learn-you-some-erlang/ct/logs refreshed!
+=== Info ===
+Refreshing logs in "/Users/ferd/code/self/learn-you-some-erlang/ct/logs"... ok
+[{"dist.spec",ok}]
+</pre>
+
+<p>There is no way to run such tests using <code>ct_run</code>. Note that CT will show all results as <samp>ok</samp> whether or not the tests actually succeeded. That is because <code>ct_master</code> only shows if it could contact all the nodes. The results themselves are actually stored on each individual node.</p>
+
+<p>You'll also note that CT shows that it started nodes, and with what cookies it did so. If you try running tests again without first terminating the master, the following warnings are shown instead:</p>
+
+<pre class="brush:eshell">
+WARNING: Node 'a@ferdmbp.local' is alive but has node_start option
+WARNING: Node 'b@ferdmbp.local' is alive but has node_start option
+</pre>
+
+<p>That's alright. It only means that Common Test is able to connect to remote nodes, but it found no use in calling our <code>init</code> tuple from the test specification, given the nodes are already alive. There is no need for Common Test to actually start any remote nodes it will run tests on, but I usually find it useful to do so.</p>
+
+<p>That's really the gist of distributed spec files. Of course you can get into more complex cases, where you set up more complex clusters and write amazing distributed tests, but as the tests become more complex, the less confidence you can have in their ability to successfully demonstrate properties of your software, simply because tests themselves might contain more and more errors as they become convoluted.</p>
+
+
+<img class="right" src="static/img/bots.png" width="282" height="270" alt="Little robots from rockem sockem (or whatever the name was). One is the Common Test bot while the other is the Eunit bot. In a political-cartoon-like satire, the ring is clearly labelled as 'system tests' and the Common Test bot knocks the head off the EUnit bot." />
+
+<h3><a class="section" name="integrating-eunit">Integrating EUnit within Common Test</a></h3>
+
+<p>Because sometimes EUnit is the best tool for the job, and sometimes Common Test is, it might be desirable for you to include one into the other.</p>
+
+<p>While it's difficult to include Common Test suites within EUnit ones, the opposite is quite easy to do. The trick is that when you call <code>eunit:test(SomeModule)</code>, the function can return either <code>ok</code> when things work, or <code>error</code> in case of any failure.</p>
+
+<p>This means that to integrate EUnit tests to a Common Test suite, all you need to do is have a function a bit like this:</p>
+
+<pre class="brush:erl">
+run_eunit(_Config) -&gt;
+    ok = eunit:test(TestsToRun).
+</pre>
+
+<p>And all your EUnit tests that can be found by the <var>TestsToRun</var> description will be run. If there's a failure, it'll appear in your Common Test logs and you'll be able to read the output to see what went wrong. It's that simple.</p>
+
+
+<h3><a class="section" name="is-there-more">Is There More?</a></h3>
+
+<p>You bet there's more. Common Test is a very complex beast. There are ways to add configuration files for some variables, add hooks that run at many points during the test executions, use callbacks on events during the suites, modules to test over <code><a class="docs" href="http://erldocs.com/17.3/common_test/ct_ssh.html">SSH</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/common_test/ct_telnet.html">Telnet</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/common_test/ct_snmp.html">SNMP</a></code>, and <code><a class="docs" href="http://erldocs.com/17.3/common_test/ct_ftp.html">FTP</a></code>.</p>
+
+ <p>This chapter only scratched the surface, but it is enough to get you started if you want to explore in more depth. A more complete document about Common Test is the <a class="docs" href="http://www.erlang.org/doc/apps/common_test/users_guide.html">user's guide</a> coming with Erlang/OTP. It is hard to read on its own, but understanding the material covered in this very chapter will help you figure out the documentation, without a doubt.</p>
+
+				<ul class="navigation">
+											<li><a href="distributed-otp-applications.html" title="Previous chapter">&lt; Previous</a></li>
+										
+					<li><a href="contents.html" title="Index">Index</a></li>
+					
+											<li><a href="mnesia.html" title="Next chapter">Next &gt;</a></li>
+									</ul>
+			</div><!-- content -->
+			<div id="footer">
+				<a href="http://creativecommons.org/licenses/by-nc-nd/3.0/" title="Creative Commons License Details"><img src="static/img/cc.png" width="88" height="31" alt="Creative Commons Attribution Non-Commercial No Derivative License" /></a>
+				<p>Except where otherwise noted, content on this site is licensed under a Creative Commons Attribution Non-Commercial No Derivative License</p>
+			</div> <!-- footer -->
+		</div> <!-- wrapper -->
+		<div id="grass" />
+	<script type="text/javascript" src="static/js/shCore.js"></script>
+	<script type="text/javascript" src="static/js/shBrushErlang2.js%3F11"></script>
+	<script type="text/javascript">
+		SyntaxHighlighter.defaults.gutter = false;
+		SyntaxHighlighter.all();
+	</script>
+	</body>
+</html>

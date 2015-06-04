@@ -1,0 +1,424 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en" dir="ltr">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<meta http-equiv="Content-Style-Type" content="text/css" />
+		<meta name="keywords" content="Erlang, functions, pattern matching, if else, case of, guards, definition, module, syntax, code" />
+		<meta name="description" content="Erlang functions: their syntax, pattern matching with multiple heads, clauses and guards. Also visits the 'if' and 'case ... of' conditional expressions." />
+        <meta name="google-site-verification" content="mi1UCmFD_2pMLt2jsYHzi_0b6Go9xja8TGllOSoQPVU" />
+		<link rel="stylesheet" type="text/css" href="static/css/screen.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/sh/shCore.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/sh/shThemeLYSE2.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/print.css" media="print" />
+		<link href="rss" type="application/rss+xml" rel="alternate" title="LYSE news" />
+		<link rel="icon" type="image/png" href="favicon.ico" />
+		<link rel="apple-touch-icon" href="static/img/touch-icon-iphone.png" />
+		<link rel="apple-touch-icon" sizes="72x72" href="static/img/touch-icon-ipad.png" />
+		<link rel="apple-touch-icon" sizes="114x114" href="static/img/touch-icon-iphone4.png" />
+		<title>Syntax in functions | Learn You Some Erlang for Great Good!</title>
+	</head>
+	<body>
+		<div id="wrapper">
+			<div id="header">
+				<h1>Learn you some Erlang</h1>
+				<span>for great good!</span>
+			</div> <!-- header -->
+			<div id="menu">
+				<ul>
+					<li><a href="content.html" title="Home">Home</a></li>
+					<li><a href="faq.html" title="Frequently Asked Questions">FAQ</a></li>
+					<li><a href="rss" title="Latest News">RSS</a></li>
+					<li><a href="static/erlang/learn-you-some-erlang.zip" title="Source Code">Code</a></li>
+				</ul>
+			</div><!-- menu -->
+			<div id="content">
+            <div class="noscript"><noscript>Hey there, it appears your Javascript is disabled. That's fine, the site works without it. However, you might prefer reading it with syntax highlighting, which requires Javascript!</noscript></div>
+<h2>Syntax in functions</h2>
+
+<h3><a class="section" name="pattern-matching">Pattern Matching</a></h3>
+
+<img class="right" src="static/img/snail.png" width="222" height="84" alt="A snail greeting you." title="The following code doesn't care about snails :(" />
+
+<p>Now that we have the ability to store and compile our code, we can begin to write more advanced functions. Those that we have written so far were extremely simple and a bit underwhelming. We'll get to more interesting stuff. The first function we'll write will need to greet someone differently according to gender. In most languages you would need to write something similar to this:</p>
+
+<pre class="brush:erl">
+function greet(Gender,Name)
+    if Gender == male then
+        print("Hello, Mr. %s!", Name)
+    else if Gender == female then
+        print("Hello, Mrs. %s!", Name)
+    else
+        print("Hello, %s!", Name)
+end
+</pre>
+
+<p>With pattern-matching, Erlang saves you a whole lot of boilerplate code. A similar function in Erlang would look like this:</p>
+
+<pre class="brush:erl">
+greet(male, Name) -&gt;
+    io:format("Hello, Mr. ~s!", [Name]);
+greet(female, Name) -&gt;
+    io:format("Hello, Mrs. ~s!", [Name]);
+greet(_, Name) -&gt;
+    io:format("Hello, ~s!", [Name]).
+</pre>
+
+<p>I'll admit that the printing function is a lot uglier in Erlang than in many other languages, but that is not the point. The main difference here is that we used pattern matching to define both what parts of a function should be used and bind the values we need at the same time. There was no need to first bind the values and then compare them! So instead of:</p>
+
+<pre class="brush:erl">
+function(Args)
+   if X then
+      Expression
+   else if Y then
+      Expression
+   else
+      Expression
+</pre>
+
+<p>We write:</p>
+
+<pre class="brush:erl">
+function(X) -&gt;
+  Expression;
+function(Y) -&gt;
+  Expression;
+function(_) -&gt;
+  Expression.
+</pre>
+
+<p>in order to get similar results, but in a much more declarative style. Each of these <code>function</code> declarations is called a <em>function clause</em>. Function clauses must be separated by semicolons (<code>;</code>) and together form a <em>function declaration</em>. A function declaration counts as one larger statement, and it's why the final function clause ends with a period.  It's a "funny" use of tokens to determine workflow, but you'll get used to it. At least you'd better hope so because there's no way out of it!</p>
+
+<div class="note">
+	<p><strong>Note:</strong> <code>io:format</code>'s formatting is done with the help of tokens being replaced in a string. The character used to denote a token is the tilde (<code>~</code>). Some tokens are built-in such as <code>~n</code>, which will be changed to a line-break. Most other tokens denote a way to format data. The function call <code>io:format("~s!~n",["Hello"]).</code> includes the token <code>~s</code>, which accepts strings and bitstrings as arguments, and <code>~n</code>. The final output message would thus be <code>"Hello!\n"</code>. Another widely used token is <code>~p</code>, which will print an Erlang term in a nice way (adding in indentation and everything).</p>
+	<p>The <code>io:format</code> function will be seen in more details in later chapters dealing with input/output with more depth, but in the meantime you can try the following calls to see what they do:  <code>io:format("~s~n",[&lt;&lt;"Hello"&gt;&gt;])</code>, <code>io:format("~p~n",[&lt;&lt;"Hello"&gt;&gt;])</code>, <code>io:format("~~~n")</code>, <code>io:format("~f~n", [4.0])</code>, <code>io:format("~30f~n", [4.0])</code>. They're a small part of all that's possible and all in all they look a bit like <code>printf</code> in many other languages. If you can't wait until the chapter about I/O, you can read the <a class="docs" href="http://erlang.org/doc/man/io.html#format-3" title="straight from the horse's mouth">online documentation</a> to know more.</p>
+</div>
+
+
+<p>Pattern matching in functions can get more complex and powerful than that. As you may or may not remember from a few chapters ago, we can pattern match on lists to get the heads and tails. Let's do this! Start a new module called <code><a class="source" href="static/erlang/functions.erl" title="complete module!">functions</a></code> in which we'll write a bunch of functions to explore many pattern matching avenues available to us:</p>
+
+<pre class="brush:erl">
+-module(functions).
+-compile(export_all). %% replace with -export() later, for God's sake!
+</pre>
+
+<p>The first function we'll write is <code>head/1</code>, acting exactly like <code>erlang:hd/1</code> which takes a list as an argument and returns its first element. It'll be done with the help of the cons operator (<code>|</code>):</p>
+
+<pre class="brush:erl">
+head([H|_]) -&gt; H.
+</pre>
+
+<p>If you type <code>functions:head([1,2,3,4]).</code> in the shell (once the module is compiled), you can expect the value '1' to be given back to you. Consequently, to get the second element of a list you would create the function:</p>
+
+<pre class="brush:erl">
+second([_,X|_]) -&gt; X.
+</pre>
+
+<p>The list will just be deconstructed by Erlang in order to be pattern matched. Try it in the shell!</p>
+
+<pre class="brush:eshell">
+1&gt; c(functions).
+{ok, functions}
+2&gt; functions:head([1,2,3,4]).
+1
+3&gt; functions:second([1,2,3,4]).
+2
+</pre>
+
+<p>This could be repeated for lists as long as you want, although it would be impractical to do it up to thousands of values. This can be fixed by writing recursive functions, which we'll see how to do later on. For now, let's concentrate on more pattern matching. The concept of free and bound variables we discussed in <a class="chapter local" href="starting-out-for-real.html#invariable-variables" title="Invariable Variables">Starting Out (for real)</a> still holds true for functions: we can then compare and know if two parameters passed to a function are the same or not. For this, we'll create a function <code>same/2</code> that takes two arguments and tells if they're identical:</p>
+
+<pre class="brush:erl">
+same(X,X) -&gt;
+    true;
+same(_,_) -&gt;
+    false.
+</pre>
+<p>And it's that simple. Before explaining how the function works, we'll go over the concept of bound and unbound variables again, just in case:</p>
+
+<img class="explanation" src="static/img/musical-chair.png" width="357" height="281" alt="A game of musical chair with 3 chairs: two occupied by a cat and a snake, and one free. The cat and snake are labelled 'values', the chairs on which they sit are labelled 'bound', and the free chair is labelled 'unbound'" />
+
+<p>If this game of musical chairs was Erlang, you'd want to sit on the empty chair. Sitting on one already occupied wouldn't end well! Joking aside, unbound variables are variables without any values attached to them (like our empty chair). Binding a variable is simply attaching a value to an unbound variable. In the case of Erlang, when you want to assign a value to a variable that is already bound, an error occurs <em>unless the new value is the same as the old one</em>. Let's imagine our snake on the right: if another snake comes around, it won't really change much to the game. You'll just have more angry snakes. If a different animal comes to sit on the chair (a honey badger, for example), things will go bad. Same values for a bound variable are fine, different ones are a bad idea. You can go back to the subchapter about <a class="chapter" href="starting-out-for-real.html#invariable-variables" title="Starting Out (for real)">Invariable Variables</a> if this concept is not clear to you.</p>
+
+<p>Back to our code: what happens when you call <code>same(a,a)</code> is that the first <var>X</var> is seen as unbound: it automatically takes the value <code>a</code>. Then when Erlang goes over to the second argument, it sees <var>X</var> is already bound. It then compares it to the <code>a</code> passed as the second argument and looks to see if it matches. The pattern matching succeeds and the function returns <code>true</code>. If the two values aren't the same, this will fail and go to the second function clause, which doesn't care about its arguments (when you're the last to choose, you can't be picky!) and will instead return false. Note that this function can effectively take any kind of argument whatsoever! It works for any type of data, not just lists or single variables. As a rather advanced example, the following function prints a date, but only if it is formatted correctly:</p>
+
+<pre class="brush:erl">
+valid_time({Date = {Y,M,D}, Time = {H,Min,S}}) -&gt;
+    io:format("The Date tuple (~p) says today is: ~p/~p/~p,~n",[Date,Y,M,D]),
+    io:format("The time tuple (~p) indicates: ~p:~p:~p.~n", [Time,H,Min,S]);
+valid_time(_) -&gt;
+    io:format("Stop feeding me wrong data!~n").
+</pre>
+
+<p>Note that it is possible to use the <code>=</code> operator in the function head, allowing us to match both the content inside a tuple (<code>{Y,M,D}</code>) and the tuple as a whole (<var>Date</var>). The function can be tested the following way:</p>
+
+<pre class="brush:eshell">
+4&gt; c(functions).
+{ok, functions}
+5&gt; functions:valid_time({{2011,09,06},{09,04,43}}).
+The Date tuple ({2011,9,6}) says today is: 2011/9/6,
+The time tuple ({9,4,43}) indicates: 9:4:43.
+ok
+6&gt; functions:valid_time({{2011,09,06},{09,04}}).
+Stop feeding me wrong data!
+ok
+</pre>
+
+<p>There is a problem though! This function could take anything for values, even text or atoms, as long as the tuples are of the form <code>{{A,B,C}, {D,E,F}}</code>. This denotes one of the limits of pattern matching: it can either specify really precise values such as a known number of atom, or abstract values such as the head|tail of a list, a tuple of <var>N</var> elements, or anything (<code>_</code> and unbound variables), etc. To solve this problem, we use guards.</p>
+
+
+<h3><a class="section" name="guards-guards">Guards, Guards!</a></h3>
+
+<img class="right" src="static/img/driving-age.png" width="199" height="160" alt="A baby driving a car" title="Baby on board // How I've adored // That sign on my car's windowpane... (&copy; The Simpsons)" />
+
+<p>Guards are additional clauses that can go in a function's head to make pattern matching more expressive. As mentioned above, pattern matching is somewhat limited as it cannot express things like a range of value or certain types of data. A concept we couldn't represent is counting: is this 12 years old basketball player too short to play with the pros? Is this distance too long to walk on your hands? Are you too old or too young to drive a car? You couldn't answer these with simple pattern matching. I mean, you could represent the driving question such as:</p>
+
+<pre class="brush:erl">
+old_enough(0) -&gt; false;
+old_enough(1) -&gt; false;
+old_enough(2) -&gt; false;
+...
+old_enough(14) -&gt; false;
+old_enough(15) -&gt; false;
+old_enough(_) -&gt; true.
+</pre>
+
+<p>But it would be incredibly impractical. You can do it if you want, but you'll be alone to work on your code forever. If you want to eventually make friends, start a new <code><a class="source" href="static/erlang/guards.erl" title="guards module">guards</a></code> module so we can type in the "correct" solution to the driving question:</p>
+
+<pre class="brush:erl">
+old_enough(X) when X &gt;= 16 -&gt; true;
+old_enough(_) -&gt; false.
+</pre>
+
+<p>And you're done! As you can see, this is much shorter and cleaner. Note that a basic rule for guard expression is they must return <code>true</code> to succeed. The guard will fail if it returns <code>false</code> or if it throws an exception. Suppose we now forbid people who are over 104 years old to drive. Our valid ages for drivers is now from 16 years old up to 104 years old. We need to take care of that, but how? Let's just add a second guard clause:</p>
+
+<pre class="brush:erl">
+right_age(X) when X &gt;= 16, X =&lt; 104 -&gt;
+    true;
+right_age(_) -&gt;
+    false.
+</pre>
+
+<p>The comma (<code>,</code>) acts in a similar manner to the operator <code>andalso</code> and the semicolon (<code>;</code>) acts a bit like <code>orelse</code> (described in "<a class="chapter local" href="starting-out-for-real.html#bool-and-compare">Starting Out (for real)</a>"). Both guard expressions need to succeed for the whole guard to pass. We could also represent the function the opposite way:</p>
+
+<pre class="brush:erl">
+wrong_age(X) when X &lt; 16; X &gt; 104 -&gt;
+    true;
+wrong_age(_) -&gt;
+    false.
+</pre>
+
+<img class="left" src="static/img/guard.png" width="135" height="230" alt="Guard" />
+
+<p>And we get correct results from that too. Test it if you want (you should always test stuff!). In guard expressions, the semi-colon (<code>;</code>) acts like the <code>orelse</code> operator: if the first guard fails, it then tries the second, and then the next one, until either one guard succeeds or they all fail.</p>
+
+<p>You can use a few more functions than comparisons and boolean evaluation in functions, including math operations (<code>A*B/C &gt;= 0</code>) and functions about data types, such as <code>is_integer/1</code>, <code>is_atom/1</code>, etc. (We'll get back on them in the following chapter). One negative point about guards is that they will not accept user-defined functions because of side effects. Erlang is not a purely functional programming language (like <a class="external" href="http://learnyouahaskell.com/" title="PURE! PURE! OH GOD SO PURELY FUNCTIONAL!">Haskell</a> is) because it relies on side effects a lot: you can do I/O, send messages between actors or throw errors as you want and when you want. There is no trivial way to determine if a function you would use in a guard would or wouldn't print text or catch important errors every time it is tested over many function clauses. So instead, Erlang just doesn't trust you (and it may be right to do so!)</p>
+
+<p>That being said, you should be good enough to understand the basic syntax of guards to understand them when you encounter them.</p>
+
+<div class="note">
+    <p><strong>Note:</strong> I've compared <code>,</code> and <code>;</code> in guards to the operators <code>andalso</code> and <code>orelse</code>. They're not exactly the same, though. The former pair will catch exceptions as they happen while the latter won't. What this means is that if there is an error thrown in the first part of the guard <code>X &gt;= N; N &gt;= 0</code>, the second part can still be evaluated and the guard might succeed; if an error was thrown in the first part of <code>X &gt;= N orelse N &gt;= 0</code>, the second part will also be skipped and the whole guard will fail.</p>
+
+    <p>However (there is always a 'however'), only <code>andalso</code> and <code>orelse</code> can be nested inside guards. This means <code>(A orelse B) andalso C</code> is a valid guard, while <code>(A; B), C</code> is not. Given their different use, the best strategy is often to mix them as necessary.</p>
+</div>
+
+<h3><a class="section" name="what-the-if">What the If!?</a></h3>
+
+<p><code>If</code>s act like guards and share guards' syntax, but outside of a function clause's head. In fact, the <code>if</code> clauses are called <em>Guard Patterns</em>. Erlang's <code>if</code>s are different from the <code>if</code>s you'll ever encounter in most other languages; compared to them they're weird creatures that might have been more accepted had they had a different name. When entering Erlang's country, you should leave all you know about <code>if</code>s at the door. Take a seat because we're going for a ride.</p>
+
+<p>To see how similar to guards the if expression is, look at the following examples:</p>
+
+<pre class="brush:erl">
+-module(what_the_if).
+-export([heh_fine/0]).
+
+
+heh_fine() -&gt;
+    if 1 =:= 1 -&gt;
+        works
+    end,
+    if 1 =:= 2; 1 =:= 1 -&gt;
+        works
+    end,
+    if 1 =:= 2, 1 =:= 1 -&gt;
+        fails
+    end.
+</pre>
+
+<p>Save this as <code><a class="source" href="static/erlang/what_the_if.erl" title="what_the_if module">what_the_if.erl</a></code> and let's try it:</p>
+
+<pre class="brush:eshell">
+1&gt; c(what_the_if).
+./what_the_if.erl:12: Warning: no clause will ever match
+./what_the_if.erl:12: Warning: the guard for this clause evaluates to 'false'
+{ok,what_the_if}
+2&gt; what_the_if:heh_fine().
+** exception error: no true branch found when evaluating an if expression
+     in function  what_the_if:heh_fine/0
+</pre>
+
+<img class="right" src="static/img/labyrinth.png" width="163" height="143" alt="Labyrinth with no exit" title="no exit branch possible! oh no!" />
+
+<p>Uh oh! the compiler is warning us that no clause from the if on line 12 (<code>1 =:= 2, 1 =:= 1</code>) will ever match because its only guard evaluates to <code>false</code>. Remember, in Erlang, everything has to return something, and <code>if</code> expressions are no exception to the rule. As such, when Erlang can't find a way to have a guard succeed, it will crash: it cannot <em>not</em> return something. As such, we need to add a catch-all branch that will always succeed no matter what. In most languages, this would be called an 'else'. In Erlang, we use 'true' (this explains why the VM has thrown "no true branch found" when it got mad):</p>
+
+<pre class="brush:erl">
+oh_god(N) -&gt;
+    if N =:= 2 -&gt; might_succeed;
+       true -&gt; always_does  %% this is Erlang's if's 'else!'
+    end.
+</pre>
+
+<p>And now if we test this new function (the old one will keep spitting warnings, ignore them or take them as a reminder of what not to do):</p>
+
+<pre class="brush:eshell">
+3&gt; c(what_the_if).
+./what_the_if.erl:12: Warning: no clause will ever match
+./what_the_if.erl:12: Warning: the guard for this clause evaluates to 'false'
+{ok,what_the_if}
+4&gt; what_the_if:oh_god(2).
+might_succeed
+5&gt; what_the_if:oh_god(3).
+always_does
+</pre>
+
+<p>Here's another function showing how to use many guards in an <code>if</code> expression. The function also illustrates how any expression must return something: <var>Talk</var> has the result of the <code>if</code> expression bound to it, and is then concatenated in a string, inside a tuple. When reading the code, it's easy to see how the lack of a <code>true</code> branch would mess things up, considering Erlang has no such thing as a null value (ie.: lisp's nil, C's NULL, Python's None, etc):</p>
+
+<pre class="brush:erl">
+%% note, this one would be better as a pattern match in function heads!
+%% I'm doing it this way for the sake of the example.
+help_me(Animal) -&gt;
+    Talk = if Animal == cat  -&gt; "meow";
+              Animal == beef -&gt; "mooo";
+              Animal == dog  -&gt; "bark";
+              Animal == tree -&gt; "bark";
+              true -&gt; "fgdadfgna"
+           end,
+    {Animal, "says " ++ Talk ++ "!"}.
+</pre>
+
+<p>And now we try it:</p>
+
+<pre class="brush:eshell">
+6&gt; c(what_the_if).
+./what_the_if.erl:12: Warning: no clause will ever match
+./what_the_if.erl:12: Warning: the guard for this clause evaluates to 'false'
+{ok,what_the_if}
+7&gt; what_the_if:help_me(dog).
+{dog,"says bark!"}
+8&gt; what_the_if:help_me("it hurts!").
+{"it hurts!","says fgdadfgna!"}
+</pre>
+
+<p>You might be one of the many Erlang programmers wondering why 'true' was taken over 'else' as an atom to control flow; after all, it's much more familiar. Richard O'Keefe gave the following answer on the Erlang mailing lists. I'm quoting it directly because I couldn't have put it better:</p>
+
+<blockquote title="From the Erlang mailing lists: http://erlang.org/pipermail/erlang-questions/2009-January/041228.html">
+	<p>It may be more FAMILIAR, but that doesn't mean 'else' is a good thing.  I know that writing ';&nbsp;true&nbsp;-&gt;' is a very easy way to get 'else' in Erlang, but we have a couple of decades of psychology-of-programming results to show that it's a bad idea. I have started to replace:</p>
+	<pre>
+                          by
+	if X &gt; Y -&gt; a()		if X &gt; Y  -&gt; a()
+	 ; true  -&gt; b()		 ; X =&lt; Y -&gt; b()
+	end		     	end
+
+	if X &gt; Y -&gt; a()		if X &gt; Y -&gt; a()
+	 ; X &lt; Y -&gt; b()		 ; X &lt; Y -&gt; b()
+	 ; true  -&gt; c()		 ; X ==Y -&gt; c()
+	end			end
+	</pre>
+	<p>which I find mildly annoying when _writing_ the code but enormously helpful when _reading_ it.</p>
+</blockquote>
+
+<p>'Else' or 'true' branches should be "avoided" altogether: <code>if</code>s are usually easier to read when you cover all logical ends rather than relying on a <em>"catch all"</em> clause.</p>
+
+<p>As mentioned before, there are only a limited set of functions that can be used in guard expressions (we'll see more of them in <a class="chapter" href="types-or-lack-thereof.html#type-conversions" title="Type conversions">Types (or lack thereof)</a>). This is where the real conditional powers of Erlang must be conjured. I present to you: the <code>case</code> expression!</p>
+
+<div class="note">
+	<p><strong>Note:</strong> All this horror expressed by the function names in <code>what_the_if.erl</code> is expressed in regards to the <code>if</code> language construct when seen from the perspective of any other languages' <code>if</code>. In Erlang's context, it turns out to be a perfectly logical construct with a confusing name.</p>
+</div>
+
+
+<h3><a class="section" name="in-case-of">In Case ... of</a></h3>
+
+<p>If the <code>if</code> expression is like a guard, a <code>case ... of</code> expression is like the whole function head: you can have the complex pattern matching you can use with each argument, and you can have guards on top of it!</p>
+
+<p>As you're probably getting pretty familiar with the syntax, we won't need too many examples. For this one, we'll write the append function for sets (a collection of unique values) that we will represent as an unordered list. This is possibly the worst implementation possible in terms of efficiency, but what we want here is the syntax:</p>
+
+<pre class="brush:erl">
+insert(X,[]) -&gt;
+    [X];
+insert(X,Set) -&gt;
+    case lists:member(X,Set) of
+        true  -&gt; Set;
+        false -&gt; [X|Set]
+    end.
+</pre>
+
+
+<p>If we send in an empty set (list) and a term <var>X</var> to be added, it returns us a list containing only <var>X</var>. Otherwise, the function <code>lists:member/2</code> checks whether an element is part of a list and returns true if it is, false if it is not. In the case we already had the element <var>X</var> in the set, we do not need to modify the list. Otherwise, we add <var>X</var> as the list's first element.</p>
+
+
+<p>In this case, the pattern matching was really simple. It can get more complex (you can compare your code with <a class="source" href="static/erlang/cases.erl" title="cases.erl">mine</a>):</p>
+
+<pre class="brush:erl">
+beach(Temperature) -&gt;
+    case Temperature of
+        {celsius, N} when N &gt;= 20, N =&lt; 45 -&gt;
+            'favorable';
+        {kelvin, N} when N &gt;= 293, N =&lt; 318 -&gt;
+            'scientifically favorable';
+        {fahrenheit, N} when N &gt;= 68, N =&lt; 113 -&gt;
+            'favorable in the US';
+        _ -&gt;
+            'avoid beach'
+    end.
+</pre>
+
+<p>Here, the answer of "is it the right time to go to the beach" is given in 3 different temperature systems: Celsius, Kelvins and Fahrenheit degrees. Pattern matching and guards are combined in order to return an answer satisfying all uses. As pointed out earlier, <code>case ... of</code> expressions are pretty much the same thing as a bunch of function heads with guards. In fact we could have written our code the following way:</p>
+
+<pre class="brush:erl">
+beachf({celsius, N}) when N &gt;= 20, N =&lt; 45 -&gt;
+    'favorable';
+...
+beachf(_) -&gt;
+    'avoid beach'.
+</pre>
+
+<p>This raises the question: when should we use <code>if</code>, <code>case ... of</code> or functions to do conditional expressions?</p>
+
+<img class="right" src="static/img/coppertone.png" width="164" height="258" alt="parody of the coppertone logo mixed with the squid on the tunnel page of this site" title="We are squids. At the beach." />
+
+<h3><a class="section" name="which-to-use">Which to use?</a></h3>
+
+<p>Which to use is rather hard to answer. The difference between function calls and <code>case ... of</code> are very minimal: in fact, they are represented the same way at a lower level, and using one or the other effectively has the same cost in terms of performance. One difference between both is when more than one argument needs to be evaluated: <code>function(A,B)&nbsp;-&gt; ... end.</code> can have guards and values to match against <var>A</var> and <var>B</var>, but a case expression would need to be formulated a bit like:</p>
+
+<pre class="brush:erl">
+case {A,B} of
+    Pattern Guards -&gt; ...
+end.
+</pre>
+
+<p>This form is rarely seen and might surprise the reader a bit. In similar situations, using a function call might be more appropriate. On the other hand the <code>insert/2</code> function we had written earlier is arguably cleaner the way it is rather than having an immediate function call to track down on a simple <code>true</code> or <code>false</code> clause.</p>
+
+<p>Then the other question is why would you ever use <code>if</code>, given <code>case</code>s and functions are flexible enough to even encompass <code>if</code> through guards? The rationale behind <code>if</code> is quite simple: it was added to the language as a short way to have guards without needing to write the whole pattern matching part when it wasn't needed.</p>
+
+<p>Of course, all of this is more about personal preferences and what you may encounter more often. There is no good solid answer. The whole topic is still debated by the Erlang community from time to time. Nobody's going to go try to beat you up because of what you've chosen, as long as it is easy to understand. As Ward Cunningham once put it, <cite>"Clean code is when you look at a routine and it's pretty much what you expected."</cite></p>
+
+				<ul class="navigation">
+											<li><a href="modules.html" title="Previous chapter">&lt; Previous</a></li>
+										
+					<li><a href="contents.html" title="Index">Index</a></li>
+					
+											<li><a href="types-or-lack-thereof.html" title="Next chapter">Next &gt;</a></li>
+									</ul>
+			</div><!-- content -->
+			<div id="footer">
+				<a href="http://creativecommons.org/licenses/by-nc-nd/3.0/" title="Creative Commons License Details"><img src="static/img/cc.png" width="88" height="31" alt="Creative Commons Attribution Non-Commercial No Derivative License" /></a>
+				<p>Except where otherwise noted, content on this site is licensed under a Creative Commons Attribution Non-Commercial No Derivative License</p>
+			</div> <!-- footer -->
+		</div> <!-- wrapper -->
+		<div id="grass" />
+	<script type="text/javascript" src="static/js/shCore.js"></script>
+	<script type="text/javascript" src="static/js/shBrushErlang2.js%3F11"></script>
+	<script type="text/javascript">
+		SyntaxHighlighter.defaults.gutter = false;
+		SyntaxHighlighter.all();
+	</script>
+	</body>
+</html>

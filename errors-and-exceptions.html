@@ -1,0 +1,645 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en" dir="ltr">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<meta http-equiv="Content-Style-Type" content="text/css" />
+		<meta name="keywords" content="Erlang, exception, error, exit, throw, try, catch, crash, runtime, process" />
+		<meta name="description" content="A list of compile-time errors and warnings, runtime errors in Erlang. Also errors, exits and throws then how to handle them with try ... catch and other constructs." />
+        <meta name="google-site-verification" content="mi1UCmFD_2pMLt2jsYHzi_0b6Go9xja8TGllOSoQPVU" />
+		<link rel="stylesheet" type="text/css" href="static/css/screen.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/sh/shCore.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/sh/shThemeLYSE2.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/print.css" media="print" />
+		<link href="rss" type="application/rss+xml" rel="alternate" title="LYSE news" />
+		<link rel="icon" type="image/png" href="favicon.ico" />
+		<link rel="apple-touch-icon" href="static/img/touch-icon-iphone.png" />
+		<link rel="apple-touch-icon" sizes="72x72" href="static/img/touch-icon-ipad.png" />
+		<link rel="apple-touch-icon" sizes="114x114" href="static/img/touch-icon-iphone4.png" />
+		<title>Errors and Exceptions | Learn You Some Erlang for Great Good!</title>
+	</head>
+	<body>
+		<div id="wrapper">
+			<div id="header">
+				<h1>Learn you some Erlang</h1>
+				<span>for great good!</span>
+			</div> <!-- header -->
+			<div id="menu">
+				<ul>
+					<li><a href="content.html" title="Home">Home</a></li>
+					<li><a href="faq.html" title="Frequently Asked Questions">FAQ</a></li>
+					<li><a href="rss" title="Latest News">RSS</a></li>
+					<li><a href="static/erlang/learn-you-some-erlang.zip" title="Source Code">Code</a></li>
+				</ul>
+			</div><!-- menu -->
+			<div id="content">
+            <div class="noscript"><noscript>Hey there, it appears your Javascript is disabled. That's fine, the site works without it. However, you might prefer reading it with syntax highlighting, which requires Javascript!</noscript></div>
+<h2>Errors and Exceptions</h2>
+<h3><a class="section" name="not-so-fast">Not so fast!</a></h3>
+
+<img class="left" src="static/img/cyclist.png" width="268" height="252" alt="A green man with a huge head and tiny body on a bicycle" title="I don't know why I drew that" />
+
+<p>There's no right place for a chapter like this one. By now, you've learned enough that you're probably running into errors, but not yet enough to know how to handle them. In fact we won't be able to see all the error-handling mechanisms within this chapter. That's a bit because Erlang has two main paradigms: functional and concurrent. The functional subset is the one I've been explaining since the beginning of the book: referential transparency, recursion, higher order functions, etc. The concurrent subset is the one that makes Erlang famous: actors, thousands and thousands of concurrent processes, supervision trees, etc.</p>
+
+<p>Because I judge the functional part essential to know before moving on to the concurrent part, I'll only cover the functional subset of the language in this chapter. If we are to manage errors, we must first understand them.</p>
+
+<div class="note">
+    <p><strong>Note:</strong> Although Erlang includes a few ways to handle errors in functional code, most of the time you'll be told to just let it crash. I hinted at this in the <a class="chapter" href="introduction.html#what-is-erlang">Introduction</a>. The mechanisms that let you program this way are in the concurrent part of the language.</p>
+</div>
+
+
+<h3><a class="section" name="a-compilation-of-errors">A Compilation of Errors</a></h3>
+
+<p>There are many kinds of errors: compile-time errors, logical errors, run-time errors and generated errors. I'll focus on compile-time errors in this section and go through the others in the next sections.</p>
+
+<p>Compile-time errors are often syntactic mistakes: check your function names, the tokens in the language (brackets, parentheses, periods, commas), the arity of your functions, etc. Here's a list of some of the common compile-time error messages and potential resolutions in case you encounter them:</p>
+
+<dl>
+	<dt>module.beam: Module name 'madule' does not match file name 'module'</dt>
+	<dd>The module name you've entered in the <code>-module</code> attribute doesn't match the filename.</dd>
+
+	<dt>./module.erl:2: Warning: function some_function/0 is unused</dt>
+	<dd>You have not exported a function, or the place where it's used has the wrong name or arity. It's also possible that you've written a function that is no longer needed. Check your code!</dd>
+
+	<dt>./module.erl:2: function some_function/1 undefined</dt>
+	<dd>The function does not exist. You've written the wrong name or arity either in the <code>-export</code> attribute or when declaring the function. This error is also output when the given function could not be compiled, usually because of a syntax error like forgetting to end a function with a period.</dd>
+
+	<dt>./module.erl:5: syntax error before: 'SomeCharacterOrWord'</dt>
+	<dd>This happens for a variety of reason, namely unclosed parentheses, tuples or wrong expression termination (like closing the last branch of a <code>case</code> with a comma). Other reasons might include the use of a reserved atom in your code or unicode characters getting weirdly converted between different encodings (I've seen it happen!)</dd>
+
+	<dt>./module.erl:5: syntax error before: </dt>
+	<dd>All right, that one is certainly not as descriptive! This usually comes up when your line termination is not correct. This is a specific case of the previous error, so just keep an eye out.</dd>
+
+	<dt>./module.erl:5: Warning: this expression will fail with a 'badarith' exception</dt>
+	<dd>Erlang is all about dynamic typing, but remember that the types are strong. In this case, the compiler is smart enough to find that one of your arithmetic expressions will fail (say, <code>llama + 5</code>). It won't find type errors much more complex than that, though.</dd>
+
+	<dt>./module.erl:5: Warning: variable 'Var' is unused</dt>
+    <dd>You declared a variable and never use it afterwards. This might be a bug with your code, so double-check what you have written. Otherwise, you might want to switch the variable name to <code>_</code> or just prefix it with an underscore (something like <var>_Var</var>) if you feel the name helps make the code readable.</dd>
+
+	<dt>./module.erl:5: Warning: a term is constructed, but never used</dt>
+	<dd>In one of your functions, you're doing something such as building a list, declaring a tuple or an anonymous function without ever binding it to a variable or returning it. This warning tells you you're doing something useless or that you have made some mistake.</dd>
+
+    <dt>./module.erl:5: head mismatch</dt>
+    <dd>It's possible your function has more than one head, and each of them has a different arity. Don't forget that different arity means different functions, and you can't interleave function declarations that way. This error is also raised when you insert a function definition between the head clauses of another function.</dd>
+
+    <dt>./module.erl:5: Warning: this clause cannot match because a previous clause at line 4 always matches</dt>
+    <dd>A function defined in the module has a specific clause defined after a catch-all one. As such, the compiler can warn you that you'll never even need to go to the other branch.</dd>
+
+   <dt>./module.erl:9: variable 'A' unsafe in 'case' (line 5)</dt>
+   <dd>You're using a variable declared within one of the branches of a <code>case ... of</code> outside of it. This is considered unsafe. If you want to use such variables, you'd be better of doing <code>MyVar = case ... of</code>...</dd>
+</dl>
+
+<p>This should cover most errors you get at compile-time at this point. There aren't too many and most of the time the hardest part is finding which error caused a huge cascade of errors listed against other functions. 
+It is better to resolve compiler errors in the order they were reported to avoid being misled by errors which may not actually be errors at all. Other kinds of errors sometimes appear and if you've got one I haven't included, send me an email and I'll add it along with an explanation as soon as possible.</p>
+
+
+<h3><a class="section" name="no-u">No, YOUR logic is wrong!</a></h3>
+
+<img class="right" src="static/img/exam.png" width="232" height="224" alt="An exam with the grade 'F'" title="This is the worst essay on underwater breakdancing I have ever read!" />
+
+<p>Logical errors are the hardest kind of errors to find and debug. They're most likely errors coming from the programmer: branches of conditional statements such as 'if's and 'case's that don't consider all the cases, mixing up a multiplication for a division, etc. They do not make your programs crash but just end up giving you unseen bad data or having your program work in an unintended manner.</p>
+
+<p>You're most likely on your own when it comes to this, but Erlang has many facilities to help you there, including test frameworks, TypEr and Dialyzer (as described in the <a class="chapter" href="types-or-lack-thereof.html#for-type-junkies">types chapter</a>), a <a class="docs" href="http://www.erlang.org/doc/apps/debugger/debugger_chapter.html" title="official documentation">debugger</a> and <a class="docs" href="http://erldocs.com/17.3/runtime_tools/dbg.html" title="link to non-official documentation">tracing module</a>, etc. Testing your code is likely your best defense. Sadly, there are enough of these kinds of errors in every programmer's career to write a few dozen books about so I'll avoid spending too much time here. It's easier to focus on those that make your programs crash, because it happens right there and won't bubble up 50 levels from now. Note that this is pretty much the origin of the 'let it crash' ideal I mentioned a few times already.</p>
+
+
+<h3><a class="section" name="run-time-errors">Run-time Errors</a></h3>
+
+<p>Run-time errors are pretty destructive in the sense that they crash your code. While Erlang has ways to deal with them, recognizing these errors is always helpful. As such, I've made a little list of common run-time errors with an explanation and example code that could generate them.</p>
+
+<dl>
+    <dt>function_clause</dt>
+    <dd>
+        <pre class="brush:eshell">
+1&gt; lists:sort([3,2,1]). 
+[1,2,3]
+2&gt; lists:sort(fffffff). 
+** exception error: no function clause matching lists:sort(fffffff)
+        </pre>
+    </dd>
+    <dd>All the guard clauses of a function failed, or none of the function clauses' patterns matched.</dd>
+
+    <dt>case_clause</dt>
+    <dd>
+        <pre class="brush:eshell">
+3&gt; case "Unexpected Value" of 
+3&gt;    expected_value -&gt; ok;
+3&gt;    other_expected_value -&gt; 'also ok'
+3&gt; end.
+** exception error: no case clause matching "Unexpected Value"
+        </pre>
+    </dd>
+    <dd>Looks like someone has forgotten a specific pattern in their <code>case</code>, sent in the wrong kind of data, or needed a catch-all clause!</dd>
+
+    <dt>if_clause</dt>
+    <dd>
+        <pre class="brush:eshell">
+4&gt; if 2 &gt; 4 -&gt; ok;
+4&gt;    0 &gt; 1 -&gt; ok
+4&gt; end.
+** exception error: no true branch found when evaluating an if expression
+        </pre>
+    </dd>
+    <dd>This is pretty similar to <code>case_clause</code> errors: it can not find a branch that evaluates to <code>true</code>. Ensuring you consider all cases or add the catch-all <code>true</code> clause might be what you need.</dd>
+
+    <dt>badmatch</dt>
+    <dd>
+        <pre class="brush:eshell">
+5&gt; [X,Y] = {4,5}.
+** exception error: no match of right hand side value {4,5}
+        </pre>
+    </dd>
+    <dd>Badmatch errors happen whenever pattern matching fails. This most likely means you're trying to do impossible pattern matches (such as above), trying to bind a variable for the second time, or just anything that isn't equal on both sides of the <code>=</code> operator (which is pretty much what makes rebinding a variable fail!). Note that this error sometimes happens because the programmer believes that a variable of the form <var>_MyVar</var> is the same as <code>_</code>. Variables with an underscore are normal variables, except the compiler won't complain if they're not used. It is not possible to bind them more than once.</dd>
+
+    <dt>badarg</dt>
+    <dd>
+        <pre class="brush:eshell">
+6&gt; erlang:binary_to_list("heh, already a list").
+** exception error: bad argument
+     in function  binary_to_list/1
+        called as binary_to_list("heh, already a list")
+        </pre>
+    </dd>
+    <dd>This one is really similar to <code>function_clause</code> as it's about calling functions with incorrect arguments. The main difference here is that this error is usually triggered by the programmer after validating the arguments from within the function, outside of the guard clauses. I'll show how to throw such errors later in this chapter.</dd>
+
+    <dt>undef</dt>
+    <dd>
+        <pre class="brush:eshell">
+7&gt; lists:random([1,2,3]).
+** exception error: undefined function lists:random/1
+        </pre>
+    </dd>
+    <dd>This happens when you call a function that doesn't exist. Make sure the function is exported from the module with the right arity (if you're calling it from outside the module) and double check that you did type the name of the function and the name of the module correctly. Another reason to get the message is when the module is not in Erlang's search path. By default, Erlang's search path is set to be in the current directory. You can add paths by using <code><a class="docs" href="http://erldocs.com/17.3/kernel/code.html#add_patha/1" title="I'll kill my brain finding new titles for the unofficial doc site">code:add_patha/1</a></code> or <code><a class="docs" href="http://erldocs.com/17.3/kernel/code.html#add_pathz/1" title="It's becoming hard to have new ideas">code:add_pathz/1</a></code>. If this still doesn't work, make sure you compiled the module to begin with!</dd>
+
+    <dt>badarith</dt>
+    <dd>
+        <pre class="brush:eshell">
+8&gt; 5 + llama.
+** exception error: bad argument in an arithmetic expression
+     in operator  +/2
+        called as 5 + llama
+        </pre>
+    </dd>
+    <dd>This happens when you try to do arithmetic that doesn't exist, like divisions by zero or between atoms and numbers.</dd>
+
+    <dt>badfun</dt>
+    <dd>
+        <pre class="brush:eshell">
+9&gt; hhfuns:add(one,two).
+** exception error: bad function one
+in function  hhfuns:add/2
+        </pre>
+    </dd>
+    <dd>The most frequent reason why this error occurs is when you use variables as functions, but the variable's value is not a function. In the example above, I'm using the <code>hhfuns</code> function from the <a class="chapter local" href="higher-order-functions.html">previous chapter</a> and using two atoms as functions. This doesn't work and <code>badfun</code> is thrown.</dd>
+
+    <dt>badarity</dt>
+    <dd>
+        <pre class="brush:eshell">
+10&gt; F = fun(_) -&gt; ok end.
+#Fun&lt;erl_eval.6.13229925&gt;
+11&gt; F(a,b).
+** exception error: interpreted function with arity 1 called with two arguments
+        </pre>
+    </dd>
+    <dd>The <code>badarity</code> error is a specific case of <code>badfun</code>: it happens when you use higher order functions, but you pass them more (or fewer) arguments than they can handle.</dd>
+
+    <dt>system_limit</dt>
+    <dd>There are many reasons why a <code>system_limit</code> error can be thrown: too many processes (we'll get there), atoms that are too long, too many arguments in a function, number of atoms too large, too many nodes connected, etc. To get a full list in details, read the <a class="docs" href="http://www.erlang.org/doc/efficiency_guide/advanced.html#id2265856">Erlang Efficiency Guide</a> on system limits. Note that some of these errors are serious enough to crash the whole VM.</dd>
+</dl>
+
+<h3><a class="section" name="raising-exceptions">Raising Exceptions</a></h3>
+
+<img class="right" src="static/img/stop.png" width="148" height="179" alt="A stop sign" title="... Hammer time!" />
+
+<p>In trying to monitor the execution of code and protect against logical errors, it's often a good idea to provoke run-time crashes so problems will be spotted early.</p>
+
+<p>There are three kinds of exceptions in Erlang: <em>errors</em>, <em>throws</em> and <em>exits</em>. They all have different uses (kind of):</p>
+
+<h4>Errors</h4>
+<p>Calling <code>erlang:error(Reason)</code> will end the execution in the current process and include a stack trace of the last functions called with their arguments when you catch it. These are the kind of exceptions that provoke the run-time errors above.</p>
+
+<p>Errors are the means for a function to stop its execution when you can't expect the calling code to handle what just happened. If you get an <code>if_clause</code> error, what can you do? Change the code and recompile, that's what you can do (other than just displaying a pretty error message). An example of when not to use errors could be our tree module from the <a class="chapter local" href="recursion.html#more-than-lists" title="More than lists">recursion chapter</a>. That module might not always be able to find a specific key in a tree when doing a lookup. In this case, it makes sense to expect the user to deal with unknown results: they could use a default value, check to insert a new one, delete the tree, etc. This is when it's appropriate to return a tuple of the form <code>{ok, Value}</code> or an atom like <code>undefined</code> rather than raising errors.</p>
+
+<p>Now, errors aren't limited to the examples above. You can define your own kind of errors too:</p>
+
+<pre class="brush:eshell">
+1&gt; erlang:error(badarith).
+** exception error: bad argument in an arithmetic expression
+2&gt; erlang:error(custom_error).
+** exception error: custom_error
+</pre>
+
+<p>Here, <code>custom_error</code> is not recognized by the Erlang shell and it has no custom translation such as "bad argument in ...", but it's usable in the same way and can be handled by the programmer in an identical manner (we'll see how to do that soon).</p>
+
+<h4>Exits</h4>
+<p>There are two kinds of exits: 'internal' exits and 'external' exits. Internal exits are triggered by calling the function <code>exit/1</code> and make the current process stop its execution. External exits are called with <code>exit/2</code> and have to do with multiple processes in the concurrent aspect of Erlang; as such, we'll mainly focus on internal exits and will visit the external kind later on.</p>
+
+<p>Internal exits are pretty similar to errors. In fact, historically speaking, they were the same and only <code>exit/1</code> existed. They've got roughly the same use cases. So how to choose one? Well the choice is not obvious. To understand when to use one or the other, there's no choice but to start looking at the concepts of actors and processes from far away.</p>
+
+<p>In the introduction, I've compared processes as people communicating by mail. There's not a lot to add to the analogy, so I'll go to diagrams and bubbles.</p>
+
+<img src="static/img/a-b-msg.png" width="221" height="83" alt="A process 'A' represented by a circle, sending a message (represented by an arrow) to a process 'B' (another circle)" title="whoa!" />
+
+<p>Processes here can send each other messages. A process can also listen for messages, wait for them. You can also choose what messages to listen to, discard some, ignore others, give up listening after a certain time etc.</p>
+
+<img src="static/img/a-b-c-hello.png" width="226" height="143" alt="A process 'A' sending 'hello' to a process 'B', which in turns messages C with 'A says hello!'" title="B is the third wheel here" />
+
+<p>These basic concepts let the implementors of Erlang use a special kind of message to communicate exceptions between processes. They act a bit like a process' last breath; they're sent right before a process dies and the code it contains stops executing. Other processes that were listening for that specific kind of message can then know about the event and do whatever they please with it. This includes logging, restarting the process that died, etc.</p>
+
+<img src="static/img/a-b-dead.png" width="266" height="86" alt="A dead process (a bursting bubble) sending 'I'm dead' to a process 'B'" title="" />
+
+<p>With this concept explained, the difference in using <code>erlang:error/1</code> and <code>exit/1</code> is easier to understand. While both can be used in an extremely similar manner, the real difference is in the intent. You can then decide whether what you've got is 'simply' an error or a condition worthy of killing the current process. This point is made stronger by the fact that <code>erlang:error/1</code> returns a stack trace and <code>exit/1</code> doesn't. If you were to have a pretty large stack trace or lots of arguments to the current function, copying the exit message to every listening process would mean copying the data. In some cases, this could become unpractical.</p>
+
+<h4>Throws</h4>
+<p>A throw is a class of exceptions used for cases that the programmer can be expected to handle. In comparison with exits and errors, they don't really carry any 'crash that process!' intent behind them, but rather control flow. As you use throws while expecting the programmer to handle them, it's usually a good idea to document their use within a module using them.</p>
+
+<p>The syntax to throw an exception is:</p>
+
+<pre class="brush:eshell">
+1&gt; throw(permission_denied).
+** exception throw: permission_denied
+</pre>
+
+<p>Where you can replace <code>permission_denied</code> by anything you want (including <code>'everything is fine'</code>, but that is not helpful and you will lose friends).</p>
+
+<p>Throws can also be used for non-local returns when in deep recursion. An example of that is the <code><a class="docs" href="http://erldocs.com/17.3/ssl/ssl.html" title="you don't actually need to click this to understand the chapter">ssl</a></code> module which uses <code>throw/1</code> as a way to push <code>{error, Reason}</code> tuples back to a top-level function. This function then simply returns that tuple to the user. This lets the implementer only write for the successful cases and have one function deal with the exceptions on top of it all.</p>
+
+<p>Another example could be the array module, where there is a lookup function that can return a user-supplied default value if it can't find the element needed. When the element can't be found, the value <code>default</code> is thrown as an exception, and the top-level function handles that and substitutes it with the user-supplied default value. This keeps the programmer of the module from needing to pass the default value as a parameter of every function of the lookup algorithm, again focusing only on the successful cases.</p>
+
+<img class="right" src="static/img/catch.png" width="107" height="248" alt="A fish that was caught" title="catch the pun" />
+
+<p>As a rule of thumb, try to limit the use of your throws for non-local returns to a single module in order to make it easier to debug your code. It will also let you change the innards of your module without requiring changes in its interface.</p>
+
+
+<h3><a class="section" name="dealing-with-exceptions">Dealing with Exceptions</a></h3>
+
+<p>I've already mentioned quite a few times that throws, errors and exits can be handled. The way to do this is by using a <code>try ... catch</code> expression.</p>
+
+<p>A <code>try ... catch</code> is a way to evaluate an expression while letting you handle the successful case as well as the errors encountered. The general syntax for such an expression is:</p>
+
+<pre class="brush:erl">
+try Expression of
+    SuccessfulPattern1 [Guards] -&gt;
+        Expression1;
+    SuccessfulPattern2 [Guards] -&gt;
+        Expression2
+catch
+    TypeOfError:ExceptionPattern1 -&gt;
+        Expression3;
+    TypeOfError:ExceptionPattern2 -&gt;
+        Expression4
+end.
+</pre>
+
+<p>The <var>Expression</var> in between <code>try</code> and <code>of</code> is said to be <em>protected</em>. This means that any kind of exception happening within that call will be caught. The patterns and expressions in between the <code>try ... of</code> and <code>catch</code> behave in exactly the same manner as a <code>case ... of</code>. Finally, the <code>catch</code> part: here, you can replace <var>TypeOfError</var> by either <code>error</code>, <code>throw</code> or <code>exit</code>, for each respective type we've seen in this chapter. If no type is provided, a <code>throw</code> is assumed. So let's put this in practice.</p>
+
+<p>First of all, let's start a module named <code><a class="source" href="static/erlang/exceptions.erl">exceptions</a></code>. We're going for simple here:</p>
+
+<pre class="brush:erl">
+-module(exceptions).
+-compile(export_all).
+
+throws(F) -&gt;
+    try F() of
+        _ -&gt; ok
+    catch
+        Throw -&gt; {throw, caught, Throw}
+    end.
+</pre>
+
+<p>We can compile it and try it with different kinds of exceptions:</p>
+
+<pre class="brush:eshell">
+1&gt; c(exceptions).
+{ok,exceptions}
+2&gt; exceptions:throws(fun() -&gt; throw(thrown) end).
+{throw,caught,thrown}
+3&gt; exceptions:throws(fun() -&gt; erlang:error(pang) end).
+** exception error: pang
+</pre>
+
+<p>As you can see, this <code>try ... catch</code> is only receiving throws. As stated earlier, this is because when no type is mentioned, a throw is assumed. Then we have functions with catch clauses of each type:</p>
+
+<pre class="brush:erl">
+errors(F) -&gt;
+    try F() of
+        _ -&gt; ok
+    catch
+        error:Error -&gt; {error, caught, Error}
+    end.
+
+exits(F) -&gt;
+    try F() of
+        _ -&gt; ok
+    catch
+        exit:Exit -&gt; {exit, caught, Exit}
+    end.
+</pre>
+
+<p>And to try them:</p>
+
+<pre class="brush:eshell">
+4&gt; c(exceptions).
+{ok,exceptions}
+5&gt; exceptions:errors(fun() -&gt; erlang:error("Die!") end).
+{error,caught,"Die!"}
+6&gt; exceptions:exits(fun() -&gt; exit(goodbye) end).
+{exit,caught,goodbye}
+</pre>
+
+<p>The next example on the menu shows how to combine all the types of exceptions in a single <code>try ... catch</code>. We'll first declare a function to generate all the exceptions we need:</p>
+
+<pre class="brush:erl">
+sword(1) -&gt; throw(slice);
+sword(2) -&gt; erlang:error(cut_arm);
+sword(3) -&gt; exit(cut_leg);
+sword(4) -&gt; throw(punch);
+sword(5) -&gt; exit(cross_bridge).
+
+black_knight(Attack) when is_function(Attack, 0) -&gt;
+    try Attack() of
+        _ -&gt; "None shall pass."
+    catch
+        throw:slice -&gt; "It is but a scratch.";
+        error:cut_arm -&gt; "I've had worse.";
+        exit:cut_leg -&gt; "Come on you pansy!";
+        _:_ -&gt; "Just a flesh wound."
+    end.
+</pre>
+
+<p>Here <code>is_function/2</code> is a BIF which makes sure the variable <var>Attack</var> is a function of arity 0. Then we add this one for good measure:</p>
+
+<pre class="brush:erl">
+talk() -&gt; "blah blah".
+</pre>
+
+<p><cite>And now for something completely different</cite>:</p>
+
+<pre class="brush:eshell">
+7&gt; c(exceptions).
+{ok,exceptions}
+8&gt; exceptions:talk().
+"blah blah"
+9&gt; exceptions:black_knight(fun exceptions:talk/0).
+"None shall pass."
+10&gt; exceptions:black_knight(fun() -&gt; exceptions:sword(1) end).
+"It is but a scratch."
+11&gt; exceptions:black_knight(fun() -&gt; exceptions:sword(2) end).
+"I've had worse."
+12&gt; exceptions:black_knight(fun() -&gt; exceptions:sword(3) end).
+"Come on you pansy!"
+13&gt; exceptions:black_knight(fun() -&gt; exceptions:sword(4) end).
+"Just a flesh wound."
+14&gt; exceptions:black_knight(fun() -&gt; exceptions:sword(5) end).
+"Just a flesh wound."
+</pre>
+
+<img class="right" src="static/img/black-knight.png" width="221" height="262" alt="Monty Python's black knight" title="Just a flesh wound." />
+
+<p>The expression on line 9 demonstrates normal behavior for the black knight, when function execution happens normally. Each line that follows that one demonstrates pattern matching on exceptions according to their class (throw, error, exit) and the reason associated with them (<code>slice</code>, <code>cut_arm</code>, <code>cut_leg</code>).</p>
+
+<p>One thing shown here on expressions 13 and 14 is a catch-all clause for exceptions. The <code>_:_</code> pattern is what you need to use to make sure to catch any exception of any type. In practice, you should be careful when using the catch-all patterns: try to protect your code from what you can handle, but not any more than that. Erlang has other facilities in place to take care of the rest.</p>
+
+<p>There's also an additional clause that can be added after a <code>try ... catch</code> that will always be executed. This is equivalent to the 'finally' block in many other languages:</p>
+
+<pre class="brush:erl">
+try Expr of
+    Pattern -&gt; Expr1
+catch
+    Type:Exception -&gt; Expr2
+after % this always gets executed
+    Expr3
+end
+</pre>
+
+<p>No matter if there are errors or not, the expressions inside the <code>after</code> part are guaranteed to run. However, you can not get any return value out of the <code>after</code> construct. Therefore, <code>after</code> is mostly used to run code with side effects. The canonical use of this is when you want to make sure a file you were reading gets closed whether exceptions are raised or not.</p>
+
+<p>We now know how to handle the 3 classes of exceptions in Erlang with catch blocks. However, I've hidden information from you: it's actually possible to have more than one expression between the <code>try</code> and the <code>of</code>!</p>
+
+<pre class="brush:erl">
+whoa() -&gt;
+    try
+        talk(),
+        _Knight = "None shall Pass!",
+        _Doubles = [N*2 || N &lt;- lists:seq(1,100)],
+        throw(up),
+        _WillReturnThis = tequila
+    of
+        tequila -&gt; "hey this worked!"
+    catch
+        Exception:Reason -&gt; {caught, Exception, Reason}
+    end.
+</pre>
+
+<p>By calling <code>exceptions:whoa()</code>, we'll get the obvious <code>{caught, throw, up}</code>, because of <code>throw(up)</code>. So yeah, it's possible to have more than one expression between <code>try</code> and <code>of</code>...</p>
+
+<p>What I just highlighted in <code>exceptions:whoa/0</code> and that you might have not noticed is that when we use many expressions in that manner, we might not always care about what the return value is. The <code>of</code> part thus becomes a bit useless. Well good news, you can just give it up:</p>
+
+<pre class="brush:erl">
+im_impressed() -&gt;
+    try
+        talk(),
+        _Knight = "None shall Pass!",
+        _Doubles = [N*2 || N &lt;- lists:seq(1,100)],
+        throw(up),
+        _WillReturnThis = tequila
+    catch
+        Exception:Reason -&gt; {caught, Exception, Reason}
+    end.
+</pre>
+
+<p>And now it's a bit leaner!</p>
+
+<div class="note">
+    <p><strong>Note:</strong> It is important to know that the protected part of an exception can't be tail recursive. The VM must always keep a reference there in case there's an exception popping up.</p>
+
+	<p>Because the <code>try ... catch</code> construct without the <code>of</code> part has nothing but a protected part, calling a recursive function from there might be dangerous for programs supposed to run for a long time (which is Erlang's niche). After enough iterations, you'll go out of memory or your program will get slower without really knowing why. By putting your recursive calls between the <code>of</code> and <code>catch</code>, you are not in a protected part and you will benefit from Last Call Optimisation.</p>
+
+	<p>Some people use <code>try ... of ... catch</code> rather than <code>try ... catch</code> by default to avoid unexpected errors of that kind, except for obviously non-recursive code with results that won't be used by anything. You're most likely able to make your own decision on what to do!</p>
+</div>
+
+
+<h3><a class="section" name="theres-more">Wait, there's more!</a></h3>
+
+<p>As if it wasn't enough to be on par with most languages already, Erlang's got yet another error handling structure. That structure is defined as the keyword <code>catch</code> and basically captures all types of exceptions on top of the good results. It's a bit of a weird one because it displays a different representation of exceptions:</p>
+
+<pre class="brush:eshell">
+1&gt; catch throw(whoa).
+whoa
+2&gt; catch exit(die).
+{'EXIT',die}
+3&gt; catch 1/0.
+{'EXIT',{badarith,[{erlang,'/',[1,0]},
+                   {erl_eval,do_apply,5},
+                   {erl_eval,expr,5},
+                   {shell,exprs,6},
+                   {shell,eval_exprs,6},
+                   {shell,eval_loop,3}]}}
+4&gt; catch 2+2.
+4
+</pre>
+
+<p>What we can see from this is that throws remain the same, but that exits and errors are both represented as <code>{'EXIT', Reason}</code>. That's due to errors being bolted to the language after exits (they kept a similar representation for backwards compatibility).</p>
+
+<p>The way to read this stack trace is as follows:</p>
+
+<pre class="brush:eshell">
+5&gt; catch doesnt:exist(a,4).              
+{'EXIT',{undef,[{doesnt,exist,[a,4]},
+                {erl_eval,do_apply,5},
+                {erl_eval,expr,5},
+                {shell,exprs,6},
+                {shell,eval_exprs,6},
+                {shell,eval_loop,3}]}}
+</pre>
+<ul>
+    <li>The type of error is <code>undef</code>, which means the function you called is not defined (see the list at the beginning of this chapter)</li>
+    <li>The list right after the type of error is a stack trace</li>
+    <li>The tuple on top of the stack trace represents the last function to be called (<code>{Module, Function, Arguments}</code>). That's your undefined function.</li>
+    <li>The tuples after that are the functions called before the error. This time they're of the form <code>{Module, Function, Arity}</code>.</li>
+    <li>That's all there is to it, really.</li>
+</ul>
+
+<p>You can also manually get a stack trace by calling <code>erlang:get_stacktrace/0</code> in the process that crashed.</p>
+
+<p>You'll often see <code>catch</code> written in the following manner (we're still in <a class="source" href="static/erlang/exceptions.erl">exceptions.erl</a>):</p>
+
+<pre class="brush:erl">
+catcher(X,Y) -&gt;
+    case catch X/Y of
+        {'EXIT', {badarith,_}} -&gt; "uh oh";
+        N -&gt; N
+    end.
+</pre>
+
+<p>And as expected:</p>
+
+<pre class="brush:eshell">
+6&gt; c(exceptions).
+{ok,exceptions}
+7&gt; exceptions:catcher(3,3).
+1.0
+8&gt; exceptions:catcher(6,3).
+2.0
+9&gt; exceptions:catcher(6,0).
+"uh oh"
+</pre>
+
+<p>This sounds compact and easy to catch exceptions, but there are a few problems with <code>catch</code>. The first of it is operator precedence:</p>
+
+<pre class="brush:eshell">
+10&gt; X = catch 4+2.
+* 1: syntax error before: 'catch'
+10&gt; X = (catch 4+2).
+6
+</pre>
+
+<p>That's not exactly intuitive given that most expressions do not need to be wrapped in parentheses this way. Another problem with <code>catch</code> is that you can't see the difference between what looks like the underlying representation of an exception and a real exception:</p>
+
+<pre class="brush:eshell">
+11&gt; catch erlang:boat().
+{'EXIT',{undef,[{erlang,boat,[]},
+                {erl_eval,do_apply,5},
+                {erl_eval,expr,5},
+                {shell,exprs,6},
+                {shell,eval_exprs,6},
+                {shell,eval_loop,3}]}}
+12&gt; catch exit({undef, [{erlang,boat,[]}, {erl_eval,do_apply,5}, {erl_eval,expr,5}, {shell,exprs,6}, {shell,eval_exprs,6}, {shell,eval_loop,3}]}). 
+{'EXIT',{undef,[{erlang,boat,[]},
+                {erl_eval,do_apply,5},
+                {erl_eval,expr,5},
+                {shell,exprs,6},
+                {shell,eval_exprs,6},
+                {shell,eval_loop,3}]}}
+</pre>
+
+<p>And you can't know the difference between an error and an actual exit. You could also have used <code>throw/1</code> to generate the above exception. In fact, a <code>throw/1</code> in a <code>catch</code> might also be problematic in another scenario:</p>
+
+<pre class="brush:erl">
+one_or_two(1) -&gt; return;
+one_or_two(2) -&gt; throw(return).
+</pre>
+
+<p>And now the killer problem:</p>
+
+<pre class="brush:eshell">
+13&gt; c(exceptions).
+{ok,exceptions}
+14&gt; catch exceptions:one_or_two(1).
+return
+15&gt; catch exceptions:one_or_two(2).
+return
+</pre>
+
+<p>Because we're behind a <code>catch</code>, we can never know if the function threw an exception or if it returned an actual value! This might not really happen a whole lot in practice, but it's still a wart big enough to have warranted the addition of the <code>try ... catch</code> construct in the R10B release.</p>
+
+
+<h3><a class="section" name="try-a-try-in-a-tree">Try a try in a tree</a></h3>
+
+<p>To put exceptions in practice, we'll do a little exercise requiring us to dig for our <code><a class="source" href="static/erlang/tree.erl">tree</a></code> module. We're going to add a function that lets us do a lookup in the tree to find out whether a value is already present in there or not. Because the tree is ordered by its keys and in this case we do not care about the keys, we'll need to traverse the whole thing until we find the value.</p>
+
+<p>The traversal of the tree will be roughly similar to what we did in <code>tree:lookup/2</code>, except this time we will always search down both the left branch and the right branch. To write the function, you'll just need to remember that a tree node is either <code>{node, {Key, Value, NodeLeft, NodeRight}}</code> or <code>{node, 'nil'}</code> when empty. With this in hand, we can write a basic implementation without exceptions:</p>
+
+<pre class="brush:erl">
+%% looks for a given value 'Val' in the tree.
+has_value(_, {node, 'nil'}) -&gt;
+    false;
+has_value(Val, {node, {_, Val, _, _}}) -&gt;
+    true;
+has_value(Val, {node, {_, _, Left, Right}}) -&gt;
+    case has_value(Val, Left) of
+        true -&gt; true;
+        false -&gt; has_value(Val, Right)
+    end.
+</pre>
+
+<p>The problem with this implementation is that every node of the tree we branch at has to test for the result of the previous branch:</p>
+
+<img class="center explanation" src="static/img/tree-case.png" width="495" height="176" alt="A diagram of the tree with an arrow following every node checked while traversing the tree, and then when returning the result" />
+
+<p>This is a bit annoying. With the help of throws, we can make something that will require less comparisons:</p>
+
+<pre class="brush:erl">
+has_value(Val, Tree) -&gt; 
+    try has_value1(Val, Tree) of
+        false -&gt; false
+    catch
+        true -&gt; true
+    end.
+
+has_value1(_, {node, 'nil'}) -&gt;
+    false;
+has_value1(Val, {node, {_, Val, _, _}}) -&gt;
+    throw(true);
+has_value1(Val, {node, {_, _, Left, Right}}) -&gt;
+    has_value1(Val, Left),
+    has_value1(Val, Right).
+</pre>
+
+<p>The execution of the code above is similar to the previous version, except that we never need to check for the return value: we don't care about it at all. In this version, only a throw means the value was found. When this happens, the tree evaluation stops and it falls back to the <code>catch</code> on top. Otherwise, the execution keeps going until the last <samp>false</samp> is returned and that's what the user sees:</p>
+
+<img class="center explanation" src="static/img/tree-throw.png" width="495" height="176" alt="A diagram of the tree with an arrow following every node checked while traversing the tree, and then skipping all the nodes on the way back up (thanks to a throw)" />
+
+<p>Of course, the implementation above is longer than the previous one. However, it is possible to realize gains in speed and in clarity by using non-local returns with a throw, depending on the operations you're doing. The current example is a simple comparison and there's not much to see, but the practice still makes sense with more complex data structures and operations.</p>
+
+<p>That being said, we're probably ready to solve real problems in sequential Erlang.</p>
+				<ul class="navigation">
+											<li><a href="higher-order-functions.html" title="Previous chapter">&lt; Previous</a></li>
+										
+					<li><a href="contents.html" title="Index">Index</a></li>
+					
+											<li><a href="functionally-solving-problems.html" title="Next chapter">Next &gt;</a></li>
+									</ul>
+			</div><!-- content -->
+			<div id="footer">
+				<a href="http://creativecommons.org/licenses/by-nc-nd/3.0/" title="Creative Commons License Details"><img src="static/img/cc.png" width="88" height="31" alt="Creative Commons Attribution Non-Commercial No Derivative License" /></a>
+				<p>Except where otherwise noted, content on this site is licensed under a Creative Commons Attribution Non-Commercial No Derivative License</p>
+			</div> <!-- footer -->
+		</div> <!-- wrapper -->
+		<div id="grass" />
+	<script type="text/javascript" src="static/js/shCore.js"></script>
+	<script type="text/javascript" src="static/js/shBrushErlang2.js%3F11"></script>
+	<script type="text/javascript">
+		SyntaxHighlighter.defaults.gutter = false;
+		SyntaxHighlighter.all();
+	</script>
+	</body>
+</html>

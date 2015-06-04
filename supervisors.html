@@ -1,0 +1,622 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en" dir="ltr">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<meta http-equiv="Content-Style-Type" content="text/css" />
+		<meta name="keywords" content="Erlang, OTP, behaviour, supervisor, one_for_one, one_for_all, rest_for_one, simple_one_for_one, worker, restart strategy" />
+		<meta name="description" content="A tour of OTP supervisors. We see how to supervise an OTP process with all the different restart strategies. Practical examples with an annoying band manager included." />
+        <meta name="google-site-verification" content="mi1UCmFD_2pMLt2jsYHzi_0b6Go9xja8TGllOSoQPVU" />
+		<link rel="stylesheet" type="text/css" href="static/css/screen.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/sh/shCore.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/sh/shThemeLYSE2.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/print.css" media="print" />
+		<link href="rss" type="application/rss+xml" rel="alternate" title="LYSE news" />
+		<link rel="icon" type="image/png" href="favicon.ico" />
+		<link rel="apple-touch-icon" href="static/img/touch-icon-iphone.png" />
+		<link rel="apple-touch-icon" sizes="72x72" href="static/img/touch-icon-ipad.png" />
+		<link rel="apple-touch-icon" sizes="114x114" href="static/img/touch-icon-iphone4.png" />
+		<title>Who Supervises The Supervisors? | Learn You Some Erlang for Great Good!</title>
+	</head>
+	<body>
+		<div id="wrapper">
+			<div id="header">
+				<h1>Learn you some Erlang</h1>
+				<span>for great good!</span>
+			</div> <!-- header -->
+			<div id="menu">
+				<ul>
+					<li><a href="content.html" title="Home">Home</a></li>
+					<li><a href="faq.html" title="Frequently Asked Questions">FAQ</a></li>
+					<li><a href="rss" title="Latest News">RSS</a></li>
+					<li><a href="static/erlang/learn-you-some-erlang.zip" title="Source Code">Code</a></li>
+				</ul>
+			</div><!-- menu -->
+			<div id="content">
+            <div class="noscript"><noscript>Hey there, it appears your Javascript is disabled. That's fine, the site works without it. However, you might prefer reading it with syntax highlighting, which requires Javascript!</noscript></div>
+<h2>Who Supervises The Supervisors?</h2>
+
+<h3><a class="section" name="from-bad-to-good">From Bad to Good</a></h3>
+
+<img class="right" src="static/img/watchmen.png" width="266" height="346" alt="Rorschach from Watchmen in a recycle bin" title="Reuse, Recycle, REVENGE!" /> 
+
+<p>Supervisors are one of the most useful part of OTP you'll get to use. We've seen basic supervisors back in <a class="chapter" href="errors-and-processes.html">Errors and Processes</a> and in <a class="chapter" href="designing-a-concurrent-application.html">Designing a Concurrent Application</a>. We've seen them as a way to keep our software going in case of errors by just restarting the faulty processes.</p>
+
+<p>To be more detailed, our supervisors would start a <em>worker</em> process, link to it, and trap exit signals with <code>process_flag(trap_exit,true)</code> to know when the process died and restart it. This is fine when we want restarts, but it's also pretty dumb. Let's imagine that you're using the remote control to turn the TV on. If it doesn't work the first time, you might try once or twice just in case you didn't press right or the signal went wrong. Our supervisor, if it was trying to turn that very TV on, would keep trying forever, even if it turned out that the remote had no batteries or didn't even fit the TV. A pretty dumb supervisor.</p>
+
+<p>Something else that was dumb about our supervisors is that they could only watch one worker at a time. Don't get me wrong, it's sometimes useful to have one supervisor for a single worker, but in large applications, this would mean you could only have a chain of supervisors, not a tree. How would you supervise a task where you need 2 or 3 workers at once? With our implementation, it just couldn't be done.</p>
+
+<p>The OTP supervisors, fortunately, provide the flexibility to handle such cases (and more). They let you define how many times a worker should be restarted in a given period of time before giving up. They let you have more than one worker per supervisor and even let you pick between a few patterns to determine how they should depend on each other in case of a failure.</p>
+
+<h3><a class="section" name="supervisor-concepts">Supervisor Concepts</a></h3>
+
+<p>Supervisors are one of the simplest behaviours to use and understand, but one of the hardest behaviours to write a good design with. There are various strategies related to supervisors and application design, but before going there we need to understand more basic concepts because otherwise it's going to be pretty hard.</p>
+
+<p>One of the words I have used in the text so far without much of a definition is the word 'worker'. Workers are defined a bit in opposition of supervisors. If supervisors are supposed to be processes which do nothing but make sure their children are restarted when they die, workers are processes in charge of doing actual work, and that may die while doing so. They are usually not trusted.</p>
+
+<p>Supervisors can supervise workers and other supervisors, while workers should never be used in any position except under another supervisor:</p>
+
+<img class="center explanation" src="static/img/sup-tree.png" width="264" height="264" alt="A supervision tree where all the supervisor nodes are above worker nodes (leaves)" />
+
+<p>Why should every process be supervised? Well the idea is simple: if for some reason you're spawning unsupervised processes, how can you be sure they are gone or not? If you can't measure something, it doesn't exist. Now if a process exists in the void away from all your supervision trees, how do you know it exists or not? How did it get there? Will it happen again?<br />
+If it does happen, you'll find yourself leaking memory very slowly. So slowly your VM might suddenly die because it no longer has memory, and so slowly you might not be able to easily track it until it happens again and again. Of course, you might say "If I take care and know what I'm doing, things will be fine". Maybe they will be fine, yeah. Maybe they won't. In a production system, you don't want to be taking chances, and in the case of Erlang, it's why you have garbage collection to begin with. Keeping things supervised is pretty useful.</p>
+
+<p>Another reason why it's useful is that it allows to terminate applications in good order. It will happen that you'll write Erlang software that is not meant to run forever. You'll still want it to terminate cleanly though. How do you know everything is ready to be shut down? With supervisors, it's easy. Whenever you want to terminate an application, you have the top supervisor of the VM shut down (this is done for you with functions like <code><a class="docs" href="http://erldocs.com/17.3/erts/init.html#stop/1">init:stop/1</a></code>). Then that supervisor asks each of its children to terminate. If some of the children are supervisors, they do the same:</p>
+
+<img class="center explanation" src="static/img/sup-tree-shutdown.png" width="264" height="264" alt="Same kind of supervisor tree as before, but the messages are going from top to bottom, and back up again. The child nodes are terminated before their parents." title="Yeah, not the clearest drawing!" />
+
+<p>This gives you a well-ordered VM shutdown, something that is very hard to do without having all of your processes being part of the tree.</p>
+
+<p>Of course, there are times where your process will be stuck for some reason and won't terminate correctly. When that happens, supervisors have a way to brutally kill the process.</p>
+
+<p>This is it for the basic theory of supervisors. We have workers, supervisors, supervision trees, different ways to specify dependencies, ways to tell supervisors when to give up on trying or waiting for their children, etc. This is not all that supervisors can do, but for now, this will let us cover the basic content required to actually use them.</p>
+
+
+<h3><a class="section" name="using-supervisors">Using Supervisors</a></h3>
+
+<p>This has been a very violent chapter so far: parents spend their time binding their children to trees, forcing them to work before brutally killing them. We wouldn't be real sadists without actually implementing it all though.</p>
+
+<p>When I said supervisors were simple to use, I wasn't kidding. There is a single callback function to provide: <code><a class="docs" href="http://erldocs.com/17.3/stdlib/supervisor.html#init/1">init/1</a></code>. It takes some arguments and that's about it. The catch is that it returns quite a complex thing. Here's an example return from a supervisor:</p>
+
+<pre class="brush:erl">
+{ok, {{one_for_all, 5, 60},
+      [{fake_id, 
+        {fake_mod, start_link, [SomeArg]},
+		permanent,
+        5000,
+        worker,
+        [fake_mod]},
+	   {other_id, 
+        {event_manager_mod, start_link, []},
+		transient,
+        infinity,
+        worker,
+        dynamic}]}}.
+</pre>
+
+<p>Say what? Yeah, that's pretty complex. A general definition might be a bit simpler to work with:</p>
+
+<pre class="brush:erl">
+{ok, {{RestartStrategy, MaxRestart, MaxTime},[ChildSpecs]}}.
+</pre>
+
+<p>Where <var>ChildSpec</var> stands for a child specification. <var>RestartStrategy</var> can be any of <code>one_for_one</code>, <code>rest_for_one</code>, <code>one_for_all</code> and <code>simple_one_for_one</code>.</p>
+
+<h4>one_for_one</h4>
+
+<p>One for one is an intuitive restart strategy. It basically means that if your supervisor supervises many workers and one of them fails, only that one should be restarted. You should use <code>one_for_one</code> whenever the processes being supervised are independent and not really related to each other, or when the process can restart and lose its state without impacting its siblings.</p>
+
+<img class="center explanation" src="static/img/restart-one-for-one.png" width="306" height="151" alt="Out of 3 children process set out left to right under a single supervisor, the middle one dies and is restarted" />
+
+<h4>one_for_all</h4>
+
+<p>One for all has little to do with musketeers. It's to be used whenever all your processes under a single supervisor heavily depend on each other to be able to work normally. Let's say you have decided to add a supervisor on top of the trading system we implemented back in the <a class="chapter" href="finite-state-machines.html">Rage Against The Finite State Machines</a> chapter. It wouldn't actually make sense to restart only one of the two traders if one of them crashed because their state would be out of sync. Restarting both of them at once would be a saner choice and <code>one_for_all</code> would be the strategy for that.</p>
+
+<img class="center explanation" src="static/img/restart-one-for-all.png" width="439" height="150" alt="Out of 3 children process set out left to right under a single supervisor, the middle one dies, then the two others are killed and then all are restarted" />
+
+<h4>rest_for_one</h4>
+
+<p>This is a more specific kind of strategy. Whenever you have to start processes that depend on each other in a chain (<var>A</var> starts <var>B</var>, which starts <var>C</var>, which starts <var>D</var>, etc.), you can use <code>rest_for_one</code>. It's also useful in the case of services where you have similar dependencies (<var>X</var> works alone, but <var>Y</var> depends on <var>X</var> and <var>Z</var> depends on both). What a <code>rest_for_one</code> restarting strategy does, basically, is make it so if a process dies, all the ones that were started after it (depend on it) get restarted, but not the other way around.</p>
+
+<img class="center explanation" src="static/img/restart-rest-for-one.png" width="439" height="150" alt="Out of 3 children process set out left to right under a single supervisor, the middle one dies, then the rightmost one is killed and then both are restarted" />
+
+<h4>simple_one_for_one</h4>
+
+<p>The <code>simple_one_for_one</code> restart strategy isn't the most simple one. We'll see it in more details when we get to use it, but it basically makes it so it takes only one kind of children, and it's to be used when you want to dynamically add them to the supervisor, rather than having them started statically.</p>
+
+<p>To say it a bit differently, a <code>simple_one_for_one</code> supervisor just sits around there, and it knows it can produce one kind of child only. Whenever you want a new one, you ask for it and you get it. This kind of thing could theoretically be done with the standard <code>one_for_one</code> supervisor, but there are practical advantages to using the simple version.</p>
+
+<div class="note">
+    <p><strong>Note:</strong> one of the big differences between <code>one_for_one</code> and <code>simple_one_for_one</code> is that <code>one_for_one</code> holds a list of all the children it has (and had, if you don't clear it), started in order, while <code>simple_one_for_one</code> holds a single definition for all its children and works using a <code>dict</code> to hold its data. Basically, when a process crashes, the <code>simple_one_for_one</code> supervisor will be much faster when you have a large number of children.</p>
+</div>
+
+<h4>Restart limits</h4>
+
+<p>The last part of the <var>RestartStrategy</var> tuple is the couple of variables <var>MaxRestart</var> and <var>MaxTime</var>. The idea is basically that if more than <var>MaxRestart</var>s happen within <var>MaxTime</var> (in seconds), the supervisor just gives up on your code, shuts it down then kills itself to never return (that's how bad it is). Fortunately, that supervisor's supervisor might still have hope in its children and start them all over again.</p>
+
+<h3><a class="section" name="child-specifications">Child Specifications</a></h3>
+
+<p>And now for the <var>ChildSpec</var> part of the return value. <var>ChildSpec</var> stands for <em>Child Specification</em>. Earlier we had the following two ChildSpecs:</p>
+
+<pre class="brush:erl">
+[{fake_id, 
+	{fake_mod, start_link, [SomeArg]},
+	permanent,
+	5000,
+	worker,
+	[fake_mod]},
+ {other_id, 
+	{event_manager_mod, start_link, []},
+	transient,
+	infinity,
+	worker,
+	dynamic}]
+</pre>
+
+<p>The child specification can be described in a more abstract form as:</p>
+
+<pre class="brush:erl">
+{ChildId, StartFunc, Restart, Shutdown, Type, Modules}.
+</pre>
+
+<h4>ChildId</h4>
+
+<p>The <var>ChildId</var> is just an internal name used by the supervisor internally. You will rarely need to use it yourself, although it might be useful for debugging purposes and sometimes when you decide to actually get a list of all the children of a supervisor. Any term can be used for the Id.</p>
+
+<h4>StartFunc</h4>
+
+<p><var>StartFunc</var> is a tuple that tells how to start the child. It's the standard <code>{M,F,A}</code> format we've used a few times already. Note that it is <em>very</em> important that the starting function here is OTP-compliant and links to its caller when executed (hint: use <code>gen_*:start_link()</code> wrapped in your own module, all the time).</p>
+
+<h4>Restart</h4>
+
+<p><var>Restart</var> tells the supervisor how to react when that particular child dies. This can take three values:</p>
+
+<ul>
+    <li>permanent</li>
+    <li>temporary</li>
+    <li>transient</li>
+</ul>
+
+<p>A permanent process should always be restarted, no matter what. The supervisors we implemented in our previous applications used this strategy only. This is usually used by vital, long-living processes (or services) running on your node.</p>
+
+<p>On the other hand, a temporary process is a process that should never be restarted. They are for short-lived workers that are expected to fail and which have few bits of code who depend on them.</p>
+
+<p>Transient processes are a bit of an in-between. They're meant to run until they terminate normally and then they won't be restarted. However, if they die of abnormal causes (exit reason is anything but <code>normal</code>), they're going to be restarted. This restart option is often used for workers that need to succeed at their task, but won't be used after they do so.</p>
+
+<p>You can have children of all three kinds mixed under a single supervisor. This might affect the restart strategy: a <code>one_for_all</code> restart won't be triggered by a temporary process dying, but that temporary process might be restarted under the same supervisor if a permanent process dies first!</p>
+
+<h4>Shutdown</h4>
+
+<p>Earlier in the text, I mentioned being able to shut down entire applications with the help of supervisors. This is how it's done. When the top-level supervisor is asked to terminate, it calls <code>exit(ChildPid, shutdown)</code> on each of the Pids. If the child is a worker and trapping exits, it'll call its own <code>terminate</code> function. Otherwise, it's just going to die. When a supervisor gets the <code>shutdown</code> signal, it will forward it to its own children the same way.</p>
+
+<p>The <var>Shutdown</var> value of a child specification is thus used to give a deadline on the termination. On certain workers, you know you might have to do things like properly close files, notify a service that you're leaving, etc. In these cases, you might want to use a certain cutoff time, either in milliseconds or <code>infinity</code> if you are really patient. If the time passes and nothing happens, the process is then brutally killed with <code>exit(Pid, kill)</code>. If you don't care about the child and it can pretty much die without any consequences without any timeout needed, the atom <code>brutal_kill</code> is also an acceptable value. <code>brutal_kill</code> will make it so the child is killed with <code>exit(Pid, kill)</code>, which is untrappable and instantaneous.</p>
+
+<p>Choosing a good <var>Shutdown</var> value is sometimes complex or tricky. If you have a chain of supervisors with <var>Shutdown</var> values like: <code>5000 -&gt; 2000 -&gt; 5000 -&gt; 5000</code>, the two last ones will likely end up brutally killed, because the second one had a shorter cutoff time. It is entirely application dependent, and few general tips can be given on the subject.</p>
+
+<div class="note">
+    <p><strong>Note:</strong> it is important to note that <code>simple_one_for_one</code> children are <em>not</em> respecting this rule with the <var>Shutdown</var> time. In the case of <code>simple_one_for_one</code>, the supervisor will just exit and it will be left to each of the workers to terminate on their own, after their supervisor is gone.</p>
+</div>
+
+<h4>Type</h4>
+
+<p>Type simply lets the supervisor know whether the child is a worker or a supervisor. This will be important when upgrading applications with more advanced OTP features, but you do not really need to care about this at the moment &mdash; only tell the truth and everything should be alright. You've got to trust your supervisors!</p>
+
+<h4>Modules</h4>
+
+<p><var>Modules</var> is a list of one element, the name of the callback module used by the child behavior. The exception to that is when you have callback modules whose identity you do not know beforehand (such as event handlers in an event manager). In this case, the value of <var>Modules</var> should be <code>dynamic</code> so that the whole OTP system knows who to contact when using more advanced features, such as <a class="docs" href="http://erlang.org/doc/design_principles/release_handling.html#11">releases</a>.</p>
+
+<p>Hooray, we now have the basic knowledge required to start supervised processes. You can take a break and digest it all, or move forward with more content!</p>
+
+<img class="center support" src="static/img/take-a-break.png" width="425" height="200" alt="A cup of coffee with cookies and a spoon. Text says 'take a break'" />
+
+<h3><a class="section" name="testing-it-out">Testing it Out</a></h3>
+
+<p>Some practice is in order. And in term of practice, the perfect example is a band practice. Well not that perfect, but bear with me for a while, because we'll go on quite an analogy as a pretext to try our hand at writing supervisors and whatnot.</p>
+
+<p>We're managing a band named <em>*RSYNC</em>, made of programmers playing a few common instruments: a drummer, a singer, a bass player and a keytar player, in memory of all the forgotten 80's glory. Despite a few retro hit song covers such as 'Thread Safety Dance' and 'Saturday Night Coder', the band has a hard time getting a venue. Annoyed with the whole situation, I storm into your office with yet another sugar rush-induced idea of simulating a band in Erlang because "at least we won't be hearing our guys". You're tired because you live in the same apartment as the drummer (who is the weakest link in this band, but they stick together with him because they do not know any other drummer, to be honest), so you accept. </p>
+
+<h4>Musicians</h4>
+
+<p>The first thing we can do is write the individual band members. For our use case, the <a class="source" href="static/erlang/musicians.erl">musicians module</a> will implement a <code>gen_server</code>. Each musician will take an instrument and a skill level as a parameter (so we can say the drummer sucks, while the others are alright). Once a musician has spawned, it shall start playing. We'll also have an option to stop them, if needed. This gives us the following module and interface:</p>
+
+<pre class="brush:erl">
+-module(musicians).
+-behaviour(gen_server).
+
+-export([start_link/2, stop/1]).
+-export([init/1, handle_call/3, handle_cast/2,
+         handle_info/2, code_change/3, terminate/2]).
+
+-record(state, {name="", role, skill=good}).
+-define(DELAY, 750).
+
+start_link(Role, Skill) -&gt;
+    gen_server:start_link({local, Role}, ?MODULE, [Role, Skill], []).
+
+stop(Role) -&gt; gen_server:call(Role, stop).
+</pre>
+
+<p>I've defined a <code>?DELAY</code> macro that we'll use as the standard time span between each time a musician will show himself as playing. As the record definition shows, we'll also have to give each of them a name:</p>
+
+<pre class="brush:erl">
+init([Role, Skill]) -&gt;
+    %% To know when the parent shuts down
+    process_flag(trap_exit, true),
+    %% sets a seed for random number generation for the life of the process
+    %% uses the current time to do it. Unique value guaranteed by now()
+    random:seed(now()),
+    TimeToPlay = random:uniform(3000),
+    Name = pick_name(),
+    StrRole = atom_to_list(Role),
+    io:format("Musician ~s, playing the ~s entered the room~n",
+              [Name, StrRole]),
+    {ok, #state{name=Name, role=StrRole, skill=Skill}, TimeToPlay}.
+</pre>
+
+<p>Two things go on in the <code>init/1</code> function. First we start trapping exits. If you recall the description of the <code>terminate/2</code> from the <a class="chapter" href="clients-and-servers.html">Generic Servers chapter</a>, we need to do this if we want <code>terminate/2</code> to be called when the server's parent shuts down its children. The rest of the <code>init/1</code> function is setting a random seed (so that each process gets different random numbers) and then creates a random name for itself. The functions to create the names are:</p>
+
+<pre class="brush:erl">
+%% Yes, the names are based off the magic school bus characters'
+%% 10 names!
+pick_name() -&gt;
+    %% the seed must be set for the random functions. Use within the
+    %% process that started with init/1
+    lists:nth(random:uniform(10), firstnames())
+    ++ " " ++
+    lists:nth(random:uniform(10), lastnames()).
+
+firstnames() -&gt;
+    ["Valerie", "Arnold", "Carlos", "Dorothy", "Keesha",
+     "Phoebe", "Ralphie", "Tim", "Wanda", "Janet"].
+
+lastnames() -&gt;
+    ["Frizzle", "Perlstein", "Ramon", "Ann", "Franklin",
+     "Terese", "Tennelli", "Jamal", "Li", "Perlstein"].
+</pre>
+
+<p>Alright! We can move on to the implementation. This one is going to be pretty trivial for <code>handle_call</code> and <code>handle_cast</code>:</p>
+
+<pre class="brush:erl">
+handle_call(stop, _From, S=#state{}) -&gt;
+    {stop, normal, ok, S};
+handle_call(_Message, _From, S) -&gt;
+    {noreply, S, ?DELAY}.
+
+handle_cast(_Message, S) -&gt;
+    {noreply, S, ?DELAY}.
+</pre>
+
+<p>The only call we have is to stop the musician server, which we agree to do pretty quick. If we receive an unexpected message, we do not reply to it and the caller will crash. Not our problem. We set the timeout in the <code>{noreply, S, ?DELAY}</code> tuples, for one simple reason that we'll see right now:</p>
+
+<pre class="brush:erl">
+handle_info(timeout, S = #state{name=N, skill=good}) -&gt;
+    io:format("~s produced sound!~n",[N]),
+    {noreply, S, ?DELAY};
+handle_info(timeout, S = #state{name=N, skill=bad}) -&gt;
+    case random:uniform(5) of
+        1 -&gt;
+            io:format("~s played a false note. Uh oh~n",[N]),
+            {stop, bad_note, S};
+        _ -&gt;
+            io:format("~s produced sound!~n",[N]),
+            {noreply, S, ?DELAY}
+    end;
+handle_info(_Message, S) -&gt;
+    {noreply, S, ?DELAY}.
+</pre>
+
+<p>Each time the server times out, our musicians are going to play a note. If they're good, everything's going to be completely fine. If they're bad, they'll have one chance out of 5 to miss and play a bad note, which will make them crash. Again, we set the <code>?DELAY</code> timeout at the end of each non-terminating call.</p>
+
+<p>Then we add an empty <code>code_change/3</code> callback, as required by the 'gen_server' behaviour:</p>
+
+<pre class="brush:erl">
+code_change(_OldVsn, State, _Extra) -&gt;
+    {ok, State}.
+</pre>
+
+<p>And we can set the terminate function:</p>
+
+<pre class="brush:erl">
+terminate(normal, S) -&gt;
+    io:format("~s left the room (~s)~n",[S#state.name, S#state.role]);
+terminate(bad_note, S) -&gt;
+    io:format("~s sucks! kicked that member out of the band! (~s)~n",
+              [S#state.name, S#state.role]);
+terminate(shutdown, S) -&gt;
+    io:format("The manager is mad and fired the whole band! "
+              "~s just got back to playing in the subway~n",
+              [S#state.name]);
+terminate(_Reason, S) -&gt;
+    io:format("~s has been kicked out (~s)~n", [S#state.name, S#state.role]).
+</pre>
+
+<img class="right" src="static/img/bus.png" width="172" height="134" alt="A short school bus" /> 
+
+<p>We've got many different messages here. If we terminate with a <code>normal</code> reason, it means we've called the <code>stop/1</code> function and so we display the the musician left of his/her own free will. In the case of a <code>bad_note</code> message, the musician will crash and we'll say that it's because the manager (the supervisor we'll soon add) kicked him out of the game.<br />
+Then we have the <code>shutdown</code> message, which will come from the supervisor. Whenever that happens, it means the supervisor decided to kill all of its children, or in our case, fired all of his musicians. We then add a generic error message for the rest. </p>
+
+<p>Here's a simple use case of a musician:</p>
+
+
+<pre class="brush:eshell">
+1&gt; c(musicians).
+{ok,musicians}
+2&gt; musicians:start_link(bass, bad).
+Musician Ralphie Franklin, playing the bass entered the room
+{ok,&lt;0.615.0&gt;}
+Ralphie Franklin produced sound!
+Ralphie Franklin produced sound!
+Ralphie Franklin played a false note. Uh oh
+Ralphie Franklin sucks! kicked that member out of the band! (bass)
+3&gt; 
+=ERROR REPORT==== 6-Mar-2011::03:22:14 ===
+** Generic server bass terminating 
+** Last message in was timeout
+** When Server state == {state,"Ralphie Franklin","bass",bad}
+** Reason for termination == 
+** bad_note
+** exception error: bad_note
+</pre>
+
+<p>So we have Ralphie playing and crashing after a bad note. Hooray. If you try the same with a <code>good</code> musician, you'll need to call our <code>musicians:stop(Instrument)</code> function in order to stop all the playing.</p>
+
+
+<h4>Band Supervisor</h4>
+
+<p>We can now work with the supervisor. We'll have three grades of supervisors: a lenient one, an angry one, and a total jerk. The difference between them is that the lenient supervisor, while still a very pissy person, will fire a single member of the band at a time (<code>one_for_one</code>), the one who fails, until he gets fed up, fires them all and gives up on bands. The angry supervisor, on the other hand, will fire some of them (<code>rest_for_one</code>) on each mistake and will wait shorter before firing them all and giving up. Then the jerk supervisor will fire the whole band each time someone makes a mistake, and give up if the bands fail even less often.</p>
+
+<pre class="brush:erl">
+-module(band_supervisor).
+-behaviour(supervisor).
+
+-export([start_link/1]).
+-export([init/1]).
+
+start_link(Type) -&gt;
+    supervisor:start_link({local,?MODULE}, ?MODULE, Type).
+
+%% The band supervisor will allow its band members to make a few
+%% mistakes before shutting down all operations, based on what
+%% mood he's in. A lenient supervisor will tolerate more mistakes
+%% than an angry supervisor, who'll tolerate more than a
+%% complete jerk supervisor
+init(lenient) -&gt;
+    init({one_for_one, 3, 60});
+init(angry) -&gt;
+    init({rest_for_one, 2, 60});
+init(jerk) -&gt;
+    init({one_for_all, 1, 60});
+</pre>
+
+
+<p>The init definition doesn't finish there, but this lets us set the tone for each of the kinds of supervisor we want. The lenient one will only restart one musician and will fail on the fourth failure in 60 seconds. The second one will accept only 2 failures and the jerk supervisor will have very strict standards there!</p>
+
+<p>Now let's finish the function and actually implement the band starting functions and whatnot:</p>
+
+<pre class="brush:erl">
+init({RestartStrategy, MaxRestart, MaxTime}) -&gt;
+    {ok, {{RestartStrategy, MaxRestart, MaxTime},
+         [{singer,
+           {musicians, start_link, [singer, good]},
+           permanent, 1000, worker, [musicians]},
+          {bass,
+           {musicians, start_link, [bass, good]},
+           temporary, 1000, worker, [musicians]},
+          {drum,
+           {musicians, start_link, [drum, bad]},
+           transient, 1000, worker, [musicians]},
+          {keytar,
+           {musicians, start_link, [keytar, good]},
+           transient, 1000, worker, [musicians]}
+         ]}}.
+</pre>
+
+<p>So we can see we'll have 3 good musicians: the singer, bass player and keytar player. The drummer is terrible (which makes you pretty mad). The musicians have different <var>Restart</var>s (permanent, transient or temporary), so the band could never work without a singer even if the current one left of his own will, but could still play real fine without a bass player, because frankly, who gives a crap about bass players?</p>
+
+<p>That gives us a functional <a class="source" href="static/erlang/band_supervisor.erl">band_supervisor module</a>, which we can now try:</p>
+
+<pre class="brush:eshell">
+3&gt; c(band_supervisor).             
+{ok,band_supervisor}
+4&gt; band_supervisor:start_link(lenient).
+Musician Carlos Terese, playing the singer entered the room
+Musician Janet Terese, playing the bass entered the room
+Musician Keesha Ramon, playing the drum entered the room
+Musician Janet Ramon, playing the keytar entered the room
+{ok,&lt;0.623.0&gt;}
+Carlos Terese produced sound!
+Janet Terese produced sound!
+Keesha Ramon produced sound!
+Janet Ramon produced sound!
+Carlos Terese produced sound!
+Keesha Ramon played a false note. Uh oh
+Keesha Ramon sucks! kicked that member out of the band! (drum)
+... &lt;snip&gt; ...
+Musician Arnold Tennelli, playing the drum entered the room
+Arnold Tennelli produced sound!
+Carlos Terese produced sound!
+Janet Terese produced sound!
+Janet Ramon produced sound!
+Arnold Tennelli played a false note. Uh oh
+Arnold Tennelli sucks! kicked that member out of the band! (drum)
+... &lt;snip&gt; ...
+Musician Carlos Frizzle, playing the drum entered the room
+... &lt;snip for a few more firings&gt; ...
+Janet Jamal played a false note. Uh oh
+Janet Jamal sucks! kicked that member out of the band! (drum)
+The manager is mad and fired the whole band! Janet Ramon just got back to playing in the subway
+The manager is mad and fired the whole band! Janet Terese just got back to playing in the subway
+The manager is mad and fired the whole band! Carlos Terese just got back to playing in the subway
+** exception error: shutdown
+</pre>
+
+<p>Magic! We can see that only the drummer is fired, and after a while, everyone gets it too. And off to the subway (tubes for the UK readers) they go!</p>
+
+<p>You can try with other kinds of supervisors and it will end the same. The only difference will be the restart strategy:</p>
+
+<pre class="brush:eshell">
+5&gt; band_supervisor:start_link(angry).  
+Musician Dorothy Frizzle, playing the singer entered the room
+Musician Arnold Li, playing the bass entered the room
+Musician Ralphie Perlstein, playing the drum entered the room
+Musician Carlos Perlstein, playing the keytar entered the room
+... &lt;snip&gt; ...
+Ralphie Perlstein sucks! kicked that member out of the band! (drum)
+...
+The manager is mad and fired the whole band! Carlos Perlstein just got back to playing in the subway
+</pre>
+
+<p>For the angry one, both the drummer and the keytar players get fired when the drummer makes a mistake. This nothing compared to the jerk's behaviour:</p>
+
+<pre class="brush:eshell">
+6&gt; band_supervisor:start_link(jerk).
+Musician Dorothy Franklin, playing the singer entered the room
+Musician Wanda Tennelli, playing the bass entered the room
+Musician Tim Perlstein, playing the drum entered the room
+Musician Dorothy Frizzle, playing the keytar entered the room
+... &lt;snip&gt; ...
+Tim Perlstein played a false note. Uh oh
+Tim Perlstein sucks! kicked that member out of the band! (drum)
+The manager is mad and fired the whole band! Dorothy Franklin just got back to playing in the subway
+The manager is mad and fired the whole band! Wanda Tennelli just got back to playing in the subway
+The manager is mad and fired the whole band! Dorothy Frizzle just got back to playing in the subway
+</pre>
+
+<p>That's most of it for the restart strategies that are not dynamic.</p>
+
+<h3><a class="section" name="dynamic-supervision">Dynamic Supervision</a></h3>
+
+<p>So far the kind of supervision we've seen has been static. We specified all the children we'd have right in the source code and let everything run after that. This is how most of your supervisors might end up being set in real world applications; they're usually there for the supervision of architectural components. On the other hand, you have supervisors who act over undetermined workers. They're usually there on a per-demand basis. Think of a web server that would spawn a process per connection it receives. In this case, you would want a dynamic supervisors to look over all the different processes you'll have.</p>
+
+<p>Every time a worker is added to a supervisor using the <code>one_for_one</code>, <code>rest_for_one</code>, or <code>one_for_all</code> strategies, the child specification is added to a list in the supervisor, along with a pid and some other information. The child specification can then be used to restart the child and whatnot. Because things work that way, the following interface exists:</p>
+
+<dl>
+    <dt>start_child(SupervisorNameOrPid, ChildSpec)</dt>
+    <dd>This adds a child specification to the list and starts the child with it</dd>
+
+    <dt>terminate_child(SupervisorNameOrPid, ChildId)</dt>
+    <dd>Terminates or brutal_kills the child. The child specification is left in the supervisor</dd>
+
+    <dt>restart_child(SupervisorNameOrPid, ChildId)</dt>
+    <dd>Uses the child specification to get things rolling.</dd>
+
+    <dt>delete_child(SupervisorNameOrPid, ChildId)</dt>
+    <dd>Gets rid of the ChildSpec of the specified child</dd>
+
+    <dt>check_childspecs([ChildSpec])</dt>
+    <dd>Makes sure a child specification is valid. You can use this to try it before using 'start_child/2'.</dd>
+
+    <dt>count_children(SupervisorNameOrPid)</dt>
+    <dd>Counts all the children under the supervisor and gives you a little comparative list of who's active, how many specs there are, how many are supervisors and how many are workers.</dd>
+
+    <dt>which_children(SupervisorNameOrPid)</dt>
+    <dd>gives you a list of all the children under the supervisor.</dd>
+</dl>
+
+<p>Let's see how this works with musicians, with the output removed (you need to be quick to outrace the failing drummer!)</p>
+
+<pre class="brush:eshell">
+1&gt; band_supervisor:start_link(lenient).
+{ok,0.709.0&gt;}
+2&gt; supervisor:which_children(band_supervisor).
+[{keytar,&lt;0.713.0&gt;,worker,[musicians]},
+ {drum,&lt;0.715.0&gt;,worker,[musicians]},
+ {bass,&lt;0.711.0&gt;,worker,[musicians]},
+ {singer,&lt;0.710.0&gt;,worker,[musicians]}]
+3&gt; supervisor:terminate_child(band_supervisor, drum).
+ok
+4&gt; supervisor:terminate_child(band_supervisor, singer).
+ok
+5&gt; supervisor:restart_child(band_supervisor, singer).
+{ok,&lt;0.730.0&gt;}
+6&gt; supervisor:count_children(band_supervisor).
+[{specs,4},{active,3},{supervisors,0},{workers,4}]
+7&gt; supervisor:delete_child(band_supervisor, drum).     
+ok
+8&gt; supervisor:restart_child(band_supervisor, drum).  
+{error,not_found}
+9&gt; supervisor:count_children(band_supervisor).     
+[{specs,3},{active,3},{supervisors,0},{workers,3}]
+</pre>
+
+<p>And you can see how you could dynamically manage the children. This works well for anything dynamic which you need to manage (I want to start this one, terminate it, etc.) and which are in little number. Because the internal representation is a list, this won't work very well when you need quick access to many children.</p>
+
+<img class="right" src="static/img/guitar-case.png" width="317" height="227" alt="a guitar case with some money inside it" title="Why yes dad, this is my retirement plan" />
+
+<p>In these case, what you want is <code>simple_one_for_one</code>. The problem with <code>simple_one_for_one</code> is that it will not allow you to manually restart a child, delete it or terminate it. This loss in flexibility is fortunately accompanied by a few advantages. All the children are held in a dictionary, which makes looking them up fast. There is also a single child specification for all children under the supervisor. This will save you memory and time in that you will never need to delete a child yourself or store any child specification.</p>
+
+<p>For the most part, writing a <code>simple_one_for_one</code> supervisor is similar to writing any other type of supervisor, except for one thing. The argument list in the <code>{M,F,A}</code> tuple is not the whole thing, but is going to be appended to what you call it with when you do <code>supervisor:start_child(Sup, Args)</code>. That's right, <code>supervisor:start_child/2</code> changes API. So instead of doing <code>supervisor:start_child(Sup, Spec)</code>, which would call <code><a class="docs" href="http://erldocs.com/17.3/erts/erlang.html#apply/3">erlang:apply(M,F,A)</a></code>, we now have <code>supervisor:start_child(Sup, Args)</code>, which calls <code>erlang:apply(M,F,A++Args)</code>.</p>
+
+<p>Here's how we'd write it for our <a class="source" href="static/erlang/band_supervisor.erl">band_supervisor</a>. Just add the following clause somewhere in it:</p>
+
+<pre class="brush:erl">
+init(jamband) -&gt;
+    {ok, {{simple_one_for_one, 3, 60},
+         [{jam_musician,
+           {musicians, start_link, []},
+           temporary, 1000, worker, [musicians]}
+         ]}};
+</pre>
+
+<p>I've made them all temporary in this case, and the supervisor is quite lenient:</p>
+
+<pre class="brush:eshell">
+1&gt; supervisor:start_child(band_supervisor, [djembe, good]).
+Musician Janet Tennelli, playing the djembe entered the room
+{ok,&lt;0.690.0&gt;}
+2&gt; supervisor:start_child(band_supervisor, [djembe, good]).
+{error,{already_started,&lt;0.690.0&gt;}}
+</pre>
+
+<p>Whoops! this happens because we register the djembe player as <code>djembe</code> as part of the start call to our <code>gen_server</code>. If we didn't name them or used a different name for each, it wouldn't cause a problem. Really, here's one with the name <code>drum</code> instead:</p>
+
+<pre class="brush:eshell">
+3&gt; supervisor:start_child(band_supervisor, [drum, good]).
+Musician Arnold Ramon, playing the drum entered the room
+{ok,&lt;0.696.0&gt;}
+3&gt; supervisor:start_child(band_supervisor, [guitar, good]).
+Musician Wanda Perlstein, playing the guitar entered the room
+{ok,&lt;0.698.0&gt;}
+4&gt; supervisor:terminate_child(band_supervisor, djembe).
+{error,simple_one_for_one}
+</pre>
+
+<p>Right. As I said, no way to control children that way.</p>
+
+<pre class="brush:eshell">
+5&gt; musicians:stop(drum).
+Arnold Ramon left the room (drum)
+ok
+</pre>
+
+<p>And this works better.</p>
+
+<p>As a general (and sometimes wrong) hint, I'd tell you to use standard supervisors dynamically only when you know with certainty that you will have few children to supervise and/or that they won't need to be manipulated with any speed and rather infrequently. For other kinds of dynamic supervision, use <code>simple_one_for_one</code> where possible.</p>
+
+<div class="note update">
+	<p><strong>update:</strong><br />
+	Since version R14B03, it is possible to terminate children with the function <code>supervisor:terminate_child(SupRef, Pid)</code>. Simple one for one supervison schemes are now possible to make fully dynamic and have become an all-around interesting choice for when you have many processes running a single type of process.</p>
+</div>
+
+<p>That's about it for the supervision strategies and child specification. Right now you might be having doubts on 'how the hell am I going to get a working application out of that?' and if that's the case, you'll be happy to get to the next chapter, which actually builds a simple application with a short supervision tree, to see how it could be done in the real world.</p>
+				<ul class="navigation">
+											<li><a href="event-handlers.html" title="Previous chapter">&lt; Previous</a></li>
+										
+					<li><a href="contents.html" title="Index">Index</a></li>
+					
+											<li><a href="building-applications-with-otp.html" title="Next chapter">Next &gt;</a></li>
+									</ul>
+			</div><!-- content -->
+			<div id="footer">
+				<a href="http://creativecommons.org/licenses/by-nc-nd/3.0/" title="Creative Commons License Details"><img src="static/img/cc.png" width="88" height="31" alt="Creative Commons Attribution Non-Commercial No Derivative License" /></a>
+				<p>Except where otherwise noted, content on this site is licensed under a Creative Commons Attribution Non-Commercial No Derivative License</p>
+			</div> <!-- footer -->
+		</div> <!-- wrapper -->
+		<div id="grass" />
+	<script type="text/javascript" src="static/js/shCore.js"></script>
+	<script type="text/javascript" src="static/js/shBrushErlang2.js%3F11"></script>
+	<script type="text/javascript">
+		SyntaxHighlighter.defaults.gutter = false;
+		SyntaxHighlighter.all();
+	</script>
+	</body>
+</html>

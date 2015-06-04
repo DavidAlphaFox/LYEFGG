@@ -1,0 +1,900 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en" dir="ltr">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<meta http-equiv="Content-Style-Type" content="text/css" />
+		<meta name="keywords" content="Erlang, OTP, behaviour, gen_fsm, generic, Finite-State Machine, callback, protocol, module, asynchronous" />
+		<meta name="description" content="Presenting finite-state machines and their OTP implementation with an asynchronous item trading system for a fictive game" />
+        <meta name="google-site-verification" content="mi1UCmFD_2pMLt2jsYHzi_0b6Go9xja8TGllOSoQPVU" />
+		<link rel="stylesheet" type="text/css" href="static/css/screen.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/sh/shCore.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/sh/shThemeLYSE2.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/print.css" media="print" />
+		<link href="rss" type="application/rss+xml" rel="alternate" title="LYSE news" />
+		<link rel="icon" type="image/png" href="favicon.ico" />
+		<link rel="apple-touch-icon" href="static/img/touch-icon-iphone.png" />
+		<link rel="apple-touch-icon" sizes="72x72" href="static/img/touch-icon-ipad.png" />
+		<link rel="apple-touch-icon" sizes="114x114" href="static/img/touch-icon-iphone4.png" />
+		<title>Rage Against The Finite-State Machines | Learn You Some Erlang for Great Good!</title>
+	</head>
+	<body>
+		<div id="wrapper">
+			<div id="header">
+				<h1>Learn you some Erlang</h1>
+				<span>for great good!</span>
+			</div> <!-- header -->
+			<div id="menu">
+				<ul>
+					<li><a href="content.html" title="Home">Home</a></li>
+					<li><a href="faq.html" title="Frequently Asked Questions">FAQ</a></li>
+					<li><a href="rss" title="Latest News">RSS</a></li>
+					<li><a href="static/erlang/learn-you-some-erlang.zip" title="Source Code">Code</a></li>
+				</ul>
+			</div><!-- menu -->
+			<div id="content">
+            <div class="noscript"><noscript>Hey there, it appears your Javascript is disabled. That's fine, the site works without it. However, you might prefer reading it with syntax highlighting, which requires Javascript!</noscript></div>
+<h2>Rage Against The Finite-State Machines</h2>
+<h3><a class="section" name="what-are-they">What Are They?</a></h3>
+
+<p>A finite-state machine (FSM) is not really a machine, but it does have a finite number of states. I've always found finite-state machines easier to understand with graphs and diagrams. For example, the following would be a simplistic diagram for a (very dumb) dog as a state machine:</p>
+
+<img class="center explanation" src="static/img/fsm_dog.png" width="284" height="161" alt="A dog supports 3 states: barks, wag tail and sits. A barking dog can have the action 'gets petted' applied to it, prompting a transition to 'wag tail'. If the dog waits for too long, it goes back to barks state. If it gets petted more, it will sit until it sees a squirrel and starts barking again" />
+
+<p>Here the dog has 3 states: sitting, barking or wagging its tail. Different events or inputs may force it to change its state. If a dog is calmly sitting and sees a squirrel, it will start barking and won't stop until you pet it again. However, if the dog is sitting and you pet it, we have no idea what might happen. In the Erlang world, the dog could crash (and eventually be restarted by its supervisor). In the real world that would be a freaky event, but your dog would come back after being ran over by a car, so it's not all bad.</p>
+
+<p>Here's a cat's state diagram for a comparison:</p>
+
+<img class="center explanation" src="static/img/fsm_cat.png" width="200" height="102" alt="A cat only has the state 'doesn't give a crap about you' and can receive any event, remaining in that state." />
+
+<p>This cat has a single state, and no event can ever change it.</p>
+
+<p>Implementing the <a class="source" href="static/erlang/cat_fsm.erl">cat state machine</a> in Erlang is a fun and simple task:</p>
+
+<pre class="brush:erl">
+-module(cat_fsm).
+-export([start/0, event/2]).
+
+start() -&gt;
+	spawn(fun() -&gt; dont_give_crap() end).
+
+event(Pid, Event) -&gt;
+	Ref = make_ref(), % won't care for monitors here
+	Pid ! {self(), Ref, Event},
+	receive
+		{Ref, Msg} -&gt; {ok, Msg}
+	after 5000 -&gt;
+		{error, timeout}
+	end.
+
+dont_give_crap() -&gt;
+	receive
+		{Pid, Ref, _Msg} -&gt; Pid ! {Ref, meh};
+		_ -&gt; ok
+	end,
+	io:format("Switching to 'dont_give_crap' state~n"),
+	dont_give_crap().
+</pre>
+
+<p>We can try the module to see that the cat really never gives a crap:</p>
+
+<pre class="brush:eshell">
+1&gt; c(cat_fsm).
+{ok,cat_fsm}
+2&gt; Cat = cat_fsm:start().
+&lt;0.67.0&gt;
+3&gt; cat_fsm:event(Cat, pet).
+Switching to 'dont_give_crap' state
+{ok,meh}
+4&gt; cat_fsm:event(Cat, love).
+Switching to 'dont_give_crap' state
+{ok,meh}
+5&gt; cat_fsm:event(Cat, cherish).
+Switching to 'dont_give_crap' state
+{ok,meh}
+</pre>
+
+<p>The same can be done for the <a class="source" href="static/erlang/dog_fsm.erl">dog FSM</a>, except more states are available: </p>
+
+<pre class="brush:erl">
+-module(dog_fsm).
+-export([start/0, squirrel/1, pet/1]).
+
+start() -&gt;
+	spawn(fun() -&gt; bark() end).
+
+squirrel(Pid) -&gt; Pid ! squirrel.
+
+pet(Pid) -&gt; Pid ! pet.
+
+bark() -&gt;
+    io:format("Dog says: BARK! BARK!~n"),
+    receive
+        pet -&gt;
+            wag_tail();
+        _ -&gt;
+            io:format("Dog is confused~n"),
+            bark()
+    after 2000 -&gt;
+        bark()
+    end.
+
+wag_tail() -&gt;
+    io:format("Dog wags its tail~n"),
+    receive
+        pet -&gt;
+            sit();
+        _ -&gt;
+            io:format("Dog is confused~n"),
+            wag_tail()
+    after 30000 -&gt;
+        bark()
+    end.
+
+sit() -&gt;
+    io:format("Dog is sitting. Gooooood boy!~n"),
+    receive
+        squirrel -&gt;
+            bark();
+        _ -&gt;
+            io:format("Dog is confused~n"),
+            sit()
+    end.
+</pre>
+
+<p>It should be relatively simple to match each of the states and transitions to what was on the diagram above. Here's the FSM in use:</p>
+
+<pre class="brush:eshell">
+6&gt; c(dog_fsm).
+{ok,dog_fsm}
+7&gt; Pid = dog_fsm:start().
+Dog says: BARK! BARK!
+&lt;0.46.0&gt;
+Dog says: BARK! BARK!
+Dog says: BARK! BARK!
+Dog says: BARK! BARK!
+8&gt; dog_fsm:pet(Pid).
+pet
+Dog wags its tail
+9&gt; dog_fsm:pet(Pid).
+Dog is sitting. Gooooood boy!
+pet
+10&gt; dog_fsm:pet(Pid).
+Dog is confused
+pet
+Dog is sitting. Gooooood boy!
+11&gt; dog_fsm:squirrel(Pid).
+Dog says: BARK! BARK!
+squirrel
+Dog says: BARK! BARK!    
+12&gt; dog_fsm:pet(Pid).
+Dog wags its tail
+pet
+13&gt; %% wait 30 seconds
+Dog says: BARK! BARK!
+Dog says: BARK! BARK!
+Dog says: BARK! BARK!     
+13&gt; dog_fsm:pet(Pid).     
+Dog wags its tail
+pet
+14&gt; dog_fsm:pet(Pid).
+Dog is sitting. Gooooood boy!
+pet
+</pre>
+
+<p>You can follow along with the schema if you want (I usually do, it helps being sure that nothing's wrong).</p>
+
+<p>That's really the core of FSMs implemented as Erlang processes. There are things that could have been done differently: we could have passed state in the arguments of the state functions in a way similar to what we do with servers' main loop. We could also have added an <code>init</code> and <code>terminate</code> functions, handled code updates, etc.</p>
+
+<p>Another difference between the dog and cat FSMs is that the cat's events are <em>synchronous</em> and the dog's events are <em>asynchronous</em>. In a real FSM, both could be used in a mixed manner, but I went for the simplest representation out of pure untapped laziness. There are other forms of event the examples do not show: global events that can happen in any state.</p>
+
+<p>One example of such an event could be when the dog gets a sniff of food. Once the <code>smell food</code> event is triggered, no matter what state the dog is in, he'd go looking for the source of food.</p>
+
+<p>Now we won't spend too much time implementing all of this in our 'written-on-a-napkin' FSM. Instead we'll move directly to the <code>gen_fsm</code> behaviour.</p>
+
+
+<h3><a class="section" name="generic-finite-state-machines">Generic Finite-State Machines</a></h3>
+
+<p>The <code>gen_fsm</code> behaviour is somewhat similar to <code>gen_server</code> in that it is a specialised version of it. The biggest difference is that rather than handling <em>calls</em> and <em>casts</em>, we're handling <em>synchronous</em> and <em>asynchronous</em> <em>events</em>. Much like our dog and cat examples, each state is represented by a function. Again, we'll go through the callbacks our modules need to implement in order to work.</p>
+
+<h4>init</h4>
+
+<p>This is the same <a class="docs" href="http://erldocs.com/17.3/stdlib/gen_fsm.html#init/1">init/1</a> as used for generic servers, except the return values accepted are <code>{ok, StateName, Data}</code>, <code>{ok, StateName, Data, Timeout}</code>, <code>{ok, StateName, Data, hibernate}</code> and <code>{stop, Reason}</code>. The <code>stop</code> tuple works in the same manner as for <code>gen_server</code>s, and <code>hibernate</code> and <var>Timeout</var> keep the same semantics.</p>
+
+<p>What's new here is that <var>StateName</var> variable. <var>StateName</var> is an atom and represents the next callback function to be called.</p>
+
+<img class="right" src="static/img/dog.png" width="171" height="220" alt="A samoyed dog barking" />
+
+<h4>StateName</h4>
+
+<p>The functions <a class="docs" href="http://erldocs.com/17.3/stdlib/gen_fsm.html#StateName/2">StateName/2</a> and <a class="docs" href="http://erldocs.com/17.3/stdlib/gen_fsm.html#StateName/3">StateName/3</a> are placeholder names and you are to decide what they will be. Let's suppose the <code>init/1</code> function returns the tuple <code>{ok, sitting, dog}</code>. This means the finite state machine will be in a <code>sitting</code> state. This is not the same kind of state as we had seen with <code>gen_server</code>; it is rather equivalent to the <code>sit</code>, <code>bark</code> and <code>wag_tail</code> states of the previous dog FSM. These states dictate a context in which you handle a given event.</p>
+
+<p>An example of this would be someone calling you on your phone. If you're in the state 'sleeping on a Saturday morning', your reaction might be to yell in the phone. If your state is 'waiting for a job interview', chances are you'll pick the phone and answer politely. On the other hand, if you're in the state 'dead', then I am surprised you can even read this text at all.</p>
+
+<p>Back to our FSM. The <code>init/1</code> function said we should be in the <code>sitting</code> state. Whenever the <code>gen_fsm</code> process receives an event, either the function <code>sitting/2</code> or <code>sitting/3</code> will be called. The <code>sitting/2</code> function is called for asynchronous events and <code>sitting/3</code> for synchronous ones.</p>
+
+<p>The arguments for <code>sitting/2</code> (or generally <code>StateName/2</code>) are <var>Event</var>, the actual message sent as an event, and <var>StateData</var>, the data that was carried over the calls. <code>sitting/2</code> can then return the tuples <code>{next_state, NextStateName, NewStateData}</code>, <code>{next_state, NextStateName, NewStateData, Timeout}</code>, <code>{next_state, NextStateName, NewStateData, hibernate}</code> and <code>{stop, Reason, NewStateData}</code>.</p>
+
+<p>The arguments for <code>sitting/3</code> are similar, except there is a <var>From</var> variable in between <var>Event</var> and <var>StateData</var>. The <var>From</var> variable is used in exactly the same way as it was for <code>gen_server</code>s, including <a class="docs" href="http://erldocs.com/17.3/stdlib/gen_fsm.html#reply/2">gen_fsm:reply/2</a>. The <code>StateName/3</code> functions can return the following tuples:</p>
+
+<pre class="expand">
+{reply, Reply, NextStateName, NewStateData}
+{reply, Reply, NextStateName, NewStateData, Timeout}
+{reply, Reply, NextStateName, NewStateData, hibernate}
+
+{next_state, NextStateName, NewStateData}
+{next_state, NextStateName, NewStateData, Timeout}
+{next_state, NextStateName, NewStateData, hibernate}
+
+{stop, Reason, Reply, NewStateData}
+{stop, Reason, NewStateData}
+</pre>
+
+<p>Note that there's no limit on how many of these functions you can have, as long as they are exported. The atoms returned as <var>NextStateName</var> in the tuples will determine whether the function will be called or not.</p>
+
+
+<h4>handle_event</h4>
+
+<p>In the last section, I mentioned global events that would trigger a specific reaction no matter what state we're in (the dog smelling food will drop whatever it is doing and will instead look for food). For these events that should be treated the same way in every state, the <a class="docs" href="http://erldocs.com/17.3/stdlib/gen_fsm.html#handle_event/3">handle_event/3</a> callback is what you want. The function takes arguments similar to <code>StateName/2</code> with the exception that it accepts a <var>StateName</var> variable in between them, telling you what the state was when the event was received. It returns the same values as <code>StateName/2</code>.</p>
+
+<h4>handle_sync_event</h4>
+
+<p>The <a class="docs" href="http://erldocs.com/17.3/stdlib/gen_fsm.html#handle_sync_event/4">handle_sync_event/4</a> callback is to <code>StateName/3</code> what <code>handle_event/2</code> is to <code>StateName/2</code>. It handles synchronous global events, takes the same parameters and returns the same kind of tuples as <code>StateName/3</code>.</p>
+
+<p>Now might be a good time to explain how we know whether an event is global or if it's meant to be sent to a specific state. To determine this we can look at the function used to send an event to the FSM. Asynchronous events aimed at any <code>StateName/2</code> function are sent with <a class="docs" href="http://erldocs.com/17.3/stdlib/gen_fsm.html#send_event/2">send_event/2</a>, synchronous events to be picked up by <code>StateName/3</code> are to be sent with <a class="docs" href="http://erldocs.com/17.3/stdlib/gen_fsm.html#sync_send_event/2">sync_send_event/2-3</a>.</p>
+
+<p>The two equivalent functions for global events are <a class="docs" href="http://erldocs.com/17.3/stdlib/gen_fsm.html#send_all_state_event/2">send_all_state_event/2</a> and <a class="docs" href="http://erldocs.com/17.3/stdlib/gen_fsm.html#sync_send_all_state_event/2">sync_send_all_state_event/2-3</a> (quite a long name).</p>
+
+
+<h4>code_change</h4>
+
+<p>This works exactly the same as it did for <code>gen_server</code>s except that it takes an extra state parameter when called like <code>code_change(OldVersion, StateName, Data, Extra)</code>, and returns a tuple of the form <code>{ok, NextStateName, NewStateData}</code>.</p>
+
+
+<h4>terminate</h4>
+
+<p>This should, again, act a bit like what we have for generic servers. <a class="docs" href="http://erldocs.com/17.3/stdlib/gen_fsm.html#terminate/3">terminate/3</a> should do the opposite of <code>init/1</code>.</p>
+
+
+<h3><a class="section" name="a-trading-system-specification">A Trading System Specification</a></h3>
+
+<p>It's time to put all of this in practice. Many Erlang tutorials about finite-state machines use examples containing telephone switches and similar things. It's my guess that most programmers will rarely have to deal with telephone switches for state machines. Because of that, we're going to look at an example which is more fitting for many developers: we'll design and implement an item trading system for some fictional and non-existing video game.</p>
+
+<p>The design I have picked is somewhat challenging. Rather than using a broker through which players route items and confirmations (which, frankly, would be easier), we're going to implement a server where both players speak to each other directly (which would have the advantage of being distributable). </p>
+
+<p>Because the implementation is tricky, I'll spend a good while describing it, the kind of problems to be faced and the ways to fix them.</p>
+
+<p>First of all, we should define the actions that can be done by our players when trading. The first is asking for a trade to be set up. The other user should also be able to accept that trade. We won't give them the right to deny a trade, though, because we want to keep things simple. It will be easy to add this feature once the whole thing is done.</p>
+
+<p>Once the trade is set up, our users should be able to negotiate with each other. This means they should be able to make offers and then retract them if they want. When both players are satisfied with the offer, they can each declare themselves as ready to finalise the trade. The data should then be saved somewhere on both sides. At any point in time, it should also make sense for any of the players to cancel the whole trade. Some <dfn title="A member of the common people; the populace">pleb</dfn> could be offering only items deemed unworthy to the other party (who might be very busy) and so it should be possible to backhand them with a well-deserved cancellation.</p>
+
+<p>In short, the following actions should be possible:</p>
+
+<ul>
+    <li>ask for a trade</li>
+    <li>accept a trade</li>
+    <li>offer items</li>
+    <li>retract an offer</li>
+    <li>declare self as ready</li>
+    <li>brutally cancel the trade</li>
+</ul>
+
+<p>Now, when each of these actions is taken, the other player's FSM should be made aware of it. This makes sense, because when Jim tells his FSM to send an item to Carl, Carl's FSM has to be made aware of it. This means both players can talk to their own FSM, which will talk to the other's FSM. This gives us something a bit like this:</p>
+
+<img class="center explanation" src="static/img/fsm_talk.png" width="336" height="55" alt="Jim &lt;--&gt; Jim's FSM  &lt;---&gt; Carl's FSM &lt;--&gt; Carl" />
+
+<p>The first thing to notice when we have two identical processes communicating with each other is that we have to avoid synchronous calls as much as possible. The reason for this is that if Jim's FSM sends a message to Carl's FSM and then waits for its reply while at the same time Carl's FSM sends a message over to Jim's FSM and waits for its own specific reply, both end up waiting for the other without ever replying. This effectively freezes both FSMs. We have a deadlock.</p>
+
+<p>One solution to this is to wait for a timeout and then move on, but then there will be leftover messages in both processes' mailboxes and the protocol will be messed up. This certainly is a can of worms, and so we want to avoid it.</p>
+
+<p>The simplest way to do it is to avoid all synchronous messages and go fully asynchronous. Note that Jim might still make a synchronous call to his own FSM; there's no risk here because the FSM won't need to call Jim and so no deadlock can occur between them.</p>
+
+<p>When two of these FSMs communicate together, the whole exchange might look a bit like this:</p>
+
+<img class="center explanation" src="static/img/fsm_overview.png" width="316" height="310" alt="Two FSMs exist, with a client each: Your FSM and Jim's FSM. You ask your FSM to ask Jim to communicate. Jim accepts and both FSMs move to a state where items are offered and withdrawn. When both players are ready, the trade is done" />
+
+<p>Both FSMs are in an idle state. When you ask Jim to trade, Jim has to accept before things move on. Then both of you can offer items or withdraw them. When you are both declaring yourself ready, the trade can take place. This is a simplified version of all that can happen and we'll see all possible cases with more detail in the next paragraphs.</p>
+
+<p>Here comes the tough part: defining the state diagram and how state transitions happen. Usually a good bit of thinking goes into this, because you have to think of all the small things that could go wrong. Some things might go wrong even after having reviewed it many times. Because of this, I'll simply put the one I decided to implement here and then explain it.</p>
+
+<img class="center explanation" src="static/img/fsm_general.png" width="155" height="300" alt="The idle state can switch to either idle_wait or negotiate. The idle_wait state can switch to negotiate state only. Negotiate can loop on itself or go into wait state. The wait state can go back to negotiate or move to ready state. The ready state is last and after that the FSM stops. All in bubbles and arrows." />
+
+<p>At first, both finite-state machines start in the <code>idle</code> state. At this point, one thing we can do is ask some other player to negotiate with us:</p>
+
+<img class="center explanation" src="static/img/fsm_initiate_nego.png" width="335" height="136" alt="Your client can send a message to its FSM asking to negotiate with Jim's FSM (The other player). Your FSM asks the other FSM to negotiate and switches to the idle_wait state." />
+
+<p>We go into <code>idle_wait</code> mode in order to wait for an eventual reply after our FSM forwarded the demand. Once the other FSM sends the reply, ours can switch to <code>negotiate</code>:</p>
+
+<img class="center explanation" src="static/img/fsm_other_accept.png" width="218" height="126" alt="The other's FSM accepts our invitation while in idle_wait state, and so we move to 'negotiate'" />
+
+<p>The other player should also be in <code>negotiate</code> state after this. Obviously, if we can invite the other, the other can invite us. If all goes well, this should end up looking like this:</p>
+
+<img class="center explanation" src="static/img/fsm_other_initiate_nego.png" width="322" height="187" alt="The other sends asks us to negotiate. We fall in idle_wait state until our client accepts. We then switch to negotiate mode" />
+
+<p>So this is pretty much the opposite as the two previous state diagrams bundled into one. Note that we expect the player to accept the offer in this case. What happens if by pure luck, we ask the other player to trade with us at the same time he asks us to trade?</p>
+
+<img class="center explanation" src="static/img/fsm_initiate_race.png" width="387" height="197" alt="Both clients ask their own FSM to negotiate with the other and instantly switch to the 'idle_wait' state. Both negotiation questions will be handled in the idle_wait state. No further communications are needed and both FSMs move to negotiate state" />
+
+<p>What happens here is that both clients ask their own FSM to negotiate with the other one. As soon as the <em>ask negotiate</em> messages are sent, both FSMs switch to <code>idle_wait</code> state. Then they will be able to process the negotiation question. If we review the previous state diagrams, we see that this combination of events is the only time we'll receive <em>ask negotiate</em> messages while in the <code>idle_wait</code> state. Consequently, we know that getting these messages in <code>idle_wait</code> means that we hit the race condition and can assume both users want to talk to each other. We can move both of them to <code>negotiate</code> state. Hooray.</p>
+
+<p>So now we're negotiating. According to the list of actions I listed earlier, we must support users offering items and then retracting the offer:</p>
+
+<img class="center explanation" src="static/img/fsm_item_offers.png" width="334" height="128" alt="Our player sends either offers or retractions, which are forwarded by our FSM, which remains in negotiate state" />
+
+<p>All this does is forward our client's message to the other FSM. Both finite-state machines will need to hold a list of items offered by either player, so they can update that list when receiving such messages. We stay in the <code>negotiate</code> state after this; maybe the other player wants to offer items too:</p>
+
+<img class="center explanation" src="static/img/fsm_other_item_offers.png" width="235" height="129" alt="Jim's FSM sends our FSM an offer or retracts one. Our FSM remains in the same state" />
+
+<p>Here, our FSM basically acts in a similar manner. This is normal. Once we get tired of offering things and think we're generous enough, we have to say we're ready to officialise the trade. Because we have to synchronise both players, we'll have to use an intermediary state, as we did for <code>idle</code> and <code>idle_wait</code>:</p>
+
+<img class="center explanation" src="static/img/fsm_own_ready.png" width="356" height="113" alt="Our player tells its FSM he's ready. The FSM asks the other player's FSM if the player is ready and switches to wait state" />
+
+<p>What we do here is that as soon as our player is ready, our FSM asks Jim's FSM if he's ready. Pending its reply, our own FSM falls into its <code>wait</code> state. The reply we'll get will depend on Jim's FSM state: if it's in <code>wait</code> state, it'll tell us that it's ready. Otherwise, it'll tell us that it's not ready yet. That's precisely what our FSM automatically replies to Jim if he asks us if we are ready when in <code>negotiate</code> state:</p>
+
+<img class="center explanation" src="static/img/fsm_other_ready.png" width="239" height="113" alt="Jim's FSM asks our FSM if it's ready. It automatically says 'not yet' and remains in negotiate mode." />
+
+<p>Our finite state machine will remain in <code>negotiate</code> mode until our player says he's ready. Let's assume he did and we're now in the <code>wait</code> state. However, Jim's not there yet. This means that when we declared ourselves as ready, we'll have asked Jim if he was also ready and his FSM will have replied 'not yet':</p>
+
+<img class="center explanation" src="static/img/fsm_wait_after_are_you_ready.png" width="216" height="101" alt="Jim's FSM sent us a not yet reply. Our FSM keeps waiting" />
+
+<p>He's not ready, but we are. We can't do much but keep waiting. While waiting after Jim, who's still negotiating by the way, it is possible that he will try to send us more items or maybe cancel his previous offers:</p> 
+
+<img class="center explanation" src="static/img/fsm_wait_item_offers.png" width="238" height="113" alt="Jim's FSM modifies the items of the trade (offer or retract). Our FSM instantly switches back to negotiate state." />
+
+<p>Of course, we want to avoid Jim removing all of his items and then clicking "I'm ready!", screwing us over in the process. As soon as he changes the items offered, we go back into the <code>negotiate</code> state so we can either modify our own offer, or examine the current one and decide we're ready. Rinse and repeat.</p>
+
+<p>At some point, Jim will be ready to finalise the trade too. When this happens, his finite-state machine will ask ours if we are ready:</p>
+
+<img class="center explanation" src="static/img/fsm_reply_are_you_ready.png" width="227" height="118" alt="Jim's FSM asks us if our FSM is ready. Our FSM automatically replies that it is indeed ready and keeps waiting" />
+
+<p>What our FSM does is reply that we indeed are ready. We stay in the waiting state and refuse to move to the <code>ready</code> state though. Why is this? Because there's a potential race condition! Imagine that the following sequence of events takes place, without doing this necessary step:</p>
+
+<img class="center explanation" src="static/img/fsm_race_wait.png" width="308" height="185" alt="You send 'ready' to your FSM while in negotiate at the same time the other player makes an offer (also in negotiate state). Your FSM turns to 'wait'. The other player declares himself ready slightly before your 'are you ready?' message is sent. At the same time as your FSM goes to 'wait', it receives the other player's offer and switches back to 'negotiate' state. Meanwhile, the other player (now in 'wait') receives your 'are you ready?' message and assumes it's a race condition. It automatically switches to 'ready'. Your FSM then receives the other's 'are you ready?' message, replies 'not yet', which is caught by the other player's FSM in 'ready' state. Nothing can happen from now on" /> 
+
+<p>This is a bit complex, so I'll explain. Because of the way messages are received, we could possibly only process the item offer <em>after</em> we declared ourselves ready and also <em>after</em> Jim declared himself as ready. This means that as soon as we read the offer message, we switch back to <code>negotiate</code> state. During that time, Jim will have told us he is ready. If he were to change states right there and move on to <code>ready</code> (as illustrated above), he'd be caught waiting indefinitely while we wouldn't know what the hell to do. This could also happen the other way around! Ugh.</p>
+
+<p>One way to solve this is by adding one layer of indirection (Thanks to <a class="external" href="http://en.wikipedia.org/wiki/David_Wheeler_(computer_scientist)">David Wheeler</a>). This is why we stay in <code>wait</code> mode and send 'ready!' (as shown in our previous state diagram). Here's how we deal with that 'ready!' message, assuming we were already in the <code>ready</code> state because we told our FSM we were ready beforehand:</p>
+
+<img class="center explanation" src="static/img/fsm_both_ready.png" width="248" height="120" alt="Our FSM receives ready!, sends ready! back (see the explanations below), and then sends 'ack' before moving to the ready state." />
+
+<p>When we receive 'ready!' from the other FSM, we send 'ready!' back again. This is to make sure that we won't have the 'double race condition' mentioned above. This will create a superfluous 'ready!' message in one of the two FSMs, but we'll just have to ignore it in this case. We then send an 'ack' message (and the Jim's FSM will do the same) before moving to <code>ready</code> state. The reason why this 'ack' message exists is due to some implementation details about synchronising clients. I've put it in the diagram for the sake of being correct, but I won't explain it until later. Forget about it for now. We finally managed to synchronise both players. Whew.</p>
+
+<p>So now there's the <code>ready</code> state. This one is a bit special. Both players are ready and have basically given the finite-state machines all the control they need. This lets us implement a bastardized version of a <a class="external" href="http://en.wikipedia.org/wiki/Two-phase_commit">two-phase commit</a> to make sure things go right when making the trade official:</p>
+
+<img class="center explanation" src="static/img/fsm_commit.png" width="295" height="154" alt="Both FSMs exchange an ack message. Then, one of them asks the other if it wants to commit. The other replies 'ok'. The first one tells it to do the commit. The second FSM saves its data, then replies saying it's done. The first one then saves its own data and both FSMs stop." />
+
+<p>Our version (as described above) will be rather simplistic. Writing a truly correct two-phase commit would require a lot more code than what is necessary for us to understand finite-state machines.</p>
+
+<p>Finally, we only have to allow the trade to be cancelled at any time. This means that somehow, no matter what state we're in, we're going to listen to the 'cancel' message from both sides and quit the transaction. It should also be common courtesy to let the other side know we're gone before leaving.</p>
+
+<p>Alright! It's a whole lot of information to absorb at once. Don't worry if it takes a while to fully grasp it. It took a bunch of people to look over my protocol to see if it was right, and even then we all missed a few race conditions that I then caught a few days later when reviewing the code while writing this text. It's normal to need to read it more than once, especially if you are not used to asynchronous protocols. If this is the case, I fully encourage you to try and design your own protocol. Then ask yourself "what happens if two people do the same actions very fast? What if they chain two other events quickly? What do I do with messages I don't handle when changing states?" You'll see that the complexity grows real fast. You might find a solution similar to mine, possibly a better one (let me know if this is the case!) No matter the outcome, it's a very interesting thing to work on and our FSMs are still relatively simple.</p>
+
+<p>Once you've digested all of this (or before, if you're a rebel reader), you can go to the next section, where we implement the gaming system. For now you can take a nice coffee break if you feel like doing so.</p>
+
+<img class="center support" src="static/img/take-a-break.png" width="425" height="200" alt="A cup of coffee with cookies and a spoon. Text says 'take a break'" />
+
+
+<h3><a class="section" name="game-trading-between-two-players">Game trading between two players</a></h3>
+
+<p>The first thing that needs to be done to implement our protocol with OTP's <code>gen_fsm</code> is to create the interface. There will be 3 callers for our module: the player, the <code>gen_fsm</code> behaviour and the other player's FSM. We will only need to export the player function and <code>gen_fsm</code> functions, though. This is because the other FSM will also run within the <a class="source" href="static/erlang/trade_fsm.erl">trade_fsm</a> module and can access them from the inside:</p>
+
+<pre class="brush:erl">
+-module(trade_fsm).
+-behaviour(gen_fsm).
+
+%% public API
+-export([start/1, start_link/1, trade/2, accept_trade/1, 
+         make_offer/2, retract_offer/2, ready/1, cancel/1]).
+%% gen_fsm callbacks
+-export([init/1, handle_event/3, handle_sync_event/4, handle_info/3,
+         terminate/3, code_change/4,
+         % custom state names
+         idle/2, idle/3, idle_wait/2, idle_wait/3, negotiate/2,
+         negotiate/3, wait/2, ready/2, ready/3]).
+</pre>
+
+<p>So that's our API. You can see I'm planning on having some functions being both synchronous and asynchronous. This is mostly because we want our client to call us synchronously in some cases, but the other FSM can do it asynchronously. Having the client synchronous simplifies our logic a whole lot by limiting the number of contradicting messages that can be sent one after the other. We'll get there. Let's first implement the actual public API according to the protocol defined above:</p>
+
+<pre class="brush:erl">
+%%% PUBLIC API
+start(Name) -&gt;
+    gen_fsm:start(?MODULE, [Name], []).
+
+start_link(Name) -&gt;
+    gen_fsm:start_link(?MODULE, [Name], []).
+
+%% ask for a begin session. Returns when/if the other accepts
+trade(OwnPid, OtherPid) -&gt;
+    gen_fsm:sync_send_event(OwnPid, {negotiate, OtherPid}, 30000).
+
+%% Accept someone's trade offer.
+accept_trade(OwnPid) -&gt;
+    gen_fsm:sync_send_event(OwnPid, accept_negotiate).
+
+%% Send an item on the table to be traded
+make_offer(OwnPid, Item) -&gt;
+    gen_fsm:send_event(OwnPid, {make_offer, Item}).
+
+%% Cancel trade offer
+retract_offer(OwnPid, Item) -&gt;
+    gen_fsm:send_event(OwnPid, {retract_offer, Item}).
+
+%% Mention that you're ready for a trade. When the other
+%% player also declares being ready, the trade is done
+ready(OwnPid) -&gt;
+    gen_fsm:sync_send_event(OwnPid, ready, infinity).
+
+%% Cancel the transaction.
+cancel(OwnPid) -&gt;
+    gen_fsm:sync_send_all_state_event(OwnPid, cancel).
+</pre>
+
+<p>This is rather standard; all these 'gen_fsm' functions have been covered before (except <a class="docs" href="http://erldocs.com/17.3/stdlib/gen_fsm.html#start/3">start/3-4</a> and <a class="docs" href="http://erldocs.com/17.3/stdlib/gen_fsm.html#start_link/3">start_link/3-4</a> which I believe you can figure out) in this chapter.</p>
+
+<p>Next we'll implement the FSM to FSM functions. The first ones have to do with trade setups, when we first want to ask the other user to join us in a trade:</p>
+
+<pre class="brush:erl">
+%% Ask the other FSM's Pid for a trade session
+ask_negotiate(OtherPid, OwnPid) -&gt;
+    gen_fsm:send_event(OtherPid, {ask_negotiate, OwnPid}).
+
+%% Forward the client message accepting the transaction
+accept_negotiate(OtherPid, OwnPid) -&gt;
+    gen_fsm:send_event(OtherPid, {accept_negotiate, OwnPid}).
+</pre>
+
+<p>The first function asks the other pid if they want to trade, and the second one is used to reply to it (asynchronously, of course).</p>
+
+<p>We can then write the functions to offer and cancel offers. According to our protocol above, this is what they should be like:</p>
+
+<pre class="brush:erl">
+%% forward a client's offer
+do_offer(OtherPid, Item) -&gt;
+    gen_fsm:send_event(OtherPid, {do_offer, Item}).
+
+%% forward a client's offer cancellation
+undo_offer(OtherPid, Item) -&gt;
+    gen_fsm:send_event(OtherPid, {undo_offer, Item}).
+</pre>
+
+<p>So, now that we've got these calls done, we need to focus on the rest. The remaining calls relate to being ready or not and handling the final commit. Again, given our protocol above, we have three calls: <code>are_you_ready</code>, which can have the replies <code>not_yet</code> or <code>ready!</code>:</p>
+
+<pre class="brush:erl">
+%% Ask the other side if he's ready to trade.
+are_you_ready(OtherPid) -&gt;
+    gen_fsm:send_event(OtherPid, are_you_ready).
+
+%% Reply that the side is not ready to trade
+%% i.e. is not in 'wait' state.
+not_yet(OtherPid) -&gt;
+    gen_fsm:send_event(OtherPid, not_yet).
+
+%% Tells the other fsm that the user is currently waiting
+%% for the ready state. State should transition to 'ready'
+am_ready(OtherPid) -&gt;
+    gen_fsm:send_event(OtherPid, 'ready!').
+</pre>
+
+<p>The only functions left are those which are to be used by both FSMs when doing the commit in the <code>ready</code> state. Their precise usage will be described more in detail later, but for now, the names and the sequence/state diagram from earlier should be enough. Nonetheless, you can still transcribe them to your own version of <a class="source" href="static/erlang/trade_fsm.erl">trade_fsm</a>:</p>
+
+<pre class="brush:erl">
+%% Acknowledge that the fsm is in a ready state.
+ack_trans(OtherPid) -&gt;
+    gen_fsm:send_event(OtherPid, ack).
+
+%% ask if ready to commit
+ask_commit(OtherPid) -&gt;
+    gen_fsm:sync_send_event(OtherPid, ask_commit).
+
+%% begin the synchronous commit
+do_commit(OtherPid) -&gt;
+    gen_fsm:sync_send_event(OtherPid, do_commit).
+</pre>
+
+<p>Oh and there's also the courtesy function allowing us to warn the other FSM we cancelled the trade:</p>
+
+<pre class="brush:erl">
+notify_cancel(OtherPid) -&gt;
+    gen_fsm:send_all_state_event(OtherPid, cancel).
+</pre>
+
+<p>We can now move to the really interesting part: the <code>gen_fsm</code> callbacks. The first callback is <code>init/1</code>. In our case, we'll want each FSM to hold a name for the user it represents (that way, our output will be nicer) in the data it keeps passing on to itself. What else do we want to hold in memory? In our case, we want the other's pid, the items we offer and the items the other offers. We're also going to add the reference of a monitor (so we know to abort if the other dies) and a <code>from</code> field, used to do delayed replies:</p>
+
+<pre class="brush:erl">
+-record(state, {name="",
+                other,
+                ownitems=[],
+                otheritems=[],
+                monitor,
+                from}).
+</pre>
+
+<p>In the case of <code>init/1</code>, we'll only care about our name for now. Note that we'll begin in the <code>idle</code> state:</p>
+
+<pre class="brush:erl">
+init(Name) -&gt;
+    {ok, idle, #state{name=Name}}. 
+</pre>
+
+<p>The next callbacks to consider would be the states themselves. So far I've described the state transitions and calls that can be made, but We'll need a way to make sure everything goes alright. We'll write a few utility functions first:</p>
+
+<pre class="brush:erl">
+%% Send players a notice. This could be messages to their clients
+%% but for our purposes, outputting to the shell is enough.
+notice(#state{name=N}, Str, Args) -&gt;
+    io:format("~s: "++Str++"~n", [N|Args]).
+
+%% Unexpected allows to log unexpected messages
+unexpected(Msg, State) -&gt;
+    io:format("~p received unknown event ~p while in state ~p~n",
+              [self(), Msg, State]).
+</pre>
+
+<p>And we can start with the idle state. For the sake of convention, I'll cover the asynchronous version first. This one shouldn't need to care for anything but the other player asking for a trade given our own player, if you look at the API functions, will use a synchronous call:</p>
+
+<pre class="brush:erl">
+idle({ask_negotiate, OtherPid}, S=#state{}) -&gt;
+    Ref = monitor(process, OtherPid),
+    notice(S, "~p asked for a trade negotiation", [OtherPid]),
+    {next_state, idle_wait, S#state{other=OtherPid, monitor=Ref}};
+idle(Event, Data) -&gt;
+    unexpected(Event, idle),
+    {next_state, idle, Data}.
+</pre>
+
+<img class="right" src="static/img/camera.png" width="169" height="110" alt="a security camera" />
+
+<p>A monitor is set up to allow us to handle the other dying, and its ref is stored in the FSM's data along with the other's pid, before moving to the <code>idle_wait</code> state. Note that we will report all unexpected events and ignore them by staying in the state we were already in. We can have a few out of band messages here and there that could be the result of race conditions. It's usually safe to ignore them, but we can't easily get rid of them. It's just better not to crash the whole FSM on these unknown, but somewhat expected messages.</p>
+
+<p>When our own client asks the FSM to contact another player for a trade, it will send a synchronous event. The <code>idle/3</code> callback will be needed:</p>
+
+<pre class="brush:erl">
+idle({negotiate, OtherPid}, From, S=#state{}) -&gt;
+    ask_negotiate(OtherPid, self()),
+    notice(S, "asking user ~p for a trade", [OtherPid]),
+    Ref = monitor(process, OtherPid),
+    {next_state, idle_wait, S#state{other=OtherPid, monitor=Ref, from=From}};
+idle(Event, _From, Data) -&gt;
+    unexpected(Event, idle),
+    {next_state, idle, Data}.
+</pre>
+
+<p>We proceed in a way similar to the asynchronous version, except we need to actually ask the other side whether they want to negotiate with us or not. You'll notice that we do <em>not</em> reply to the client yet. This is because we have nothing interesting to say, and we want the client locked and waiting for the trade to be accepted before doing anything. The reply will only be sent if the other side accepts once we're in <code>idle_wait</code>.</p>
+
+<p>When we're there, we have to deal with the other accepting to negotiate and the other asking to negotiate (the result of a race condition, as described in the protocol):</p>
+
+<pre class="brush:erl">
+idle_wait({ask_negotiate, OtherPid}, S=#state{other=OtherPid}) -&gt;
+    gen_fsm:reply(S#state.from, ok),
+    notice(S, "starting negotiation", []),
+    {next_state, negotiate, S};
+%% The other side has accepted our offer. Move to negotiate state
+idle_wait({accept_negotiate, OtherPid}, S=#state{other=OtherPid}) -&gt;
+    gen_fsm:reply(S#state.from, ok),
+    notice(S, "starting negotiation", []),
+    {next_state, negotiate, S};
+idle_wait(Event, Data) -&gt;
+    unexpected(Event, idle_wait),
+    {next_state, idle_wait, Data}.
+</pre>
+
+<p>This gives us two transitions to the <code>negotiate</code> state, but remember that we must use <code>gen_fsm:reply/2</code> reply to our client to tell it it's okay to start offering items. There's also the case of our FSM's client accepting the trade suggested by the other party:</p>
+
+<pre class="brush:erl">
+idle_wait(accept_negotiate, _From, S=#state{other=OtherPid}) -&gt;
+    accept_negotiate(OtherPid, self()),
+    notice(S, "accepting negotiation", []),
+    {reply, ok, negotiate, S};
+idle_wait(Event, _From, Data) -&gt;
+    unexpected(Event, idle_wait),
+    {next_state, idle_wait, Data}.
+</pre>
+
+<p>Again, this one moves on to the <code>negotiate</code> state. Here, we must handle asynchronous queries to add and remove items coming both from the client and the other FSM. However, we have not yet decided how to store items. Because I'm somewhat lazy and I assume users won't trade that many items, simple lists will do it for now. However, we might change our mind at a later point, so it would be a good idea to wrap item operations in their own functions. Add the following functions at the bottom of the file with <code>notice/3</code> and <code>unexpected/2</code>:</p>
+
+<pre class="brush:erl">
+%% adds an item to an item list
+add(Item, Items) -&gt;
+    [Item | Items].
+
+%% remove an item from an item list
+remove(Item, Items) -&gt;
+    Items -- [Item].
+</pre>
+ 
+<p>Simple, but they have the role of isolating the actions (adding and removing items) from their implementation (using lists). We could easily move to proplists, arrays or whatever data structure without disrupting the rest of the code.</p>
+
+<p>Using both of these functions, we can implement offering and removing items:</p>
+
+<pre class="brush:erl">
+negotiate({make_offer, Item}, S=#state{ownitems=OwnItems}) -&gt;
+    do_offer(S#state.other, Item),
+    notice(S, "offering ~p", [Item]),
+    {next_state, negotiate, S#state{ownitems=add(Item, OwnItems)}};
+%% Own side retracting an item offer
+negotiate({retract_offer, Item}, S=#state{ownitems=OwnItems}) -&gt;
+    undo_offer(S#state.other, Item),
+    notice(S, "cancelling offer on ~p", [Item]),
+    {next_state, negotiate, S#state{ownitems=remove(Item, OwnItems)}};
+%% other side offering an item
+negotiate({do_offer, Item}, S=#state{otheritems=OtherItems}) -&gt;
+    notice(S, "other player offering ~p", [Item]),
+    {next_state, negotiate, S#state{otheritems=add(Item, OtherItems)}};
+%% other side retracting an item offer
+negotiate({undo_offer, Item}, S=#state{otheritems=OtherItems}) -&gt;
+    notice(S, "Other player cancelling offer on ~p", [Item]),
+    {next_state, negotiate, S#state{otheritems=remove(Item, OtherItems)}};
+</pre>
+
+<p>This is an ugly aspect of using asynchronous messages on both sides. One set of message has the form 'make' and 'retract', while the other has 'do' and 'undo'. This is entirely arbitrary and only used to differentiate between player-to-FSM communications and FSM-to-FSM communications. Note that on those coming from our own player, we have to tell the other side about the changes we're making.</p>
+
+<p>Another responsibility is to handle the <code>are_you_ready</code> message we mentioned in the protocol. This one is the last asynchronous event to handle in the <code>negotiate</code> state:</p>
+
+<pre class="brush:erl">
+negotiate(are_you_ready, S=#state{other=OtherPid}) -&gt;
+    io:format("Other user ready to trade.~n"),
+    notice(S,
+           "Other user ready to transfer goods:~n"
+           "You get ~p, The other side gets ~p",
+           [S#state.otheritems, S#state.ownitems]),
+    not_yet(OtherPid),
+    {next_state, negotiate, S};
+negotiate(Event, Data) -&gt;
+    unexpected(Event, negotiate),
+    {next_state, negotiate, Data}.
+</pre>
+
+<p>As described in the protocol, whenever we're not in the <code>wait</code> state and receive this message, we must reply with <code>not_yet</code>. Were also outputting trade details to the user so a decision can be made.</p>
+
+<p>When such a decision is made and the user is ready, the <code>ready</code> event will be sent. This one should be synchronous because we don't want the user to keep modifying his offer by adding items while claiming he's ready:</p>
+
+<pre class="brush:erl">
+negotiate(ready, From, S = #state{other=OtherPid}) -&gt;
+    are_you_ready(OtherPid),
+    notice(S, "asking if ready, waiting", []),
+    {next_state, wait, S#state{from=From}};
+negotiate(Event, _From, S) -&gt;
+    unexpected(Event, negotiate),
+    {next_state, negotiate, S}.
+</pre>
+
+<p>At this point a transition to the <code>wait</code> state should be made. Note that just waiting for the other is not interesting. We save the <var>From</var> variable so we can use it with <code>gen_fsm:reply/2</code> when we have something to tell to the client.</p>
+
+<p>The <code>wait</code> state is a funny beast. New items might be offered and retracted because the other user might not be ready. It makes sense, then, to automatically rollback to the negotiating state. It would suck to have great items offered to us, only for the other to remove them and declare himself ready, stealing our loot. Going back to negotiation is a good decision:</p>
+
+<pre class="brush:erl">
+wait({do_offer, Item}, S=#state{otheritems=OtherItems}) -&gt;
+    gen_fsm:reply(S#state.from, offer_changed),
+    notice(S, "other side offering ~p", [Item]),
+    {next_state, negotiate, S#state{otheritems=add(Item, OtherItems)}};
+wait({undo_offer, Item}, S=#state{otheritems=OtherItems}) -&gt;
+    gen_fsm:reply(S#state.from, offer_changed),
+    notice(S, "Other side cancelling offer of ~p", [Item]),
+    {next_state, negotiate, S#state{otheritems=remove(Item, OtherItems)}};
+</pre>
+
+<p>Now that's something meaningful and we reply to the player with the coordinates we stored in <var>S#state.from</var>. <img class="left" src="static/img/cash.png" width="197" height="200" alt="a cash register" /> The next set of messages we need to worry about are those related to with synchronising both FSMs so they can move to the <code>ready</code> state and confirm the trade. For this one we should really focus on the protocol defined earlier.</p>
+
+<p>The three messages we could have are <code>are_you_ready</code> (because the other user just declared himself ready), <code>not_yet</code> (because we asked the other if he was ready and he was not) and <code>ready!</code> (because we asked the other if he was ready and he was).</p>
+
+<p>We'll start with <code>are_you_ready</code>. Remember that in the protocol we said that there could be a race condition hidden there. The only thing we can do is send the <code>ready!</code> message with <code>am_ready/1</code> and deal with the rest later:</p>
+
+<pre class="brush:erl">
+wait(are_you_ready, S=#state{}) -&gt;
+    am_ready(S#state.other),
+    notice(S, "asked if ready, and I am. Waiting for same reply", []),
+    {next_state, wait, S};
+</pre>
+
+<p>We'll be stuck waiting again, so it's not worth replying to our client yet. Similarly, we won't reply to the client when the other side sends a <code>not_yet</code> to our invitation:</p>
+
+<pre class="brush:erl">
+wait(not_yet, S = #state{}) -&gt;
+    notice(S, "Other not ready yet", []),
+    {next_state, wait, S};
+</pre>
+
+<p>On the other hand, if the other is ready, we send an extra <code>ready!</code> message to the other FSM, reply to our own user and then move to the <code>ready</code> state:</p>
+
+<pre class="brush:erl">
+wait('ready!', S=#state{}) -&gt;
+    am_ready(S#state.other),
+    ack_trans(S#state.other),
+    gen_fsm:reply(S#state.from, ok),
+    notice(S, "other side is ready. Moving to ready state", []),
+    {next_state, ready, S};
+%% DOn't care about these!
+wait(Event, Data) -&gt;
+    unexpected(Event, wait),
+    {next_state, wait, Data}.
+</pre>
+
+<p>You might have noticed that I've used <code>ack_trans/1</code>. In fact, both FSMs should use it. Why is this? To understand this we have to start looking at what goes on in the <code>ready!</code> state.</p>
+
+<img class="left" src="static/img/commitment.png" width="230" height="228" alt="An ugly man, kneeling and offering a diamond ring to nobody" title="Oh, I love you, cloud computing" />
+
+<p>When in the ready state, both players' actions become useless (except cancelling). We won't care about new item offers. This gives us some liberty. Basically, both FSMs can freely talk to each other without worrying about the rest of the world. This lets us implement our bastardization of a two-phase commit. To begin this commit without either player acting, we'll need an event to trigger an action from the FSMs. The <code>ack</code> event from <code>ack_trans/1</code> is used for that. As soon as we're in the ready state, the message is treated and acted upon; the transaction can begin.</p>
+
+<p>Two-phase commits require synchronous communications, though. This means we can't have both FSMs starting the transaction at once, because they'll end up deadlocked. The secret is to find a way to decide that one finite state machine should initiate the commit, while the other will sit and wait for orders from the first one.</p>
+
+<p>It turns out that the engineers and computer scientists who designed Erlang were pretty smart (well, we knew that already). The pids of any process can be compared to each other and sorted. This can be done no matter when the process was spawned, whether it's still alive or not, or if it comes from another VM (we'll see more about this when we get into distributed Erlang).</p>
+
+<p>Knowing that two pids can be compared and one will be greater than the other, we can write a function <code>priority/2</code> that will take two pids and tell a process whether it's been elected or not:</p>
+
+<pre class="brush:erl">
+priority(OwnPid, OtherPid) when OwnPid &gt; OtherPid -&gt; true;
+priority(OwnPid, OtherPid) when OwnPid &lt; OtherPid -&gt; false.
+</pre> 
+
+<p>And by calling that function, we can have one process starting the commit and the other following the orders.</p>
+
+<p>Here's what this gives us when included in the <code>ready</code> state, after receiving the <code>ack</code> message:</p>
+
+<pre class="brush:erl">
+ready(ack, S=#state{}) -&gt;
+    case priority(self(), S#state.other) of
+        true -&gt;
+            try 
+                notice(S, "asking for commit", []),
+                ready_commit = ask_commit(S#state.other),
+                notice(S, "ordering commit", []),
+                ok = do_commit(S#state.other),
+                notice(S, "committing...", []),
+                commit(S),
+                {stop, normal, S}
+            catch Class:Reason -&gt; 
+                %% abort! Either ready_commit or do_commit failed
+                notice(S, "commit failed", []),
+                {stop, {Class, Reason}, S}
+            end;
+        false -&gt;
+            {next_state, ready, S}
+    end;
+ready(Event, Data) -&gt;
+    unexpected(Event, ready),
+    {next_state, ready, Data}.
+</pre>
+
+<p>This big <code>try ... catch</code> expression is the leading FSM deciding how the commit works. Both <code>ask_commit/1</code> and <code>do_commit/1</code> are synchronous. This lets the leading FSM call them freely. You can see that the other FSM just goes and wait. It will then receive the orders from the leading process. The first message should be <code>ask_commit</code>. This is just to make sure both FSMs are still there; nothing wrong happened, they're both dedicated to completing the task:</p>
+
+<pre class="brush:erl">
+ready(ask_commit, _From, S) -&gt;
+    notice(S, "replying to ask_commit", []),
+    {reply, ready_commit, ready, S};
+</pre>
+
+<p>Once this is received, the leading process will ask to confirm the transaction with <code>do_commit</code>. That's when we must commit our data:</p>
+
+<pre class="brush:erl">
+ready(do_commit, _From, S) -&gt;
+    notice(S, "committing...", []),
+    commit(S),
+    {stop, normal, ok, S};
+ready(Event, _From, Data) -&gt;
+    unexpected(Event, ready),
+    {next_state, ready, Data}.
+</pre>
+
+<p>And once it's done, we leave. The leading FSM will receive <code>ok</code> as a reply and will know to commit on its own end afterwards. This explains why we need the big <code>try ... catch</code>: if the replying FSM dies or its player cancels the transaction, the synchronous calls will crash after a timeout. The commit should be aborted in this case.</p>
+
+<p>Just so you know, I defined the commit function as follows:</p>
+
+<pre class="brush:erl">
+commit(S = #state{}) -&gt;
+    io:format("Transaction completed for ~s. "
+              "Items sent are:~n~p,~n received are:~n~p.~n"
+              "This operation should have some atomic save "
+              "in a database.~n",
+              [S#state.name, S#state.ownitems, S#state.otheritems]).
+</pre>
+
+<p>Pretty underwhelming, eh? It's generally not possible to do a true safe commit with only two participants&mdash;a third party is usually required to judge if both players did everything right. If you were to write a true commit function, it should contact that third party on behalf of both players, and then do the safe write to a database for them or rollback the whole exchange. We won't go into such details and the current <code>commit/1</code> function will be enough for the needs of this book.</p>
+
+<p>We're not done yet. We have not yet covered two types of events: a player cancelling the trade and the other player's finite state machine crashing. The former can be dealt with by using the callbacks <code>handle_event/3</code> and <code>handle_sync_event/4</code>. Whenever the other user cancels, we'll receive an asynchronous notification:</p>
+
+<pre class="brush:erl">
+%% The other player has sent this cancel event
+%% stop whatever we're doing and shut down!
+handle_event(cancel, _StateName, S=#state{}) -&gt;
+    notice(S, "received cancel event", []),
+    {stop, other_cancelled, S};
+handle_event(Event, StateName, Data) -&gt;
+    unexpected(Event, StateName),
+    {next_state, StateName, Data}.
+</pre>
+
+<p>When we do it we must not forget to tell the other before quitting ourselves:</p>
+
+<pre class="brush:erl">
+%% This cancel event comes from the client. We must warn the other
+%% player that we have a quitter!
+handle_sync_event(cancel, _From, _StateName, S = #state{}) -&gt;
+    notify_cancel(S#state.other),
+    notice(S, "cancelling trade, sending cancel event", []),
+    {stop, cancelled, ok, S};
+%% Note: DO NOT reply to unexpected calls. Let the call-maker crash!
+handle_sync_event(Event, _From, StateName, Data) -&gt;
+    unexpected(Event, StateName),
+    {next_state, StateName, Data}.
+</pre>
+
+<p>And voilà! The last event to take care of is when the other FSM goes down. Fortunately, we had set a monitor back in the <code>idle</code> state. We can match on this and react accordingly:</p>
+
+<pre class="brush:erl">
+handle_info({'DOWN', Ref, process, Pid, Reason}, _, S=#state{other=Pid, monitor=Ref}) -&gt;
+    notice(S, "Other side dead", []),
+    {stop, {other_down, Reason}, S};
+handle_info(Info, StateName, Data) -&gt;
+    unexpected(Info, StateName),
+    {next_state, StateName, Data}.
+</pre>
+ 
+<p>Note that even if the <code>cancel</code> or <code>DOWN</code> events happen while we're in the commit, everything should be safe and nobody should get its items stolen.</p>
+
+<div class="note">
+    <p><strong>Note:</strong> we used <code>io:format/2</code> for most of our messages to let the FSMs communicate with their own clients. In a real world application, we might want something more flexible than that. One way to do it is to let the client send in a Pid, which will receive the notices sent to it. That process could be linked to a GUI or any other system to make the player aware of the events. The <code>io:format/2</code> solution was chosen for its simplicity: we want to focus on the FSM and the asynchronous protocols, not the rest.</p>
+</div>
+
+<p>Only two callbacks left to cover! They're <code>code_change/4</code> and <code>terminate/3</code>. For now, we don't have anything to do with <code>code_change/4</code> and only export it so the next version of the FSM can call it when it'll be reloaded. Our terminate function is also really short because we didn't handle real resources in this example:</p>
+
+<pre class="brush:erl">
+code_change(_OldVsn, StateName, Data, _Extra) -&gt;
+ {ok, StateName, Data}.
+
+%% Transaction completed.
+terminate(normal, ready, S=#state{}) -&gt;
+    notice(S, "FSM leaving.", []);
+terminate(_Reason, _StateName, _StateData) -&gt;
+    ok.
+</pre>
+ 
+<p>Whew.</p>
+
+<p>We can now try it. Well, trying it is a bit annoying because we need two processes to communicate to each other. To solve this, I've written the tests in the file <a class="source" href="static/erlang/trade_calls.erl">trade_calls.erl</a>, which can run 3 different scenarios. The first one is <code>main_ab/0</code>. It will run a standard trade and output everything. The second one is <code>main_cd/0</code> and will cancel the transaction halfway through. The last one is <code>main_ef/0</code> and is very similar to <code>main_ab/0</code>, except it contains a different race condition. The first and third tests should succeed, while the second one should fail (with a crapload of error messages, but that's how it goes). You can try it if you feel like it.</p>
+
+
+<h3><a class="section" name="that-was-quite-something">That Was Quite Something</a></h3>
+
+<img class="right" src="static/img/snake.png" width="171" height="183" alt="A snake shaped as an interrogation mark" />
+
+<p>If you've found this chapter a bit harder than the others, I must remind you that it's entirely normal. I've just gone crazy and decided to make something hard out of the generic finite-state machine behaviour. If you feel confused, ask yourself these questions: Can you understand how different events are handled depending on the state your process is in? Do you understand how you can transition from one state to the other? Do you know when to use <code>send_event/2</code> and <code>sync_send_event/2-3</code> as opposed to <code>send_all_state_event/2</code> and <code>sync_send_all_state_event/3</code>? If you answered yes to these questions, you understand what <code>gen_fsm</code> is about.</p>
+
+<p>The rest of it with the asynchronous protocols, delaying replies and carrying the <var>From</var> variable, giving a priority to processes for synchronous calls, bastardized two-phase commits and whatnot <em>are not essential to understand</em>. They're mostly there to show what can be done and to highlight the difficulty of writing truly concurrent software, even in a language like Erlang. Erlang doesn't excuse you from planning or thinking, and Erlang won't solve your problems for you. It'll only give you tools.</p>
+
+<p>That being said, if you understood everything about these points, you can be proud of yourself (especially if you had never written concurrent software before). You are now starting to really think concurrently.</p>
+
+
+<h3><a class="section" name="fit-for-the-real-world">Fit for the Real World?</a></h3>
+
+<p>In a real game, there is a lot more stuff going on that could make trading even more complex. Items could be worn by the characters and damaged by enemies while they're being traded. Maybe items could be moved in and out of the inventory while being exchanged. Are the players on the same server? If not, how do you synchronise commits to different databases?</p>
+
+<p>Our trade system is sane when detached from the reality of any game. Before trying to fit it in a game (if you dare), make sure everything goes right. Test it, test it, and test it again. You'll likely find that testing concurrent and parallel code is a complete pain. You'll lose hair, friends and a piece of your sanity. Even after this, you'll have to know your system is always as strong as its weakest link and thus potentially very fragile nonetheless.</p>
+
+<div class="note koolaid">
+    <p><strong>Don't Drink Too Much Kool-Aid:</strong><br />
+	While the model for this trade system seems sound, subtle concurrency bugs and race conditions can often rear their ugly heads a long time after they were written, and even if they've been running for years. While my code is generally bullet proof (yeah, right), you sometimes have to face swords and knives. Beware the dormant bugs.</p> 
+</div>
+
+<p>Fortunately, we can put all of this madness behind us. We'll next see how OTP allows you to handle various events, such as alarms and logs, with the help of the <code>gen_event</code> behaviour.</p>
+
+				<ul class="navigation">
+											<li><a href="clients-and-servers.html" title="Previous chapter">&lt; Previous</a></li>
+										
+					<li><a href="contents.html" title="Index">Index</a></li>
+					
+											<li><a href="event-handlers.html" title="Next chapter">Next &gt;</a></li>
+									</ul>
+			</div><!-- content -->
+			<div id="footer">
+				<a href="http://creativecommons.org/licenses/by-nc-nd/3.0/" title="Creative Commons License Details"><img src="static/img/cc.png" width="88" height="31" alt="Creative Commons Attribution Non-Commercial No Derivative License" /></a>
+				<p>Except where otherwise noted, content on this site is licensed under a Creative Commons Attribution Non-Commercial No Derivative License</p>
+			</div> <!-- footer -->
+		</div> <!-- wrapper -->
+		<div id="grass" />
+	<script type="text/javascript" src="static/js/shCore.js"></script>
+	<script type="text/javascript" src="static/js/shBrushErlang2.js%3F11"></script>
+	<script type="text/javascript">
+		SyntaxHighlighter.defaults.gutter = false;
+		SyntaxHighlighter.all();
+	</script>
+	</body>
+</html>
