@@ -33,7 +33,7 @@
 			</div><!-- menu -->
 			<div id="content">
             <div class="noscript"><noscript>Hey there, it appears your Javascript is disabled. That's fine, the site works without it. However, you might prefer reading it with syntax highlighting, which requires Javascript!</noscript></div>
-<h2>Introduction</h2>
+<h2>介绍</h2>
 <h3><a class="section" name="about-this-tutorial">关于本教程</a></h3>
 
 <p>这是趣学Erlang的开篇介绍，阅读本教程也许是你学习Erlang的一个开始</p>
@@ -43,13 +43,16 @@
 <p>首先我有这个想法是因为我阅读了利波瓦卡(Miran Lipovača)的 <a class="external" href="http://learnyouahaskell.com/" title="Free Book!">趣学Haskell(LYAH)</a> 教程；
 	我认为他做的工作充分的展示了语言的美丽，同时让语言学习过程更加友好。 由于我和他很熟识，我曾问他，我来写Erlang的版本如何。 他感觉这主意不错，并且他本人对Erlang也有一些兴趣。</p>
 
-<p>So here I am typing this. Of course there were other sources to my motivation: I mainly find the entry to the language to be hard (the web has sparse documentation and otherwise you need to buy books), and I thought the community would benefit from a LYAH-like guide. Less importantly, I've seen people attributing Erlang too much or not enough merit sometimes based on sweeping generalizations. Then there are people who sure as hell believe Erlang is nothing but hype. If I'd like to convince them otherwise, I know they're not likely to read this in the first place.</p>
+<p>所以我开始编写这个教程。 当然我写本教程还有其它动机：主要我发现语言入门有点困难(要么使用文档稀缺的网站或者你买一本书), 并且我认为像趣学Haskell的那种入门指南是对社区有益处的。
+	更重要的是, 我见过好多人，都是通过非常笼统的言论过度的称赞或贬低Erlang。之后就有人认为Erlang只不过是一个噱头。如果我想通过别的方式说服这些人，我认为是不会收到这些人的重视的。</p>
 
-<p>This book thus wants itself to be a way to learn Erlang for people who have basic knowledge of programming in imperative languages (such as C/C++, Java, Python, Ruby, etc) and may or may not know functional programming (Haskell, Scala, Erlang, Clojure, OCaml...). I also want to write this book in a honest manner, selling Erlang for what it is, acknowledging its weaknesses and strengths.</p>
+<p>希望本书成为有命令式语言编程基础(如 C/C++, Java, Python, Ruby, 等) 和那些知道或不知道函数式编程的 (Haskell, Scala, Erlang, Clojure, OCaml...)的人的入门指南。
+	我也希望也一本没有偏见的书，阐述Erlang是什么，它的有点和它的缺点都是什么。</p>
 
 
-<h3><a class="section" name="what-is-erlang">So what's Erlang?</a></h3>
-<p>First of all, Erlang is a functional programming language. If you have ever worked with imperative languages, statements such as <code>i++</code> may be normal to you; in functional programming they are not allowed. In fact, changing the value of any variable is strictly forbidden! This may sound weird at first, but if you remember your math classes, it's in fact how you've learned it:</p>
+<h3><a class="section" name="what-is-erlang">什么是Erlang</a></h3>
+<p>首先，Erlang是一门函数式语言。 If you have ever worked with imperative languages, statements such as <code>i++</code> may be normal to you;
+	in functional programming they are not allowed. In fact, changing the value of any variable is strictly forbidden! This may sound weird at first, but if you remember your math classes, it's in fact how you've learned it:</p>
 <pre class="brush:eshell">
 y = 2
 x = y + 3
