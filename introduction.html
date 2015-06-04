@@ -88,60 +88,99 @@ x = x
 
 <img class="right" src="static/img/envelope.png" width="206" height="161" alt="An envelope" />
 
-<p>Now, we defined Erlang as a functional programming language, but there's also a large emphasis on concurrency and high reliability. To be able to have dozens of tasks being performed at the same time, Erlang uses the <a class="external" href="http://en.wikipedia.org/wiki/Actor_model" title="A more technical definition">actor model</a>, and each actor is a separate process in the virtual machine. In a nutshell, if you were an actor in Erlang's world, you would be a lonely person, sitting in a dark room with no window, waiting by your mailbox to get a message. Once you get a message, you react to it in a specific way: you pay the bills when receiving them, you respond to Birthday cards with a "Thank you" letter and you ignore the letters you can't understand.</p>
+<p>当前，我们将Erlang定义为函数式语言， 但是它同样具备高可靠和高并发的特性。 为了能在同一个时间内，执行大量的任务， Erlang使用<a class="external" href="http://en.wikipedia.org/wiki/Actor_model" title="A more technical definition">actor模型</a>，
+	并且在Erlang的虚拟机中，每个actor都是一个Erlang的进程。 简而言之，如果你是Erlang世界中的一个actor， 你将是一个孤独的个体，在一间没有窗户的小黑屋子中，守着一个邮箱等待消息的到来。 一旦你收到了一个消息， 你将使用以下方式处理：
+	你需要在接收消息的时候支付邮资，当你收到了生日贺卡你会回复感谢并且忽略那些你不能读懂的消息。</p>
 
-<p>Erlang's actor model can be imagined as a world where everyone is sitting alone in their own room and can perform a few distinct tasks. Everyone communicates strictly by writing letters and that's it. While it sounds like a boring life (and a new age for the postal service), it means you can ask many people to perform very specific tasks for you, and none of them will ever do something wrong or make mistakes which will have repercussions on the work of others; they may not even know the existence of people other than you (and that's great).</p>
-<p>To escape this analogy, Erlang forces you to write actors (processes) that will share no information with other bits of code unless they pass messages to each other. Every communication is explicit, traceable and safe.</p>
+<p>Erlang的actor模型，可以被认为是一个所有人都坐在自己的屋子中处理不同任务的世界。 所有人之间的通信，只有通过邮件，且仅有这么一个方式。
+	尽管这听起来挺无聊的（这将是邮递服务的一个全新的时代）， 这代表这你可以要求别人帮你处理一些特殊的任务，并且没有人会做错事情或者做出影响别人工作的错误；他们甚至都不知道除你之外的别人的存在（这非常好）。</p>
+<p>比喻到此为止， Erlang强制你写actors（Erlang进程）， 除了通过消息传递进行通信，这些Erlang进程除了代码外不共享任何信息或数据。每次通信都是准确的，安全的并且可追踪的。</p>
 
-<p>When we defined Erlang, we did so at a language level, but in a broader sense, this is not all there is to it: Erlang is also a development environment as a whole. The code is compiled to bytecode and runs inside a virtual machine. So Erlang, much like Java and kids with ADD, can run anywhere. The standard distribution includes (among others) development tools (compiler, debugger, profiler, test framework), the Open Telecom Platform (OTP) Framework, a web server, a parser generator, and the mnesia database, a key-value storage system able to replicate itself on many servers, supporting nested transactions and letting you store any kind of Erlang data.</p>
-<p>The VM and the libraries also allow you to update the code of a running system without interrupting any program, distribute your code with ease on many computers and manage errors and faults in a simple but powerful manner.</p>
+<p>当我们定义Erlang时，我们是在一个语言层面上，但是从广义上讲，这并不是Erlang的全部：Erlang不单是一个语言，也是一个整体的开发环境。
+	Erlang的代码被编译成字节码，并使用Erlang虚拟机来运行。所以Erlang更像Java或者这种类型的加强版，可以跨平台运行。标准的发型版包含开发工具（编译器，调试器，profiler，测试框架）， Open Telecom Platform (OTP) Framework，一个Web服务器，一个Parser生成器，
+	和支持分布式，嵌套事务的Mneisa数据库，该数据库可以让你轻松的存储Erlang数据。</p>
+<p>虚拟机和库都支持代码热更新，并且提供了简单且强大的代码部署和容错机制。</p>
 
 <img class="right" src="static/img/letitcrash.png" width="206" height="320" alt="A crashed plane" title="Don't do this" />
 
-<p>We'll see how to use most of these tools and achieve safety later on, but for now, I'll tell you about a related general policy in Erlang: Let it crash. Not like a plane with dozens of passengers dying, but more like a tightrope walker with a safety net under him. While you should avoid making mistakes, you won't need to check for every type or error condition in most cases.</p>
+<p>我们将使用这些工具获得更多的可靠性，但是现在，我将告诉你Erlang的基本策略： 让它崩溃。
+	并不像一个有很多乘客的飞机坠毁那样，更像一个有足够安全措施的走钢丝表演者一样。
+	虽然你应当避免犯错，但是在绝大部分情况下，你不需要检查每个类型和错误条件。</p>
 
-<p>Erlang's ability to recover from errors, organize code with actors and making it scale with distribution and concurrency all sound awesome, which brings us to the next section...</p>
+<p>Erlang的从错误中恢复， 使用actor模型来组织代码，通过使用并发和分布式让整个系统可动态扩容这些很棒的特性，我们将在以后的章节逐步介绍。</p>
 
-<h3><a class="section" name="kool-aid">Don't drink too much Kool-Aid</a></h3>
+<h3><a class="section" name="kool-aid">不要盲从(Don't drink too much Kool-Aid)</a></h3>
 
-<p>There may be many little yellowish-orange sections named like this one around the book (you'll recognize them when you see them). Erlang is currently gaining lots of popularity due to zealous talks which may lead people to believe it's more than what it really is. These reminders will be there to help you keep your feet on the ground if you're one of these overenthusiastic learners.</p>
+<p>在这本书中，将有很多这个标题的黄橙色的小条（你很容易辨识它们的）。
+	由于很多热门话题的讨论，Erlang变得比以前普及了一些，但是这些热门的话题讨论导致人们对Erlang有一些言过其实的认知。
+	(Erlang is currently gaining lots of popularity due to zealous talks which may lead people to believe it's more than what it really is.)
+	这些小条，将帮助你不至于飘飘然。
+	(These reminders will be there to help you keep your feet on the ground if you're one of these overenthusiastic learners.)</p>
 
-<p>The first case of this is related to Erlang's massive scaling abilities due to its lightweight processes. It is true that Erlang processes are very light:  you can have hundreds of thousands of them existing at the same time, but this doesn't mean you have to use it that way just because you can. For example, creating a shooter game where everything including bullets is its own actor is madness. The only thing you'll shoot with a game like this is your own foot.  There is still a small cost in sending a message from actor to actor, and if you divide tasks too much, <em>you will make things slower</em>!</p>
+<p>第一个例子是关于Erlang的扩展能力的，因为Erlang使用了轻量级的进程才使Erlang具有很强的扩展能力。
+	Erlang的进程确实非常轻量级：在同一个时刻，我们可以拥有成百上千的Erlang进程，但是这不代表你因为能这样才去这样使用它。
+	举个例子， 创建一个连子弹都是actor的射击游戏是很疯狂的。如果你真的这么做了，那么很有可能把事情搞砸。(The only thing you'll shoot with a game like this is your own foot.)
+	虽然发送消息代价很小，但是过度的拆分任务，<em>你会让任务变慢的</em>！</p>
 
-<p>I'll cover this with more depth when we're far enough into the learning to actually worry about it, but just keep in mind that randomly throwing parallelism at a problem is not enough to make it go fast. Don't be sad; there are times when using hundreds of processes will both be possible and useful! It's just not happening all the time.</p>
+<p>当我们学习了足够多知识，我将深入的说明这方面我们真正需要关心的是什么，目前，我们只需要记得，随便的使用并行去解决某个问题并不一定能带来速度的提升。
+	(I'll cover this with more depth when we're far enough into the learning to actually worry about it,
+	but just keep in mind that randomly throwing parallelism at a problem is not enough to make it go fast.)
+	不过不要伤心；我们将会有很多机会去使用成百上千的进程！只不过，不是每次都需要。</p>
 
-<p>Erlang is also said to be able to scale in a directly proportional manner to how many cores your computer has, but this is usually not true: <img class="left" src="static/img/scaling.png" width="220" height="185" alt="Bad Graph: Speed vs Cores: It just scales!" />
-it is possible, but most problems do not behave in a way that lets you just run everything at the same time.</p>
+<p>一个说法是Erlang的扩展能力和电脑的CPU数量成正比的方式，但这通常是不正确的： <img class="left" src="static/img/scaling.png" width="220" height="185" alt="Bad Graph: Speed vs Cores: It just scales!" />
+虽然这是可能的，但是绝大部分问题是不能转化成一组可并行的完全相同的行为。</p>
 
-<p>There's something else to keep in mind: while Erlang does some things very well, it's technically still possible to get the same results from other languages. The opposite is also true; evaluate each problem as it needs to be, and choose the right tool according to the problem being addressed. Erlang is no silver bullet and will be particularly bad at things like image and signal processing, operating system device drivers, etc. and will shine at things like large software for server use (i.e.: queues, map-reduce), doing some lifting coupled with other languages, higher-level protocol implementation, etc. Areas in the middle will depend on you. You should not necessarily wall yourself in server software with Erlang: there have been cases of people doing unexpected and surprising things. One example is IANO, a robot created by the UNICT team, which uses Erlang for its artificial intelligence and won the silver medal at the 2009 <a class="external" href="http://eurobot.dmi.unict.it/">eurobot competition</a>. Another example is Wings 3D, an open source 3D modeler (but not a renderer) written in Erlang and thus cross-platform.</p>
+<p>同时，请谨记： 即便Erlang做某些事情非常好，并且从技术角度上讲，做一件事情时可以获得和使用其它语言相同的结果。
+	反过来一样；我们需要谨慎的评估我们面对的问题，并根据问题选择合适的工具。
+	Erlang并非银弹，并且做某些事情非常差，如图像处理，信号处理和系统的驱动等。
+	但是非常适合大规模的服务端软件（例如：消息队列，map-reduce计算），还有配合其它语言使用，高级协议实现等。
+	而是否适合都根据你的判断。你没有必要把自己使用Erlang的范围限制在服务端软件：曾经有人用它做出了一些让人意想不到的东西。
+	一个例子是IANO，UNICT团队创造的一个机器人，该机器人使用Erlang编写的人工智能系统，并在2009年赢得了银牌。<a class="external" href="http://eurobot.dmi.unict.it/">eurobot competition</a>。
+	另一个例子是Wings 3D， 一个Erlang编写的跨平台的3D建模工具（但不是一个渲染器）。</p>
 
 
-<h3><a class="section" name="what-you-need">What you need to dive in</a></h3>
-<p>All you need to get started is a text editor and the Erlang environment. You can get the source code and the Windows binaries from <a class="external" href="http://erlang.org/download.html" title="official Erlang download page">the official Erlang website</a>. I won't go into much installation details, but for Windows, just download and run the binary files. Don't forget to add your Erlang directory to your <var>PATH</var> system variable to be able to access it from the command line.</p>
+<h3><a class="section" name="what-you-need">我们如何开始</a></h3>
+<p>所有你必须的，一个文本编辑器和Erlang环境。
+	你可以从以下地方获取<a class="external" href="http://erlang.org/download.html" title="official Erlang download page">Erlang官方网站</a>。
+	我不想太多介绍安装细节，对于Windows，只需要下载安装即可。
+	不过不要忘记将Erlang文件夹添加到系统变量<var>PATH</var>中，这样我们才能通过命令行使用它。</p>
 
-<p>On Debian-based Linux distributions, you should be able to install the package by doing <code>$ apt-get install erlang</code>. On Fedora (if you have 'yum' installed), you can achieve the same by typing <code># yum install erlang</code>. However, these repositories often hold outdated versions of the Erlang packages; Using an outdated version could give you some differences with what you'll get from this tutorial and a hit in performance with certain applications. I thus encourage you to compile from source. Consult the README file within the package and Google to get all the installing details you'll need, they'll do a far better job than I ever will.</p>
+<p>在Debian系Linux发型版上，你可以用 <code>$ apt-get install erlang</code>来安装。
+	在Fedora上（如果你安装了yum），你可以使用 <code># yum install erlang</code>来安装。
+	但是，这些仓库中的Erlang版本都是非常老旧的。
+	当你使用本教程的一些例子的时候，使用老版本的Erlang会给你带来一些不同或者性能问题。
+	因此我推荐你从代码编译一个Erlang。
+	使用google去搜索安装相关的问题和翻阅README文件，将会比我能给出的答案更好。</p>
+	However, these repositories often hold outdated versions of the Erlang packages;
 
-<p>On FreeBSD, many options are available to you. If you're using portmaster, you can do <code>portmaster lang/erlang</code>. For standard ports, it should be <code>cd /usr/ports/lang/erlang; make install clean</code>. Finally, if you want to use packages, run <code>pkg_add -rv erlang</code>.</p>
+<p>在FreeBSD上，这就都看你自己的决定了。如果你用portmaster， <code>portmaster lang/erlang</code>。
+	如果使用Ports系统, 可以这样 <code>cd /usr/ports/lang/erlang; make install clean</code>。
+	如果，你只用packages系统，那么执行 <code>pkg_add -rv erlang</code>。</p>
 
-<p>If you're on OSX, you can install Erlang with <code>$ brew install erlang</code> (with <a class="external" href="https://github.com/Homebrew/homebrew">Homebrew</a>) or by doing <code>$ port install erlang</code> (if you prefer <a class="external" href="http://macports.org">MacPorts</a>.)</p>
+<p>如果你用OSX，那么用brew安装是不错的选择 <code>$ brew install erlang</code> （<a class="external" href="https://github.com/Homebrew/homebrew">Homebrew</a>）
+	或者使用 <code>$ port install erlang</code> （如果你更喜欢<a class="external" href="http://macports.org">MacPorts</a>。）</p>
 
-<p>Alternatively, Erlang Solutions Ltd. offers <a class="external" href="https://www.erlang-solutions.com/downloads">packages for all major OSes</a>, which generally work pretty well.</p>
+<p>另一个选择， Erlang Solutions Ltd. 提供了绝大部分都可以完美工作的<a class="external" href="https://www.erlang-solutions.com/downloads">主流操作系统安装包</a>。</p>
 
 <div class="note">
-	<p><strong>Note:</strong> at the time of this writing, I'm using Erlang version R13B+, so for best results, you should use that version or newer ones.</p>
+	<p><strong>注意:</strong> 在些本书的时候，我使用的版本是R13B+，建议使用此版本或更新的版本。</p>
 </div>
 
 
-<h3><a class="section" name="get-help">Where to get Help</a></h3>
-<p>There are a few places where you can get help. If you're using linux, you can access the man pages for good technical documentation. Erlang has a lists module (which we'll soon see): to get the documentation on lists, just type in <code>$ erl -man lists</code>.</p>
+<h3><a class="section" name="get-help">从何处获得帮助</a></h3>
+<p>这里有几处可以让你得到帮助。如果使用Linux，可以翻阅man手册。
+	Erlang 有一个叫lists的模块：获得该模块的文档，只需要 <code>$ erl -man lists</code>。</p>
 
-<p>On Windows, the installation should include HTML documentation. You can download it at any time from the <a class="external" href="http://erlang.org/doc/" title="Official Erlang HTML documentation">official erlang site</a>, or consult one of the <a class="external" href="http://erldocs.com/" title="Unofficial Erlang HTML documentation">cleaner alternative sites</a>.</p>
+<p>在Windows上, 安装包将包含HTML文档。当然你可以从此处下载 <a class="external" href="http://erlang.org/doc/" title="Official Erlang HTML documentation">official erlang site</a>，
+	或翻阅 <a class="external" href="http://erldocs.com/" title="Unofficial Erlang HTML documentation">cleaner alternative sites</a>。</p>
 
-<p>Good coding practices can be found <a class="external" href="http://www.erlang.se/doc/programming_rules.shtml">here</a> once you feel you need to get everything clean. The code in this book will attempt to follow these guidelines, too.</p>
+<p>编码风格和实践<a class="external" href="http://www.erlang.se/doc/programming_rules.shtml">here</a> 。
+	本书的代码都遵循这些风格。</p>
 
-<p>Now, there are times where just getting the technical details isn't enough. When that happens, I tend to turn to two main sources: the official <a class="external" href="http://www.erlang.org/static/doc/mailinglist.html">mailing list</a> (you should follow it just to learn a bunch) and the <a class="external" href="irc://irc.freenode.net/erlang">#erlang</a> channel on <a class="external" href="http://freenode.net/">irc.freenode.net</a>.</p>
+<p>当你你想知道更多的技术细节，请关注Erlang官方邮件列表 <a class="external" href="http://www.erlang.org/static/doc/mailinglist.html">mailing list</a>（你应当订阅该列表，从中可以学习不少），以及<a class="external" href="http://freenode.net/">irc.freenode.net</a>上<a class="external" href="irc://irc.freenode.net/erlang">#erlang</a> 频道。</p>
 
-<p>Oh and if you're the type of person to go for cookbooks and pre-made recipes, <a class="external" href="http://trapexit.org/" title="trapexit, an Erlang community site">trapexit</a> is the place you're looking for. They also mirror the mailing lists as a forum and a general wiki, which can always be helpful.</p>
+<p>另一个不错的地方<a class="external" href="http://trapexit.org/" title="trapexit, an Erlang community site">trapexit</a>。他们制作了邮件列表的镜像，并将它们分类成了论坛和Wiki，这非常有用。</p>
+<p>夹带点私料，两个专业的QQ群：59293159（中国Erlang俱乐部），230538511（Hacking Erlang）。非专业QQ群：111477336（函数式语言编程）。</p>
 				<ul class="navigation">
 											<li><a href="contents.html" title="Previous chapter">&lt; Previous</a></li>
 										
