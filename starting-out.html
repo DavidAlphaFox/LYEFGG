@@ -33,34 +33,45 @@
 			</div><!-- menu -->
 			<div id="content">
             <div class="noscript"><noscript>Hey there, it appears your Javascript is disabled. That's fine, the site works without it. However, you might prefer reading it with syntax highlighting, which requires Javascript!</noscript></div>
-<h2>Starting Out</h2>
+<h2>开始尝试</h2>
 
-<h3><a class="local" name="the-shell">The Shell</a></h3>
+<h3><a class="local" name="the-shell">Shell</a></h3>
 
-<p>In Erlang, you can test most of your stuff in an emulator; it will run your scripts when compiled and deployed, but it will also let you edit stuff live. To start the shell in Linux, open a terminal and then type in <code>$ erl</code>. If you've set up everything fine, you should see text like this:</p>
+<p>在Erlang的开发环境中，你可以用模拟器来测试你绝大部分想法；它可以执行你编译好的脚本，同时也准许你时时编辑你的代码。
+	在Linux中开启一个Erlang的shell非常简单，只需打开一个终端并输入<code>$ erl</code>就可以了。
+	如果你的Erlang环境已经被配置好，你将会看到以下信息：</p>
 <pre class="brush:eshell">
 Erlang R13B01 (erts-5.7.2) [source] [smp:2:2] [rq:2] [async-threads:0] [hipe] [kernel-poll:false]
 
 Eshell V5.7.2  (abort with ^G)
 </pre>
-<p>Congratulations, you're running the Erlang shell!</p>
+<p>恭喜你，你已经成功的启动了Erlang的shell！</p>
 
-<p>For Windows users, you can still run the <code>erl.exe</code> shell, but it's recommended you instead use <code>werl.exe</code>, which can be found in your start menu (<code>programs &gt; Erlang</code>). Werl is a windows-only implementation of the Erlang shell, having its own window with scrollbars and supporting command-line editing (like copy-pasting, which got to be a pain with the standard <code>cmd.exe</code> shell in Windows). The erl shell is still required if you want to redirect standard input or output, or use pipelines.</p>
+<p>对于Windows用户，你依然可以执行<code>erl.exe</code>来启动shell，
+	但是我更建议用<code>werl.exe</code>来启动shell，该命令可以从开始菜单中找到（<code>程序 &gt; Erlang</code>）。
+	Werl是针对Windows实现的shell，它具有独立的可滚动的窗口并且支持命令行编辑（像复制粘贴, 该功能在Windows的<code>cmd.exe</code>中非常不完善)。
+	即便你重定向输入输出或使用管道，你依然需要Erlang的shell。
+	(The erl shell is still required if you want to redirect standard input or output, or use pipelines.)</p>
 
-<p>We'll be able to enter and run code in the emulator, but first, let's see how we can get around in it.</p>
+<p>现在我们将进入模拟器并执行代码，但首先，让我们先看看shell提供了什么。</p>
 
 
-<h3><a class="local" name="shell-commands">Shell Commands</a></h3>
-<p>The Erlang shell has a built-in line editor based on a subset of Emacs, a popular text editor that's been in use since the 70s. If you know Emacs, you should be fine. For the others, you'll do fine anyway.</p>
+<h3><a class="local" name="shell-commands">Shell命令</a></h3>
+<p>Erlang的shell内置了一个基于Emacs的子集行编辑器，Emacs是一个从70年代就开始被使用且非常流行的编辑器。
+	如果你知道Emacs，你将会感到非常适应。对于其他人而言，不管如何你会一点点适应的。</p>
 
 <img class="right" src="static/img/shell.png" width="312" height="143" alt="super turtle" title="In your face, Hare!" />
 
-<p>First of all, if you type some text and then go <code>^A</code> (Ctrl+A), you should see your cursor moving to the beginning of the line. <code>^E</code> (Ctrl+E) gets you to the end. You can use arrow keys to go forward, backwards, show previous or next lines so you can repeat code.</p>
-<p>If you type something like <code>li</code> and then press "tab", the shell will have completed the terms for you to <code>lists:</code>. Press tab again, and the shell will suggest you many functions to use after. This is Erlang completing the module <code>lists</code> and then suggesting functions from it. You may find the notation weird, but don't worry, you'll get familiar with it soon enough.</p>
+<p>首先，如果你输入了一些文本，接着你按了<code>^A</code> （Ctrl+A），你会发现光标移动到当前行的开头。
+	<code>^E</code> （Ctrl+E） 会让你的光标移动到行尾。你可以使用箭头键进行前进和后退，显示上一行或下一行，这样你可以重用之前的代码。</p>
+<p>如果你输入 <code>li</code> 并按下TAB键，shell将会帮你补全为 <code>lists:</code>。 再按一次Tab键，shell将会给出稍后你可能会用到函数的建议。
+	这就是Erlang补全模块 <code>lists</code> 并给出模块内函数的方式。你也许会感到这种方式很奇怪，但是不用担心，很快你就会适应这种方式了。</p>
 
-<p>I think we've seen enough of shell functionality to be alright, except for one thing: we don't know how to leave! There's a fast way to find how. Just type in <code>help().</code> and you should get information on a bunch of commands you can use in the shell (do not forget the full stop (<code>.</code>) as it is necessary for the command to run). We'll use some of them at a later point, but the only line of concern to us in order to get out is<br />
+<p>我认为我们已经了解很多shell的功能，除了这个：我们如何退出！这里有一个找出如何做这件事情的方法。我们只需要输入 <code>help().</code> 这样你就能得一堆可以在shell中执行的命令的信息（不要忘记终止符号（<code>.</code>）因为想执行一个命令，这是必须的）。
+	有一些命令我们将在后面用到，但是目前我们只关注这一行<br />
 <code>q()        -- quit - shorthand for init:stop()</code><br />
-So this is one way to do it (in fact, two ways). But this won't help us if the shell freezes! If you were paying attention, when you started the shell, there was a comment about 'aborting with <code>^G</code>'. Let's do that, and then press <code>h</code> to get help!</p>
+这是其中的一种方法（事实上，有两种方法）。 但是当shell失去响应，这方法就不行了！如果你很细心，你会发现，当你启动Erlang的shell的时候，有一行提示'aborting with <code>^G</code>'.
+	让我们尝试下， 之后按下<code>h</code>来获得帮助！</p>
 <pre class="brush:eshell">
 User switch command
  --&gt; h
@@ -75,7 +86,9 @@ User switch command
  --&gt;
 </pre>
 
-<p>If you type in <code>i</code> then <code>c</code>, Erlang should stop the currently running code and bring you back to a responsive shell. <code>j</code> will give you a list of processes running (a star after a number indicates this is the job you are currently running), which you can then interrupt with <code>i</code> followed by the number. If you use <code>k</code>, you will kill the shell as it is instead of just interrupting it. Press <code>s</code> to start a new one.</p>
+<p>如果你按下<code>i</code>接着按下<code>c</code>，Erlang将停止当前正在运行的代码，并回到可响应的shell。
+	<code>j</code>将列出当前进程列表 （一个星号紧跟一个数字表示，这是当前正在运行的任务），这个正在执行的进程可以用<code>i</code>加上该进程的进程号进行中断。
+	如果你使用了<code>k</code>，你将杀掉shell进程，而不是中断它。按<code>s</code>可以创建一个新的shell进程</p>
 
 <pre class="brush:eshell">
  Eshell V5.7.2  (abort with ^G)
@@ -91,7 +104,9 @@ Unknown job
 Eshell V5.7.2  (abort with ^G)
 1&gt; "YESS!"
 </pre>
-<p>If you read back the help text, you'll notice we can start remote shells. I won't get into details right now, but this should give you an idea of what the Erlang VM can do apart from running code. For now, let's get things started (for real).</p>
+<p>如果你再次阅读帮助信息，你会发现我们可以创建远程shell。现在我不会做更什么的介绍，但是已经可以让你明白Erlang的虚拟机除了可以执行代码之外还能做些什么。
+	(I won't get into details right now, but this should give you an idea of what the Erlang VM can do apart from running code.)
+	好了，让我们进行真正的尝试吧。</p>
 				<ul class="navigation">
 											<li><a href="introduction.html" title="Previous chapter">&lt; Previous</a></li>
 										
