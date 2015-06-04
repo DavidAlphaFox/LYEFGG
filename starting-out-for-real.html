@@ -33,17 +33,22 @@
 			</div><!-- menu -->
 			<div id="content">
             <div class="noscript"><noscript>Hey there, it appears your Javascript is disabled. That's fine, the site works without it. However, you might prefer reading it with syntax highlighting, which requires Javascript!</noscript></div>
-<h2>Starting Out (for real)</h2>
+<h2>真正的尝试</h2>
 
 <div class="note" style="margin-top:2.5em">
-	<p>Erlang is a relatively small and simple language (in the way C is simpler than C++). There are a few basic data types built in the language, and as such, this chapter will cover most of them. Reading it is strongly advised as it explains the building blocks for all the programs you'll write with Erlang later on.</p>
+	<p>相对来说，Erlang是一个非常小巧且简单语言（就像C比C＋＋简单一样）。Erlang内置了几种基础类型，如本章将会介绍的绝大部分基础类型。
+		强烈建议你的认真阅读，因为稍后的Erlang程序都会使用到本章内容。
+		(Reading it is strongly advised as it explains the building blocks for all the programs you'll write with Erlang later on.)</p>
 </div>
 
-<h3><a class="section" name="numbers">Numbers</a></h3>
+<h3><a class="section" name="numbers">数字</a></h3>
 
-<p>In the Erlang shell, <strong>expressions have to be terminated with a period followed by whitespace</strong> (line break, a space etc.), otherwise they won't be executed. You can separate expressions with commas, but only the result of the last one will be shown (the others are still executed). This is certainly unusual syntax for most people and it comes from the days Erlang was implemented directly in Prolog, a logic programming language.</p>
+<p>Erlang的shell中 <strong>表达式必须使用句号结尾紧跟着是一个空白</strong>（换行，空格等），否则不会被执行。
+	你可以使用逗号去隔开表达式，但是只有最后一行的结果会被显示出来（其余的语句也会被执行）。
+	这种语法形式对很多人来说并不常见，这种语法是因为Erlang一开始是由一种逻辑式的语言Prolog实现的。
+	(This is certainly unusual syntax for most people and it comes from the days Erlang was implemented directly in Prolog, a logic programming language.)</p>
 
-<p>Open the Erlang shell as described in the previous chapters and let's type them things!</p>
+<p>让我们像前一章所说的那样启动Erlang的shell，做一些小的尝试吧！</p>
 
 <pre class="brush:eshell">
 1&gt; 2 + 15.
@@ -60,9 +65,12 @@
 1
 </pre>
 
-<p>You should have noticed Erlang doesn't care if you enter floating point numbers or integers: both types are supported when dealing with arithmetic. <img class="right" src="static/img/calculator.png" width="97" height="128" alt="A calculator with the number '80085' typed in" title="tee hee" /> Integers and floating values are pretty much the only types of data Erlang's mathematical operators will handle transparently for you. However, if you want to have the integer-to-integer division, use <code>div</code>, and to have the modulo operator, use <code>rem</code> (remainder).</p>
+<p>你可能已经发现了，Erlang并不关心你输入的是整型还是浮点型：在做算数处理的时候，这两种类型都是支持的。 <img class="right" src="static/img/calculator.png" width="97" height="128" alt="A calculator with the number '80085' typed in" title="tee hee" />
+	Erlang算数操符支持自动类型转换的，只有整型和浮点型。
+	(Integers and floating values are pretty much the only types of data Erlang's mathematical operators will handle transparently for you.)
+	然而，如果你想整除的结果使用<code>div</code>，如果你想取余数使用<code>rem</code>（remainder）。</p>
 
-<p>Note that we can use several operators in a single expression, and mathematical operations obey the normal precedence rules.</p>
+<p>请注意，我们依然可以按照数学运算所服从的正常的优先级规则使用多个运算符。</p>
 
 <pre class="brush:eshell">
 7&gt; (50 * 100) - 4999.
@@ -73,7 +81,7 @@
 244950
 </pre>
 
-<p>If you want to express integers in other bases than base 10, just enter the number as <code>Base#Value</code> (given Base is in the range 2..36):</p>
+<p>如果你想使用非10进制来表达整数，只需要使用这个模式<code>Base#Value</code> （Base的范围是2到36）：</p>
 
 <pre class="brush:eshell">
 10&gt; 2#101010.
@@ -84,7 +92,7 @@
 174
 </pre>
 
-<p>Awesome! Erlang has the power of the calculator you have on the corner of your desk with a weird syntax on top of it! Absolutely exciting!</p>
+<p>不错吧！你现在拥有了一个语法怪异的桌面计算器！绝对酷！</p>
 
 
 <h3><a class="section" name="invariable-variables">Invariable Variables</a></h3>
