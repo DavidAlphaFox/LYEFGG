@@ -51,26 +51,26 @@
 
 
 <h3><a class="section" name="what-is-erlang">什么是Erlang</a></h3>
-<p>首先，Erlang是一门函数式语言。 If you have ever worked with imperative languages, statements such as <code>i++</code> may be normal to you;
-	in functional programming they are not allowed. In fact, changing the value of any variable is strictly forbidden! This may sound weird at first, but if you remember your math classes, it's in fact how you've learned it:</p>
+<p>首先，Erlang是一门函数式语言。 If you have ever worked with imperative languages, statements such as <code>i++</code> may be normal to you; 如果你使用过命令式开发语言编译器，像 <code>i++</code> 这样的语句对你来说是比较常见了。
+	in functional programming they are not allowed.  而这些语句在函数式开发中是不允许的。In fact, changing the value of any variable is strictly forbidden! 事实上，改变任何变量的值是强烈禁止的！This may sound weird at first, but if you remember your math classes, it's in fact how you've learned it:  这看起来有点古怪。 只是，如果你想想起你的数学课程，这就是事实中你曾经学习过的：</p>
 <pre class="brush:eshell">
 y = 2
 x = y + 3
 x = 2 + 3
 x = 5
 </pre>
-<p>Had I added the following:</p>
+<p>Had I added the following: 下面我作的加法：</p>
 <pre class="brush:eshell">
 x = 5 + 1
 x = x
 &there4; 5 = 6
 </pre>
-<p>You would have been very confused. Functional programming recognizes this: If I say <var>x</var> is 5, then I can't logically claim it is also 6! This would be dishonest. This is also why a function with the same parameter should always return the same result:</p>
+<p>You would have been very confused.  你将会觉十分困惑。Functional programming recognizes this 函数式编程是这样认为的: If I say <var>x</var> is 5, then I can't logically claim it is also 6!  如果我说 变量 <var>x</var> 的值是 5， 那么就不能从逻辑上声称变量 <var>x</var> 的值同时是6.  This would be dishonest.    这将是？？不诚实的？。 This is also why a function with the same parameter should always return the same result: 同时这也就是为什么一个函数在输入同样的参数将总是返回同样的结果。</p>
 <pre class="brush:eshell">
 x = add_two_to(3) = 5
 &there4; x = 5
 </pre>
-<p>Functions always returning the same result for the same parameter is called referential transparency. It's what lets us replace <code>add_two_to(3)</code> with 5, as the result of <code>3+2</code> will always be 5. That means we can then glue dozens of functions together in order to resolve more complex problems while being sure nothing will break. Logical and clean isn't it? There's a problem though:</p>
+<p>Functions always returning the same result for the same parameter is called referential transparency. 函数对相同的输入参数总是返回相同的结果，这被称为引用透明性。  It's what lets us replace <code>add_two_to(3)</code> with 5, as the result of <code>3+2</code> will always be 5.   在我们将代码<code>add_tow_to(3)</code> 替换为 5， 结果将永远是 5.   That means we can then glue dozens of functions together in order to resolve more complex problems while being sure nothing will break.  这意味着我们可以将多个函数组合在一起来解决复杂的问题，并且可以预测在解决问题过程中没什么被破坏。 Logical and clean isn't it?  这是不是合乎逻辑并且很清晰呢。 There's a problem though: 然而下面这个例子就有问题了：</p>
 <pre class="brush:eshell">
 x = today() = 2009/10/22
   -- wait a day --
@@ -78,8 +78,8 @@ x = today() = 2009/10/23
 x = x
 &there4; 2009/10/22 = 2009/10/23
 </pre>
-<p>Oh no! My beautiful equations! They suddenly all turned wrong! How come my function returns a different result every day?</p>
-<p>Obviously, there are some cases where it's useful to break referential transparency. Erlang has this very pragmatic approach with functional programming: obey its purest principles (referential transparency, avoiding mutable data, etc), but break away from them when real world problems pop up.</p>
+<p>Oh no! My beautiful equations! 哦，不，这美丽的问题。 They suddenly all turned wrong!  他们突然全变成错误了。How come my function returns a different result every day?  我的函数在每一天都返回不同的结果，为什么！</p>
+<p>Obviously, there are some cases where it's useful to break referential transparency. 很明显，破坏引用透明性在某些场景（用例）下是很有用的。  Erlang has this very pragmatic approach with functional programming: obey its purest principles (referential transparency, avoiding mutable data, etc), but break away from them when real world problems pop up.</p>
 
 <img class="right" src="static/img/envelope.png" width="206" height="161" alt="An envelope" />
 
@@ -139,9 +139,9 @@ it is possible, but most problems do not behave in a way that lets you just run 
 <p>Oh and if you're the type of person to go for cookbooks and pre-made recipes, <a class="external" href="http://trapexit.org/" title="trapexit, an Erlang community site">trapexit</a> is the place you're looking for. They also mirror the mailing lists as a forum and a general wiki, which can always be helpful.</p>
 				<ul class="navigation">
 											<li><a href="contents.html" title="Previous chapter">&lt; Previous</a></li>
-										
+
 					<li><a href="contents.html" title="Index">Index</a></li>
-					
+
 											<li><a href="starting-out.html" title="Next chapter">Next &gt;</a></li>
 									</ul>
 			</div><!-- content -->
