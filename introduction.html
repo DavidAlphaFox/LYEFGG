@@ -46,31 +46,35 @@
 <p>所以我开始编写这个教程。 当然我写本教程还有其它动机：主要我发现语言入门有点困难(要么使用文档稀缺的网站或者你买一本书), 并且我认为像趣学Haskell的那种入门指南是对社区有益处的。
 	更重要的是, 我见过好多人，都是通过非常笼统的言论过度的称赞或贬低Erlang。之后就有人认为Erlang只不过是一个噱头。如果我想通过别的方式说服这些人，我认为是不会很快受到这些人的关注。</p>
 
-<p>希望本书成为有命令式语言编程基础(如 C/C++, Java, Python, Ruby, 等) 和那些知道或不知道函数式编程的 (Haskell, Scala, Erlang, Clojure, OCaml...)的人的入门指南。
-	我也希望也一本没有偏见的书，阐述Erlang是什么，它的有点和它的缺点都是什么。</p>
+<p>希望本书成为有命令式语言编程基础(如 C/C++, Java, Python, Ruby, 等) 和那些知道或不知道函数式编程 (Haskell, Scala, Erlang, Clojure, OCaml...)的人的入门指南。
+	我也希望写一本没有偏见的书，阐述Erlang是什么，它的有点和它的缺点都是什么。</p>
 
 
 <h3><a class="section" name="what-is-erlang">什么是Erlang</a></h3>
-<p>首先，Erlang是一门函数式语言。 If you have ever worked with imperative languages, statements such as <code>i++</code> may be normal to you;
-	in functional programming they are not allowed. In fact, changing the value of any variable is strictly forbidden! This may sound weird at first, but if you remember your math classes, it's in fact how you've learned it:</p>
+<p>首先，Erlang是一门函数式语言。 如果你使用过命令式语言, 像这样的语句 <code>i++</code> 对你来说很熟悉;
+	但是在函数式语言中，这是不被允许的。 事实上，改变一个变量的值是被严格禁止的！ 这听起来挺奇怪的，但是想想你之前上过的数学课的内容:</p>
 <pre class="brush:eshell">
 y = 2
 x = y + 3
 x = 2 + 3
 x = 5
 </pre>
-<p>Had I added the following:</p>
+<p>我添加了下面这个例子:</p>
 <pre class="brush:eshell">
 x = 5 + 1
 x = x
 &there4; 5 = 6
 </pre>
-<p>You would have been very confused. Functional programming recognizes this: If I say <var>x</var> is 5, then I can't logically claim it is also 6! This would be dishonest. This is also why a function with the same parameter should always return the same result:</p>
+<p>你也许会感到困惑。 函数式语言认为: 如果我定义 <var>x</var> 是 5, 之后，在逻辑上我不能再次定义它为6！ 这样是不可靠的。 这也是为什么相同的函数相同的参数总返回相同的结果:</p>
 <pre class="brush:eshell">
 x = add_two_to(3) = 5
 &there4; x = 5
 </pre>
-<p>Functions always returning the same result for the same parameter is called referential transparency. It's what lets us replace <code>add_two_to(3)</code> with 5, as the result of <code>3+2</code> will always be 5. That means we can then glue dozens of functions together in order to resolve more complex problems while being sure nothing will break. Logical and clean isn't it? There's a problem though:</p>
+<p>函数接受相同参数时总返回相同的结果被称为<a href="http://en.wikipedia.org/wiki/Referential_transparency_%28computer_science%29">引用透明</a>。
+	这将允许我们用5来替换 <code>add_two_to(3)</code> ，因为计算 <code>3+2</code> 的结果将永远是5。
+	这代表着我们可以用很多函数组合再一起去解决一个问题，并且我们可以非常确信我们将得到我们想要的结果。
+	(That means we can then glue dozens of functions together in order to resolve more complex problems while being sure nothing will break.)
+	这难道不是非常清晰且符合逻辑的吗？(Logical and clean isn't it?) 尽管这有一个问题:</p>
 <pre class="brush:eshell">
 x = today() = 2009/10/22
   -- wait a day --
@@ -78,8 +82,9 @@ x = today() = 2009/10/23
 x = x
 &there4; 2009/10/22 = 2009/10/23
 </pre>
-<p>Oh no! My beautiful equations! They suddenly all turned wrong! How come my function returns a different result every day?</p>
-<p>Obviously, there are some cases where it's useful to break referential transparency. Erlang has this very pragmatic approach with functional programming: obey its purest principles (referential transparency, avoiding mutable data, etc), but break away from them when real world problems pop up.</p>
+<p>天哪！ 我完美的等式！在一瞬间它们全变成错误的了！ 为什么我的函数每天都会返回一个不同的结果呢？</p>
+<p>很明显，在某些情况下打破引用透明是必须的。(Obviously, there are some cases where it's useful to break referential transparency.)
+	Erlang是一个非常务实的函数式编程语言：遵循纯函数的相关规则(引用透明，避免可变数据， 等等）， 但是当面对部分现实世界的问题的时候，它打破这一规则。</p>
 
 <img class="right" src="static/img/envelope.png" width="206" height="161" alt="An envelope" />
 
