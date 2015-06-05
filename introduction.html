@@ -52,7 +52,8 @@
 
 <h3><a class="section" name="what-is-erlang">什么是Erlang</a></h3>
 <p>首先，Erlang是一门函数式语言。 如果你使用过命令式语言, 像这样的语句 <code>i++</code> 对你来说很熟悉;
-	但是在函数式语言中，这是不被允许的。 事实上，改变一个变量的值是被严格禁止的！ 这听起来挺奇怪的，但是想想你之前上过的数学课的内容:</p>
+	但是在函数式语言中，这是不被允许的。 事实上，改变一个变量的值是被严格禁止的！ 这看起来有点古怪。 只是，如果你想想起你的数学课程，这就是事实中你曾经学习过的：</p>
+
 <pre class="brush:eshell">
 y = 2
 x = y + 3
@@ -65,7 +66,9 @@ x = 5 + 1
 x = x
 &there4; 5 = 6
 </pre>
-<p>你也许会感到困惑。 函数式语言认为: 如果我定义 <var>x</var> 是 5, 之后，在逻辑上我不能再次定义它为6！ 这样是不可靠的。 这也是为什么相同的函数相同的参数总返回相同的结果:</p>
+
+<p>你也许会感到困惑。 函数式语言认为: 如果我定义 <var>x</var> 是 5, 之后，那么就不能从逻辑上声称变量 <var>x</var> 的值同时是6！ 这样是不可靠的。 这也是为什么相同的函数相同的参数总返回相同的结果:</p>
+
 <pre class="brush:eshell">
 x = add_two_to(3) = 5
 &there4; x = 5
@@ -74,7 +77,8 @@ x = add_two_to(3) = 5
 	这将允许我们用5来替换 <code>add_two_to(3)</code> ，因为计算 <code>3+2</code> 的结果将永远是5。
 	这代表着我们可以用很多函数组合再一起去解决一个问题，并且我们可以非常确信我们将得到我们想要的结果。
 	(That means we can then glue dozens of functions together in order to resolve more complex problems while being sure nothing will break.)
-	这难道不是非常清晰且符合逻辑的吗？(Logical and clean isn't it?) 尽管这有一个问题:</p>
+	这难道不是非常清晰且符合逻辑的吗？(Logical and clean isn't it?) 然而下面这个例子就有问题了:</p>
+
 <pre class="brush:eshell">
 x = today() = 2009/10/22
   -- wait a day --
@@ -82,6 +86,7 @@ x = today() = 2009/10/23
 x = x
 &there4; 2009/10/22 = 2009/10/23
 </pre>
+
 <p>天哪！ 我完美的等式！在一瞬间它们全变成错误的了！ 为什么我的函数每天都会返回一个不同的结果呢？</p>
 <p>很明显，在某些情况下打破引用透明是必须的。(Obviously, there are some cases where it's useful to break referential transparency.)
 	Erlang是一个非常务实的函数式编程语言：遵循纯函数的相关规则(引用透明，避免可变数据， 等等）， 但是当面对部分现实世界的问题的时候，它打破这一规则。</p>
@@ -182,9 +187,9 @@ x = x
 <p>夹带点私料，两个专业的QQ群：59293159（中国Erlang俱乐部），230538511（Hacking Erlang）。非专业QQ群：111477336（函数式语言编程）。</p>
 				<ul class="navigation">
 											<li><a href="contents.html" title="Previous chapter">&lt; Previous</a></li>
-										
+
 					<li><a href="contents.html" title="Index">Index</a></li>
-					
+
 											<li><a href="starting-out.html" title="Next chapter">Next &gt;</a></li>
 									</ul>
 			</div><!-- content -->

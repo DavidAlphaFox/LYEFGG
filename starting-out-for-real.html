@@ -95,9 +95,11 @@
 <p>不错吧！你现在拥有了一个语法怪异的桌面计算器！绝对酷！</p>
 
 
-<h3><a class="section" name="invariable-variables">Invariable Variables</a></h3>
+<h3><a class="section" name="invariable-variables">不变的变量</a></h3>
 
-<p>Doing arithmetic is alright, but you won't go far without being able to store results somewhere. For that, we'll use variables. If you have read the intro to this book, you'll know that variables can't be variable in functional programming. The basic behavior of variables can be demonstrated with these 7 expressions (note that variables begin with an uppercase letter):</p>
+<p>虽然我们有了一个不错的计算器，但是到目前为止，我们还没有办法存储计算的结果。
+	为此我们将使用变量。如果你读了本书的介绍，你就已经知道在函数式语言中，变量是不变的。
+	变量的基本行为可以用这7个表达式来说明（请注意，变量首字母需要大写）：</p>
 
 <pre class="brush:eshell">
 1&gt; One.
@@ -116,7 +118,12 @@
 ** exception error: no match of right hand side value 2
 </pre>
 
-<p>The first thing these commands tell us is that you can assign a value to a variable exactly once; then you can 'pretend' to assign a value to a variable if it's the same value it already has. If it's different, Erlang will complain. It's a correct observation, but the explanation is a bit more complex and depends on the <code>=</code> operator. The <code>=</code> operator (not the variables) has the role of comparing values and complaining if they're different. If they're the same, it returns the value:</p>
+<p>第一，我们只能为变量赋值一次；
+	第二，如果你给一个变量赋值时，该变量当前的值和所赋的值相同，你可以‘假装’给一个变量赋值。(then you can 'pretend' to assign a value to a variable if it's the same value it already has.)
+	如果不同，Erlang将会报错的。
+	虽然这很容易观察到，但是怎么解释比较负责，这完全取决于<code>=</code>的含义。
+	<code>=</code>操作符（不是变量）扮演着比较值的角色，看符号的两端的值是否不同。
+	如果两个值相同，它将返回进行比较的值：</p>
 
 <pre class="brush:eshell">
 8&gt; 47 = 45 + 2.
@@ -125,7 +132,10 @@
 ** exception error: no match of right hand side value 48
 </pre>
 
-<p>What this operator does when mixed with variables is that if the left-hand side term is a variable and it is unbound (has no value associated to it), Erlang will automatically bind the right-hand side value to the variable on the left-hand side. The comparison will consequently succeed and the variable will keep the value in memory.</p>
+<p> 如果操作符左侧是未绑定值的变量（没有被赋值），Erlang会自动将右侧的值绑定到左侧的变量上（赋值操作）。(What this operator does when mixed with variables is that if the left-hand side term is a variable and it is unbound (has no value associated to it),
+	Erlang will automatically bind the right-hand side value to the variable on the left-hand side.)
+	比较操作会因此而成功，并且右值会被保存到变量中。
+	(The comparison will consequently succeed and the variable will keep the value in memory.)</p>
 
 <p>This behavior of the <code>=</code> operator is the basis of something called 'Pattern matching', which many functional programming languages have, although Erlang's way of doing things is usually regarded as more flexible and complete than alternatives. We'll see pattern matching with more detail when we visit the tuple and list types in this very chapter, and also with functions in the following chapters.</p>
 
