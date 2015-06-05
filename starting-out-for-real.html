@@ -137,11 +137,14 @@
 	比较操作会因此而成功，并且右值会被保存到变量中。
 	(The comparison will consequently succeed and the variable will keep the value in memory.)</p>
 
-<p>This behavior of the <code>=</code> operator is the basis of something called 'Pattern matching', which many functional programming languages have, although Erlang's way of doing things is usually regarded as more flexible and complete than alternatives. We'll see pattern matching with more detail when we visit the tuple and list types in this very chapter, and also with functions in the following chapters.</p>
+<p><code>=</code>操作符的这种行为被称为’模式匹配‘,这是所有函数式语言都具备的，但是通常认为Erlang的实现更加完善和灵活。
+	在本章中介绍列表和元组的环节，以及后面介绍函数的章节中，我们将学习更多关于模式匹配的知识。</p>
 
-<p>The other thing the commands 1-7 told us is that variable names must begin with a capital letter. Command 7 failed because the word <var>two</var> had a lowercase letter to begin with. Technically, variables can start with an underscore ('_') too, but by convention their use is restricted to values you do not care about, yet you felt it was necessary to document what it contains.</p>
+<p>另外这7个命令告诉我们变量是需要首字母大写的。第7个命令失败就是因为变量<var>two</var>首字母小写了。
+	严格来说，变量也可以用下划线来开头（‘_’）， 但是根据惯例，以下划线开头的变量代表着你不关心它的值但是需要标注下这个变量是什么。
+	(Technically, variables can start with an underscore ('_') too, but by convention their use is restricted to values you do not care about, yet you felt it was necessary to document what it contains.)</p>
 
-<p>You can also have variables that are only an underscore:</p>
+<p>当然你可以单独使用一个下划线来做变量：</p>
 
 <pre class="brush:eshell">
 10&gt; _ = 14+3.
@@ -150,12 +153,16 @@
 * 1: variable '_' is unbound
 </pre>
 
-<p>Unlike any other kind of variable, it won't ever store any value. Totally useless for now, but you'll know it exists when we need it.</p>
+<p>不像别的变量，只有一个下划线的变量是不会存储任何被赋的值。
+	就现在而言，它一点用都没有，但是请谨记，因为某一个时刻你会用到它的。</p>
 
 <div class="note">
-	<p><strong>Note:</strong> If you're testing in the shell and save the wrong value to a variable, it is possible to 'erase' that variable by using the function <code>f(Variable).</code>. If you wish to clear all variable names, do <code>f().</code>.</p>
+	<p><strong>注意：</strong> 如果你在用shell做些尝试时，发现你给一个变量赋了一个错误的值，这个变量时可以被‘消除’的，用<code>f(Variable).</code>来消除。
+		如果你想清理掉shell中所有的变量只要执行<code>f().</code>就可以了。</p>
 	
-	<p>These functions are there only to help you when testing and only work in the shell. When writing real programs, we won't be able to destroy values that way. Being able to do it only in the shell makes sense if you acknowledge Erlang being usable in industrial scenarios: it is wholly possible to have a shell being active for years without interruption... Let's bet that the variable <var>X</var> would be used more than once in that time period.</p>
+	<p>当然这些函数只能在shell中使用。当你在编写项目的时候，你是无法通过这种方式来‘消除’变量的。
+		之所以这么做，就是让你能在这种生产环境中使用：一个Erlang的shell已经执行了好多年都没有被中断过，在这期间，可以让我们多次的重复使用变量<var>X</var>。
+		(Being able to do it only in the shell makes sense if you acknowledge Erlang being usable in industrial scenarios: it is wholly possible to have a shell being active for years without interruption... Let's bet that the variable <var>X</var> would be used more than once in that time period.)</p>
 </div>
 
 
