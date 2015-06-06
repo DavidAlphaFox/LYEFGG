@@ -175,7 +175,7 @@
 	你不能给它赋值，不能改变它，不能将它变成别的东西；他就是<var>cat</var>。你要了解这一点。
 	(You can't play with it, you can't change it, you can't smash it to pieces; it's <var>cat</var>.Deal with it.)</p>
 
-<p>While single words starting with a lowercase letter is a way to write an atom, there's more than one manner to do it:</p>
+<p>不只有单个小写的单词可以被定义为原子，我们还有其它方式可以定义原子：</p>
 
 <pre class="brush:eshell">
 1&gt; atom.
@@ -190,8 +190,11 @@ atoms_rule@erlang
 atom
 </pre>
 
-<p>An atom should be enclosed in single quotes (') if it does not begin with a lower-case letter or if it contains other characters than alphanumeric characters, underscore (_), or @.<br />
-Expression 5 also shows that an atom with single quotes is exactly the same as a similar atom without them.</p>
+<p>一个原子如果不是用小写字母开头或者该原子中包含了字符，数字，下划线（_）或@符之外的字符，需要用单引号（'）括起来。
+	(An atom should be enclosed in single quotes (') if it does not begin with a lower-case letter or
+	if it contains other characters than alphanumeric characters, underscore (_), or @.)<br />
+	表达式5，像我们展示了一个原子如果被单引号括起来了，那么被单引号括起来的原子和没有用单引号括起来的原子是相同的。
+</p>
 
 <p>I compared atoms to constants having their name as their values. You may have worked with code that used constants before: as an example, let's say I have values for eye colors: <img class="left" src="static/img/atom.png" width="193" height="198" alt="An Atom, as imagined by Rutherford" /> <code>BLUE -&gt; 1, BROWN -&gt; 2, GREEN -&gt; 3, OTHER -&gt; 4</code>. You need to match the name of the constant to some underlying value. Atoms let you forget about the underlying values: my eye colors can simply be 'blue', 'brown', 'green' and 'other'. These colors can be used anywhere in any piece of code: the underlying values will never clash and it is impossible for such a constant to be undefined! If you really want constants with values associated to them, there's a way to do it that we'll see in <a class="chapter local" href="modules.html" title="Modules">chapter 4</a> (Modules).</p>
 
