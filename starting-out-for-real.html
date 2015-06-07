@@ -196,29 +196,44 @@ atom
 	表达式5，像我们展示了一个原子如果被单引号括起来了，那么被单引号括起来的原子和没有用单引号括起来的原子是相同的。
 </p>
 
-<p>I compared atoms to constants having their name as their values. You may have worked with code that used constants before: as an example, let's say I have values for eye colors: <img class="left" src="static/img/atom.png" width="193" height="198" alt="An Atom, as imagined by Rutherford" /> <code>BLUE -&gt; 1, BROWN -&gt; 2, GREEN -&gt; 3, OTHER -&gt; 4</code>. You need to match the name of the constant to some underlying value. Atoms let you forget about the underlying values: my eye colors can simply be 'blue', 'brown', 'green' and 'other'. These colors can be used anywhere in any piece of code: the underlying values will never clash and it is impossible for such a constant to be undefined! If you really want constants with values associated to them, there's a way to do it that we'll see in <a class="chapter local" href="modules.html" title="Modules">chapter 4</a> (Modules).</p>
+<p>我们可以认为原子是将它们名字作为它们值的常量。(I compared atoms to constants having their name as their values.)
+	你以前的代码中也许用过常量：举个例子来说， 让我们定义眼睛颜色 <img class="left" src="static/img/atom.png" width="193" height="198" alt="An Atom, as imagined by Rutherford" /> <code>BLUE -&gt; 1, BROWN -&gt; 2, GREEN -&gt; 3, OTHER -&gt; 4</code>。
+	你需要给这些名字赋上原始的值。
+	原子让你忘记了这些原始值的存在：我们只需要定义眼睛的颜色为'blue'，'brown'，'green'和'other'。
+	这些颜色的定义可以在任何代码中使用：这样使常量的原始值就不存在冲突或未定义的情况！
+	如果你真的想给这些常量赋上原始值，你可以去<a class="chapter local" href="modules.html" title="Modules">第四章</a>（模块）中寻找相应的方法。
+(the underlying values will never clash and it is impossible for such a constant to be undefined! If you really want constants with values associated to them, there's a way to do it that we'll see in chapter 4 (Modules).)</p>
 
-<p>An atom is therefore mainly useful to express or qualify data coupled with it. Used alone, it's a bit harder to find a good use to it. This is why we won't spend more time toying with them; their best use will come when coupled with other types of data.</p>
+<p>原子主要用于表达或修饰与它关联的数据。我们很少单独使用原子。这也是我们不在原子上浪费太多时间的原因；
+	原子的最佳使用场景将是它和其它数据建立关联的时候。
+</p>
 
 <div class="note koolaid">
-	<p><strong>Don't drink too much Kool-Aid:</strong><br />
-		Atoms are really nice and a great way to send messages or represent constants. However there are pitfalls to using atoms for too many things: an atom is referred to in an "atom table" which consumes memory (4 bytes/atom in a 32-bit system, 8 bytes/atom in a 64-bit system). The atom table is not garbage collected, and so atoms will accumulate until the system tips over, either from memory usage or because 1048577 atoms were declared.</p>
-
-	<p>This means atoms should not be generated dynamically for whatever reason; if your system has to be reliable and user input lets someone crash it at will by telling it to create atoms, you're in serious trouble. Atoms should be seen as tools for the developer because honestly, it's what they are.</p>
+	<p><strong>不要盲从：</strong><br />
+		原子作为消息和常量确实非常好。然而过度使用原子也是个非常大的陷阱：
+		一个原子通常是“原子表”中的一个引用，每个原子引用都会消耗一定量内存（在32位的系统上，一个原子引用是4字节，在64位的系统上，一个原子引用是8字节）。
+		原子表是不进行垃圾回收的，因此原子会一直增加到1048577或内存耗尽，这时Erlang系统会给出一个提示，告诉我们原子不能再增加了。
+	</p>
+	<p>不管什么原因，都不应该动态生成原子；
+		如果你的系统需要高可靠性，但是用户输入却可以创建原子，从而导致系统崩溃，那么你就有大麻烦了。
+		说实话，原子应当被当作开发者的一个工具，而非用户的。
+	</p>
 </div>
 
 <div class="note">
-	<p><strong>Note:</strong> some atoms are reserved words and can not be used except for what the language designers wanted them to be: function names, operators, expressions, etc. These are:
+	<p><strong>注意：</strong> 一些原子是语言的保留字，你不能随便改变它的含义：
+		如函数名，表达式，操作符。分别是：
 		<code>after and andalso band begin bnot bor bsl bsr bxor case catch cond div end fun if let not of or orelse query receive rem try when xor</code></p>
 </div>
 
 <img class="right" src="static/img/boole.png" width="198" height="224" alt="George Boole" title='"Sup baby, would you like to go Booling?"' />
 
-<h3><a class="section" name="bool-and-compare">Boolean Algebra &amp; Comparison operators</a></h3>
+<h3><a class="section" name="bool-and-compare">布尔代数&amp;比较操作符</a></h3>
 
-<p>One would be in pretty deep trouble if one couldn't tell the difference between what's small and big, what's true and false. As any other language, Erlang has ways to let you use boolean operations and to compare items.</p>
+<p> 如果一个系统诉你，它无法区分真和假，大和小，那么我们将面临一个非常严重的问题。
+	和其它语言一样，Erlang给你准备了布尔运算符还有比较算法。</p>
 
-<p>Boolean algebra is dirt simple:</p>
+<p>布尔代数非常简单：</p>
 
 <pre class="brush:eshell">
 1&gt; true and false.
@@ -234,7 +249,9 @@ false
 </pre>
 
 <div class="note">
-	<p><strong>Note:</strong> the boolean operators <code>and</code> and <code>or</code> will always evaluate arguments on both sides of the operator. If you want to have the short-circuit operators (which will only evaluate the right-side argument if it needs to), use <code>andalso</code> and <code>orelse</code>.</p>
+	<p><strong>注意：</strong>布尔运算符<code>and</code>和<code>or</code>总是会计算两边的表达式的。
+		如果你想使用短路运算符（只在有需要的时候，才去计算右侧的表达式），那么请用<code>andalso</code> and <code>orelse</code>。
+	</p>
 </div>
 
 <p>Testing for equality or inequality is also dirt simple, but has slightly different symbols from those you see in many other languages:</p>
