@@ -250,11 +250,12 @@ false
 
 <div class="note">
 	<p><strong>注意：</strong>布尔运算符<code>and</code>和<code>or</code>总是会计算两边的表达式的。
-		如果你想使用短路运算符（只在有需要的时候，才去计算右侧的表达式），那么请用<code>andalso</code> and <code>orelse</code>。
+		如果你想使用短路运算符（只在有需要的时候，才去计算右侧的表达式），那么请用<code>andalso</code>和<code>orelse</code>。
 	</p>
 </div>
 
-<p>Testing for equality or inequality is also dirt simple, but has slightly different symbols from those you see in many other languages:</p>
+<p>相等和不等判断也相当简单，但是和其它语言在符号上稍有不同：
+</p>
 
 <pre class="brush:eshell">
 6&gt; 5 =:= 5.
@@ -271,9 +272,14 @@ true
 false
 </pre>
 
-<p>First of all, if your usual language uses <code>==</code> and <code>!=</code> to test for and against equality, Erlang uses <code>=:=</code> and <code>=/=</code>.  The three last expressions (lines 9 to 11) also introduce us to a pitfall: Erlang won't care about floats and integers in arithmetic, but will do so when comparing them. No worry though, because the <code>==</code> and <code>/=</code> operators are there to help you in these cases. This is important to remember whether you want exact equality or not.</p>
+<p>首先，如果你常用的语言用<code>==</code>和<code>!=</code>来判断相等，Erlang用<code>=:=</code>和<code>=/=</code>来判断相等。
+	最后三个表达式（9到11行）也让你看到了Erlang一些不方便的地方：
+	Erlang在算数上并不关心浮点和整型，但是在Erlang进行比较的时候，就开始关心浮点和整形。
+	不过不用担心，因为使用<code>==</code>和<code>/=</code>可以避免这些情况。
+	所以自己心中要清楚，自己要进行无类型的比较还是有类型的比较。</p>
 
-<p>Other operators for comparisons are <code>&lt;</code> (less than), <code>&gt;</code> (greater than), <code>&gt;=</code> (greater than or equal to) and <code>=&lt;</code> (less than or equal to). That last one is backwards (in my opinion) and is the source of many syntax errors in my code. Keep an eye on that <code>=&lt;</code>.</p>
+<p>其它比较操作符<code>&lt;</code>（小于），<code>&gt;</code>（大于），<code>&gt;=</code>（大于等于）和<code>=&lt;</code>（小于等于）。
+	在我个人看来，最后一个操作符是为了向后兼容，同时这也导致我代码出现很多错误。所以多留心下<code>=&lt;</code>操作符。</p>
 
 <pre class="brush:eshell">
 12&gt; 1 &lt; 2.
@@ -286,7 +292,8 @@ true
 true
 </pre>
 
-<p>What happens when doing <code>5 + llama</code> or <code>5 == true</code>? There's no better way to know than trying it and subsequently getting scared by error messages!</p>
+<p>如果我们做这个操作<code>5 + llama</code>或这个操作<code>5 == true</code>会出现什么事情？
+	除了不断尝试并得到一堆错误之外，没有更好的方法！</p>
 
 <pre class="brush:eshell">
 12&gt; 5 + llama.
@@ -295,18 +302,25 @@ true
         called as 5 + llama
 </pre>
 
-<p>Welp! Erlang doesn't really like you misusing some of its fundamental types! The emulator returns a nice error message here. It tells us it doesn't like one of the two arguments used around the <code>+</code> operator!</p>
+<p>哇哦！Erlang并不希望你误用它的基础类型。模拟器将会返回一个清晰的错误信息。
+	这条信息告诉我们，它无法识别<code>+</code>操作符两个参数中的一个！
+	(It tells us it doesn't like one of the two arguments used around the <code>+</code> operator!)</p>
 
-<p>Erlang getting mad at you for wrong types is not always true though:</p>
+<p>Erlang并不总会因为类型错误而让你疯狂：</p>
 
 <pre class="brush:eshell">
 13&gt; 5 =:= true.
 false
 </pre>
 
-<p>Why does it refuse different types in some operations but not others? While Erlang doesn't let you <em>add</em> anything with everything, it will let you <em>compare</em> them. This is because the creators of Erlang thought pragmaticism beats theory and decided it would be great to be able to simply write things like general sorting algorithms that could order any term. It's there to make your life simpler and can do so the vast majority of the time.</p>
+<p>为什么有些操作符拒绝不同类型的参数而有些却可以呢？
+	Erlang不准你<em>合并</em>两个任意类型，但是准许你<em>比较</em>它们。
+	这是因为Erlang的创造者们，这样做更实用一些并且这样可以方便编写通用的排序算法。
+	(This is because the creators of Erlang thought pragmaticism beats theory and decided it would be great to be able to simply write things like general sorting algorithms that could order any term.)
+	这将使你的生活更加简单，就像你生命中绝大部分的时间。
+	(It's there to make your life simpler and can do so the vast majority of the time.)</p>
 
-<p>There is one last thing to keep in mind when doing boolean algebra and comparisons:</p>
+<p>在使用Erlang的布尔算数和比较运算需要牢记下面情形：</p>
 
 <pre class="brush:eshell">
 14&gt; 0 == false.
@@ -315,14 +329,23 @@ false
 true
 </pre>
 
-<p>Chances are you're pulling your hair if you come from procedural languages or most object-oriented languages. Line 14 should evaluate to <var>true</var> and line 15 to <var>false</var>! After all, false means 0 and true is anything else! Except in Erlang. Because I lied to you. Yes, I did that. Shame on me.</p>
+<p>如果你以前使用过过程式或面向OO的语言，这会使你震惊的。第14行的结果应当是<var>true</var>第15行的结果应当是<var>false</var>！
+	毕竟，fasle代表着0，true代表着别的！但是这在Erlang中完全不同的。因为我对你说了一个谎，是的我确实这么做了，我感到很抱歉。
+	(Because I lied to you. Yes, I did that. Shame on me.)</p>
 
-<p>Erlang has no such things as boolean <var>true</var> and <var>false</var>. The terms true and false are atoms, but they are integrated well enough into the language you shouldn't have a problem with that as long as you don't expect false and true to mean anything but false and true.</p>
+<p>Erlang在布尔上只有<var>true</var>和<var>false</var>。
+	ture和false是原子，它能很好集成到语言中，只要你不将布尔值用做其它用途，你就不会遇到任何问题。
+	(The terms true and false are atoms,
+	but they are integrated well enough into the language you shouldn't have a problem with that
+	as long as you don't expect false and true to mean anything but false and true.)</p>
 
 <div class="note">
-	<p><strong>Note:</strong> The correct ordering of each element in a comparison is the following:<br />
+	<p><strong>注意：</strong>各类型的比较顺序如下：<br />
 	<code>number &lt; atom &lt; reference &lt; fun &lt; port &lt; pid &lt; tuple &lt; list &lt; bit string</code></p>
-	<p>You don't know all these types of things yet, but you will get to know them through the book. Just remember that this is why you can compare anything with anything! To quote Joe Armstrong, one of the creators of Erlang: "The actual order is not important - but that a total ordering is well defined is important."</p>
+	<p>你也许还不知道这些类型，但是你可以通过本书逐步了解这些类型。
+		请记住这就是你为什么能比较任何类型的原因！
+		Joe Armstrong，Erlang的创造者之一认为：“真正的顺序并不重要，但是所有类型的排序定义是非常重要的。”
+		("The actual order is not important - but that a total ordering is well defined is important.")</p>
 </div>
 
 
