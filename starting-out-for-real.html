@@ -391,7 +391,12 @@ true
 	很明显，这次比较一定会成功，因为比较已经变成了<code>{4,5} = {4,5}</code>。
 	这是多种模式匹配形式中的一种。</p>
 
-<p>Note that on expression 6, I used the anonymous <var>_</var> variable. This is exactly how it's meant to be used: to drop the value that would usually be placed there since we won't use it. The <var>_</var> variable is always seen as unbound and acts as a wildcard for pattern matching. Pattern matching to unpack tuples will only work if the number of elements (the tuple's length) is the same.</p>
+<p>注意到第6个表达式了嘛，我用了匿名变量<var>_</var>。
+	其实这就是它做好的用途：
+	占一个变量的位置，并忽略掉它的值，因为你根本用不到它的值。
+	(to drop the value that would usually be placed there since we won't use it.)
+	模式匹配只有在两边元素数量相同（元组长度相等）的情况下，才会对元组进行解包。
+</p>
 
 <pre class="brush:eshell">
 7&gt; {_,_} = {4,5}.
@@ -400,14 +405,14 @@ true
 ** exception error: no match of right hand side value {4,5,6}
 </pre>
 
-<p>Tuples can also be useful when working with single values. How so? The simplest example is temperature:</p>
+<p>即便是只有一个单值，元组也是非常有用的。为何如此？最简单的例子如温度：</p>
 
 <pre class="brush:eshell">
 9&gt; Temperature = 23.213.
 23.213
 </pre>
 
-<p>Well, it sounds like a good day to go to the beach... Wait, is this temperature in Kelvin, Celsius or Fahrenheit?</p>
+<p>很好，看起来这是一个去海滩的好日子。。。等下， 这温度的单位是什么，开氏，摄氏还是华氏？</p>
 
 <pre class="brush:eshell">
 10&gt; PreciseTemperature = {celsius, 23.213}.
@@ -416,14 +421,21 @@ true
 ** exception error: no match of right hand side value {celsius,23.213}
 </pre>
 
-<p>This throws an error, but it's exactly what we want! This is, again, pattern matching at work. The <code>=</code> operator ends up comparing <var>{kelvin, T}</var> and <var>{celsius, 23.213}</var>: even if the variable <var>T</var> is unbound, Erlang won't see the <var>celsius</var> atom as identical to the <var>kelvin</var> atom when comparing them. An exception is thrown which stops the execution of code. By doing so, the part of our program that expects a temperature in Kelvin won't be able to process temperatures sent in Celsius. This makes it easier for the programmer to know what is being sent around and also works as a debugging aid. A tuple which contains an atom with one element following it is called a 'tagged tuple'. Any element of a tuple can be of any type, even another tuple:</p>
+<p>它报错了，但是，这确实是我们想要的。这里我们再次的用到了模式匹配。
+<code>=</code>结束了对<var>{kelvin, T}</var>的<var>{celsius, 23.213}</var>比较操作：
+	即便变量<var>T</var>是未绑定的，Erlang在进行比较的时候也不会认为原子<var>celsius</var>和<var>kelvin</var>是一样的。
+	Erlang此时会抛出一个异常并停止执行代码。这样做，处理开氏温度的代码片段即便收到了摄氏温度也不会进行处理。
+	这样做让程序员很容易知道现在正在发送的是什么消息并且这是一个不错的辅助调试工具。
+	一个元组中第一个元素是原子的元组，我们称它们为‘标签元组’。
+	任何一个类型都可以是元组的元素，即便这个元素是另一个元组：</p>
+
 
 <pre class="brush:eshell">
 12&gt; {point, {X,Y}}.
 {point,{4,5}}
 </pre>
 
-<p>What if we want to carry around more than one Point though?</p>
+<p>如果我们要表达一个以上的点呢？(What if we want to carry around more than one Point though?)</p>
 
 
 <h3><a class="section" name="lists">Lists!</a></h3>
