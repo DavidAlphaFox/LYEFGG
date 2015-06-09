@@ -349,9 +349,13 @@ true
 </div>
 
 
-<h3><a class="section" name="tuples">Tuples</a></h3>
+<h3><a class="section" name="tuples">元组</a></h3>
 
-<p>A tuple is a way to organize data. It's a way to group together many terms when you know how many there are. In Erlang, a tuple is written in the form <code>{Element1, Element2, ..., ElementN}</code>. As an example, you'd give me the coordinates (x,y) if you wanted to tell me the position of a point in a Cartesian graph. We can represent this point as a tuple of two terms:</p>
+<p>
+	元组是组织数据的一种方式。当你知道有多少项的时候，你可以使用它将这些项放到一起。
+	在Erlang中， <code>{Element1, Element2, ..., ElementN}</code>就是元组的书写方式。
+	举例来说，如果你想告诉我笛卡尔坐标系中某点的位置的时候，你会告诉我一个坐标<code>(x,y)</code>。
+	我们可以将这个点表述成具有两个项的元组：</p>
 
 <pre class="brush:eshell">
 1&gt; X = 10, Y = 4.
@@ -360,7 +364,11 @@ true
 {10,4}
 </pre>
 
-<p>In this case, a point will always be two terms. Instead of carrying the variables <var>X</var> and <var>Y</var> around the place, you only have to carry one instead. However, what can I do if I receive a point and only want the <var>X</var> coordinate? It's not hard to extract that information. Remember that when we assigned values, Erlang would never complain if they were the same. Let's exploit that! You may need to clean the variables we had set with <code>f()</code>.</p>
+<p>在这种情况，一个点总是有两个项的。
+	比起使用两个变量<var>X</var>和<var>Y</var>，现在你只需要使用一个就可以了
+	但是，当我收到这个点的元组时，我怎么才能只取出<var>X</var>坐标呢？
+	从这里面提取信息一点都不难。还记得嘛，当我们给某个变量赋值的时候，Erlang从来不会因为两个值相同而报错。
+	我们就利用这个特性！你也许需要使用<code>f()</code>来清理掉当前的变量。</p>
 
 <pre class="brush:eshell">
 3&gt; Point = {4,5}.
@@ -373,7 +381,15 @@ true
 {4,5}
 </pre>
 
-<p>From then on we can use <var>X</var> to get the first value of the tuple! How did that happen?  <img class="left" src="static/img/mr-brackets.png" width="178" height="178" alt="{Mr.Brackets}" />First, <var>X</var> and <var>Y</var> had no value and were thus considered unbound variables. When we set them in the tuple <var>{X,Y}</var> on the left-hand side of the <code>=</code> operator, the <code>=</code> operator compares both values: <var>{X,Y}</var> vs. <var>{4,5}</var>. Erlang is smart enough to unpack the values from the tuple and distribute them to the unbound variables on the left-hand side. Then the comparison is only <code>{4,5} = {4,5}</code>, which obviously succeeds! That's one of the many forms of pattern matching.</p>
+<p>然后我们就可以再次用<var>X</var>来获取元组的中第一个值了！
+	这是怎么发生的？ <img class="left" src="static/img/mr-brackets.png" width="178" height="178" alt="{Mr.Brackets}" />
+	首先 因为<var>X</var>和<var>Y</var>都没有值，所以他们是没绑定的变量。
+	当我们将<var>{X,Y}</var>作为<code>=</code>操作符的左值的时候，
+	<code>=</code>操作符比较两个值：<var>{X,Y}</var> vs. <var>{4,5}</var>。
+	Erlang会很聪明的将元组中的值解包然后赋值给左侧未绑定的变量。
+	(Erlang is smart enough to unpack the values from the tuple and distribute them to the unbound variables on the left-hand side.)
+	很明显，这次比较一定会成功，因为比较已经变成了<code>{4,5} = {4,5}</code>。
+	这是多种模式匹配形式中的一种。</p>
 
 <p>Note that on expression 6, I used the anonymous <var>_</var> variable. This is exactly how it's meant to be used: to drop the value that would usually be placed there since we won't use it. The <var>_</var> variable is always seen as unbound and acts as a wildcard for pattern matching. Pattern matching to unpack tuples will only work if the number of elements (the tuple's length) is the same.</p>
 
