@@ -438,23 +438,27 @@ true
 <p>如果我们要表达一个以上的点呢？(What if we want to carry around more than one Point though?)</p>
 
 
-<h3><a class="section" name="lists">Lists!</a></h3>
+<h3><a class="section" name="lists">列表</a></h3>
 
-<p>Lists are the bread and butter of many functional languages. They're used to solve all kinds of problems and are undoubtedly the most used data structure in Erlang. Lists can contain anything! Numbers, atoms, tuples, other lists; your wildest dreams in a single structure. The basic notation of a list is <code>[Element1, Element2, ..., ElementN]</code> and you can mix more than one type of data in it:</p>
+<p>对许多函数式的语言来说，列表是整个语言的基础。
+	毋庸置疑在Erlang中，列表是非常有用的数据结构，可以解决所有类型的问题。
+	列表可以保存任何类型的东西！数字，原子，元组或者别的列表；列表实现了你狂野的梦想，任何类型都放在一个数据结构中。
+	列表的书写方式是<code>[Element1, Element2, ..., ElementN]</code>这个样子的，当然你可以在其中混合多种数据类型：</p>
 
 <pre class="brush:eshell">
 1&gt; [1, 2, 3, {numbers,[4,5,6]}, 5.34, atom].
 [1,2,3,{numbers,[4,5,6]},5.34,atom]
 </pre>
 
-<p>Simple enough, right?</p>
+<p>是不是很简单？</p>
 
 <pre class="brush:eshell">
 2&gt; [97, 98, 99].
 "abc"
 </pre>
 
-<p>Uh oh! This is one of the most disliked things in Erlang: strings! Strings are lists and the notation is absolutely the exact same! Why do people dislike it? Because of this:</p>
+<p>差点忘记了！Erlang中有一个最不讨人喜欢的东西：字符串！字符串和列表是完全相同的！
+	为什么这会让人讨厌呢？就因为这个：</p>
 
 <pre class="brush:eshell">
 3&gt; [97,98,99,4,5,6].
@@ -463,15 +467,28 @@ true
 "é"
 </pre>
 
-<p>Erlang will print lists of numbers as numbers only when at least one of them could not also represent a letter! There is no such thing as a real string in Erlang! This will no doubt come to haunt you in the future and you'll hate the language for it. Don't despair, because there are other ways to write strings we'll see later in this chapter.</p>
+<p>只要字符串中有一个字母不能被打印出来，Erlang就会打印出一串代表字母的数字。
+	(Erlang will print lists of numbers as numbers only when at least one of them could not also represent a letter!)
+	所以在Erlang中没有真正的字符串！
+	这无疑会让你对未来感到无望，并且你会因为这个而恨这门语言。
+	不过不要绝望，因为在这章后面的部分会介绍别的方式来表述字符串的。
+</p>
 
 <div class="note koolaid">
-	<p><strong>Don't drink too much Kool-Aid:</strong><br />
-		This is why you may have heard Erlang is said to suck at string manipulation: there is no built-in string type like in most other languages. This is because of Erlang's origins as a language created and used by telecom companies. They never (or rarely) used strings and as such, never felt like adding them officially. However, most of Erlang's lack of sense in string manipulations is getting fixed with time: The VM now natively supports Unicode strings, and overall gets faster on string manipulations all the time.</p>
-	<p>There is also a way to store strings as a binary data structure, making them really light and faster to work with. All in all, there are still some functions missing from the standard library and while string processing is definitely doable in Erlang, there are somewhat better languages for tasks that need lots of it, like Perl or Python.</p>
+	<p><strong>不要盲从：</strong><br />
+		这大概是你为什么会听说Erlang的字符串操作非常差：因为没有一个像其它语言一样内置的字符串类型。
+		这是因为Erlang最开始是被电信类型的公司创作出来和使用的。
+		他们从来（或者说很少）使用字符串，所以他们从来就没想过添加字符串类型这事情。
+		但是随着时光的流逝，Erlang也在逐步完善它的字符串操作：
+		Erlang的虚拟机现在已经支持Unicode的字符串了，并且在字符串的相关操作上变得越来越好，越来越快了。
+	</p>
+	<p>还有一种方式，使用二进制来存储字符串，这使它非常轻量非常快速。
+		归根结底，Erlang的标准库中还是缺少一些处理字符串的函数，但是Erlang却对是可以很好的处理字符串的，
+		并且如果我们真的需要大量处理字符串，这里有大把适合这类任务的语言，如Python和Perl。
+		(All in all, there are still some functions missing from the standard library and while string processing is definitely doable in Erlang, there are somewhat better languages for tasks that need lots of it, like Perl or Python.)</p>
 </div>
 
-<p>To glue lists together, we use the <code>++</code> operator. The opposite of <code>++</code> is <code>--</code> and will remove elements from a list:</p>
+<p>将两个字符串拼接到一起我们使用<code>++</code>操作符。和操作符<code>++</code>含义相反的操作符是<code>--</code>，它将从列表中移除某些元素：</p>
 
 <pre class="brush:eshell">
 5&gt; [1,2,3] ++ [4,5].
@@ -484,7 +501,9 @@ true
 []
 </pre>
 
-<p>Both <code>++</code> and <code>--</code> are right-associative. This means the elements of many <code>--</code> or <code>++</code> operations will be done from right to left, as in the following examples:</p>
+<p><code>++</code>操作符和<code>--</code>
+	这代表着如果有多个<code>--</code>操作符或<code>++</code>操作符，这些操作将会从右向左执行，就像下面这个例子：
+</p>
 
 <pre class="brush:eshell">
 9&gt; [1,2,3] -- [1,2] -- [3].
@@ -493,7 +512,9 @@ true
 [2,3]
 </pre>
 
-<p>Let's keep going. The first element of a list is named the Head, and the rest of the list is named the Tail. We will use two built-in functions (BIF) to get them.</p>
+<p>让我们继续。列表中第一个元组被称为头，剩余的部分被称为尾。
+	我们将使用两个内置函数（BIF）去得到它们。
+</p>
 
 <pre class="brush:eshell">
 11&gt; hd([1,2,3,4]).
@@ -503,7 +524,10 @@ true
 </pre>
 
 <div class="note">
-	<p><strong>Note:</strong>  built-in functions (BIFs) are usually functions that could not be implemented in pure Erlang, and as such are defined in C, or whichever language Erlang happens to be implemented on (it was Prolog in the 80's). There are still some BIFs that could be done in Erlang but were still implemented in C in order to provide more speed to common operations. One example of this is the <code>length(List)</code> function, which will return the (you've guessed it) length of the list passed in as the argument.</p>
+	<p><strong>注意：</strong>内置函数（BIFs）是一些无法用纯Erlang实现的函数，只能用C或其它用来实现的Erlang的语言（80年代Erlang是用Prolog实现的）。
+		当然这里面也有一些BIF是可以用纯Erlang来实现的，但是因为性能问题，依然选择用C实现。
+		例如说，<code>length(List)</code>函数，一个返回传入列表长度的函数（我想你已经猜到了）。
+	</p>
 </div>
 
 <p>Accessing or adding the head is fast and efficient: virtually all applications where you need to deal with lists will always operate on the head first. As it's used so frequently, there is a nicer way to separate the head from the tail of a list with the help of pattern matching: <code>[Head|Tail]</code>. Here's how you would add a new head to a list:</p>
