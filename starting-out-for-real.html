@@ -530,8 +530,12 @@ true
 	</p>
 </div>
 
-<p>Accessing or adding the head is fast and efficient: virtually all applications where you need to deal with lists will always operate on the head first. As it's used so frequently, there is a nicer way to separate the head from the tail of a list with the help of pattern matching: <code>[Head|Tail]</code>. Here's how you would add a new head to a list:</p>
-
+<p>
+	访问列表头或给列表添加头是非常快速且高效的：
+	实际上，所有处理列表的程序都要先操作列表头的。
+	由于这操作太常用了，这里有一个非常好用的模式匹配<code>[Head|Tail]</code>去分离列表头和尾。
+	下面将展示，如果为一个列表添加新的头：
+</p>
 <pre class="brush:eshell">
 13&gt; List = [2,3,4].
 [2,3,4]
@@ -539,7 +543,9 @@ true
 [1,2,3,4]
 </pre>
 
-<p>When processing lists, as you usually start with the head, you want a quick way to also store the tail to later operate on it. If you remember the way tuples work and how we used pattern matching to unpack the values of a point (<var>{X,Y}</var>), you'll know we can get the first element (the head) sliced off a list in a similar manner.</p>
+<p>
+	当在处理列表的时候，由于你经常从列表头开始，你会想要一个快速保存列表尾的方法，这样你可以在后续的操作中实用列表尾。
+	如果你还记得元组是如果使用模式匹配去解包点（<var>{X,Y}</var>）， 那么你就知道如何通过类似的方法分割列表来获得列表的第一个元素（列表头）。</p>
 
 <pre class="brush:eshell">
 15&gt; [Head|Tail] = NewList.
@@ -554,7 +560,7 @@ true
 2
 </pre>
 
-<p>The <code>|</code> we used is named the cons operator (constructor). In fact, any list can be built with only cons and values:</p>
+<p>我们称<code>|</code>操作符为cons操作符（构造函数）。事实上，所有的列表都是由cons操作符和值构成的：</p>
 
 <pre class="brush:eshell">
 20&gt; [1 | []].
@@ -565,11 +571,18 @@ true
 [3,2,1]
 </pre>
 
-<p>This is to say any list can be built with the following formula: <code>[Term1| [Term2 | [... | [TermN]]]]...</code>. Lists can thus be defined recursively as a head preceding a tail, which is itself a head followed by more heads. In this sense we could imagine a list being a bit like an earthworm: you can slice it in half and you'll then have two worms.</p>
+<p>从上面我们可以看到，任何列表都可以通过：<code>[Term1| [Term2 | [... | [TermN]]]]...</code>这种方式来创建。
+	从而列表可以通过不断的添加头递归完成定义。
+	(Lists can thus be defined recursively as a head preceding a tail, which is itself a head followed by more heads.)
+	在这个场景中，我们可以将列表想像成一个蚯蚓：你可以将它一分为二，这样你就得到了两条蚯蚓。
+	(In this sense we could imagine a list being a bit like an earthworm: you can slice it in half and you'll then have two worms.)</p>
 
 <img class="explanation" src="static/img/worm.png" width="288" height="331" alt="Two drawn worms, the first one normal with the text 'Head' and 'tail' as usual; the second has its head cut off, and under it a new 'head' is written." title="Worms, like lists can be defined recursively." />
 
-<p>The ways Erlang lists can be built are sometimes confusing to people who are not used to similar constructors. To help you get familiar with the concept, read all of these examples (hint: they're all equivalent):</p>
+<p>
+	Eralng列表构建的方式会让那些不习惯这类构造方式的人感到困惑。
+	为了帮助你熟悉的概念，阅读所有这些例子（提示：这些表达式的结果都是相同的）：
+</p>
 
 <pre class="brush:eshell">
 [a, b, c, d]
@@ -580,10 +593,19 @@ true
 [a | [b | [c | [d | [] ]]]]
 </pre>
 
-<p>With this understood, you should be able to deal with list comprehensions.</p>
+<p>理解了这些，你就能处理列表解析了。</p>
 
 <div class="note">
-	<p><strong>Note:</strong> Using the form <code>[1 | 2]</code> gives what we call an 'improper list'. Improper lists will work when you pattern match in the <code>[Head|Tail]</code> manner, but will fail to be used with standard functions of Erlang (even <code>length()</code>). This is because Erlang expects proper lists. Proper lists end with an empty list as their last cell. When declaring an item like <code>[2]</code>, the list is automatically formed in a proper manner. As such, <code>[1|[2]]</code> would work! Improper lists, although syntactically valid, are of very limited use outside of user-defined data structures.</p>
+	<p><strong>注意：</strong>用这种方式<code>[1 | 2]</code>构建列表，会产生种被我们称为‘不当列表‘的列表。
+		当我们只用模式匹配<code>[Head|Tail]</code>的时候，不当列表是可以正常工作的。
+		但是当我们使用Erlang的常用函数的时候会失败（即便是<code>length()</code>）。
+		因为Erlang的函数期望的是正常列表。最后一个元素是空列表才是Erlang认为的正常列表。
+		(This is because Erlang expects proper lists. Proper lists end with an empty list as their last cell.)
+		当我们写一个列表如<code>[2]</code>这种，Erlang会默认构建一个正常列表。
+		(When declaring an item like <code>[2]</code>, the list is automatically formed in a proper manner.)
+		正如大家所见<code>[1|[2]]</code>是存在的！不当列表，即便是语法上有效，但是只能在非常有限的用户定义的数据结构上使用。
+		(As such, <code>[1|[2]]</code> would work!
+		Improper lists, although syntactically valid, are of very limited use outside of user-defined data structures.)</p>
 </div>
 
 
