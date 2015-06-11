@@ -593,7 +593,7 @@ true
 [a | [b | [c | [d | [] ]]]]
 </pre>
 
-<p>理解了这些，你就能处理列表解析了。</p>
+<p>理解了这些，你就能处理列表推导式了。</p>
 
 <div class="note">
 	<p><strong>注意：</strong>用这种方式<code>[1 | 2]</code>构建列表，会产生种被我们称为‘不当列表‘的列表。
@@ -609,29 +609,55 @@ true
 </div>
 
 
-<h3><a class="section" name="list-comprehensions">List Comprehensions</a></h3>
+<h3><a class="section" name="list-comprehensions">列表推导式</a></h3>
 
-<p>List comprehensions are ways to build or modify lists. They also make programs short and easy to understand compared to other ways of manipulating lists. It's based off the idea of set notation; if you've ever taken mathematics classes with set theory or if you've ever looked at mathematical notation, you probably know how that works. Set notation basically tells you how to build a set by specifying properties its members must satisfy. List comprehensions may be hard to grasp at first, but they're worth the effort. They make code cleaner and shorter, so don't hesitate to try and type in the examples until you understand them!</p>
+<p>列表推导式是修改和创建列表的方式。比起其它处理列表的方式，这种方式会让程序更短更容易理解。
+	它是基于集合符号；如果你曾经你在数学课上学过集合理论或你曾经看过相关的数学符号，你也许已经知道它怎么工作的。
+	集合符号,主要告诉你怎么通过满足条件的成员的特殊属性来构建一个新的集合。
+	(Set notation basically tells you how to build a set by specifying properties its members must satisfy.)
+	列表解析一开始可能很难掌握，但是他们很值得你投入时间。
+	(List comprehensions may be hard to grasp at first, but they're worth the effort.)
+	列表推导式让代码非常简洁，所以不要犹豫，在你完全明白之前可以不断的尝试！
+	(They make code cleaner and shorter, so don't hesitate to try and type in the examples until you understand them!)</p>
 
-<p>An example of set notation would be <img style="float:none; display:inline;" src="static/img/set-comprehension.png" alt="{x &isin; &real; x = x^2}" />.  That set notation tells you the results you want will be all real numbers who are equal to their own square. The result of that set would be <var>{0,1}</var>. Another set notation example, simpler and abbreviated would be <code>{x : x &gt; 0}</code>. Here, what we want is all numbers where <var>x</var> &gt; 0.</p>
+<p>如这个集合的例子<img style="float:none; display:inline;" src="static/img/set-comprehension.png" alt="{x &isin; &real; x = x^2}" />。
+	我们定义了一个实数集合，其中的实数是所有自身等于自身平方。
+	(That set notation tells you the results you want will be all real numbers who are equal to their own square.)
+	这个集合的结果将是<var>{0,1}</var>。另一个集合的例子，简单且非常简洁<code>{x : x &gt; 0}</code>。
+	这里我们得到<var>x</var> &gt; 0的数字。</p>
 
-<p>List comprehensions in Erlang are about building sets from other sets. Given the set <code>{2n : n in L}</code> where L is the list <var>[1,2,3,4]</var>, the Erlang implementation would be:</p>
+<p>List comprehensions in Erlang are about building sets from other sets.
+	Erlang中的列表推导式是从一个集合构建另一个集合的方式。
+	给定集合<code>{2n : n in L}</code>，其中L是<var>[1,2,3,4]</var>，在Erlang中将会被这样实现：
+</p>
 
 <pre class="brush:eshell">
 1&gt; [2*N || N &lt;- [1,2,3,4]].
 [2,4,6,8]
 </pre>
 
-<p>Compare the mathematical notation to the Erlang one and there's not a lot that changes: brackets ({}) become square brackets ([]), the colon (:) becomes two pipes (||) and the word 'in' becomes the arrow (&lt;-). We only change symbols and keep the same logic.  In the example above, each value of <var>[1,2,3,4]</var> is sequentially pattern matched to <var>N</var>. The arrow acts exactly like the <code>=</code> operator, with the exception that it doesn't throw exceptions.</p>
+<p>和数学符号相比Erlang并没有什么太多变化：大括号（{}）变成中括号（[]），冒号（:）变成两个管道符（||）并且'in'变成剪头（&lt;-）。
+	我们只是改变了符号但是保持了同样的逻辑。
+	在前面的例子中，列表<var>[1,2,3,4]</var>中每个值都顺序的通过模式匹配的方式绑定到<var>N</var>上。
+	其中箭头完全充当<code>=</code>操作符的角色，除了这个操作从来不会抛出异常。
+	(The arrow acts exactly like the <code>=</code> operator, with the exception that it doesn't throw exceptions.)</p>
 
-<p>You can also add constraints to a list comprehension by using operations that return boolean values. if we wanted all the even numbers from one to ten, we could write something like:</p>
+<p>
+	你可以通过添加返回布尔值的操作符来作为列表推导式的约束。
+	(You can also add constraints to a list comprehension by using operations that return boolean values.)
+	如果你想得到10以内所有的偶数：</p>
 
 <pre class="brush:eshell">
 2&gt; [X || X &lt;- [1,2,3,4,5,6,7,8,9,10], X rem 2 =:= 0].
 [2,4,6,8,10]
 </pre>
 
-<p>Where <code>X rem 2 =:= 0</code> checks if a number is even. Practical applications come when we decide we want to apply a function to each element of a list, forcing it to respect constraints, etc. As an example, say we own a restaurant. A customer enters, sees our menu and asks if he could have the prices of all the items costing between $3 and $10 with taxes (say 7%) counted in afterwards.</p>
+<p>这里<code>X rem 2 =:= 0</code>表达式检查一个数是否是偶数。
+	在实际应用中，当我们要在每个元素上执行函数，或者我们要过滤其中的元素的时候等等，我们就可以考虑用这个东西。
+	(Practical applications come when we decide we want to apply a function to each element of a list, forcing it to respect constraints, etc.)
+	举个例子，当我们拥有一个餐馆。
+	一位顾客进来，看到我们的菜单，并询问他是否可以知道所有含税（比如7％）在3美元10美元之间的东西。
+</p>
 
 <pre class="brush:eshell">
 3&gt; RestaurantMenu = [{steak, 5.99}, {beer, 3.99}, {poutine, 3.50}, {kitten, 20.99}, {water, 0.00}].
@@ -644,14 +670,20 @@ true
 [{steak,6.409300000000001},{beer,4.2693},{poutine,3.745}]
 </pre>
 
-<p>Of course, the decimals aren't rounded in a readable manner, but you get the point. The recipe for list comprehensions in Erlang is therefore <code>NewList = [Expression || Pattern &lt;- List, Condition1, Condition2, ... ConditionN]</code>. The part <code>Pattern &lt;- List</code> is named a Generator expression. You can have more than one!</p>
+<p>
+	当然，小数没有进行四舍五入，但是你确实得到了所有的结果。(Of course, the decimals aren't rounded in a readable manner, but you get the point.)
+	在Erlang中列表推导式总是写作<code>NewList = [Expression || Pattern &lt;- List, Condition1, Condition2, ... ConditionN]</code>。
+	<code>Pattern &lt;- List</code>这部分被称为生成器表达式。你可以在一个列表推导式中写多个生成器表达式！
+</p>
 
 <pre class="brush:eshell">
 5&gt; [X+Y || X &lt;- [1,2], Y &lt;- [2,3]].
 [3,4,4,5]
 </pre>
 
-<p>This runs the operations <code>1+2</code>, <code>1+3</code>, <code>2+2</code>, <code>2+3</code>. So if you want to make the list comprehension recipe more generic, you get: <code>NewList = [Expression || GeneratorExp1, GeneratorExp2, ..., GeneratorExpN, Condition1, Condition2, ... ConditionM]</code>. Note that the generator expressions coupled with pattern matching also act as a filter:</p>
+<p>这个例子将会执行<code>1+2</code>，<code>1+3</code>， <code>2+2</code>，<code>2+3</code>。
+	如果你想让列表推导式更通用一些：<code>NewList = [Expression || GeneratorExp1, GeneratorExp2, ..., GeneratorExpN, Condition1, Condition2, ... ConditionM]</code>。
+	注意了生成器表达式，也可以做为一个过滤器来用：</p>
 
 <pre class="brush:eshell">
 6&gt; Weather = [{toronto, rain}, {montreal, storms}, {london, fog},   
@@ -666,9 +698,12 @@ true
 [london,boston]
 </pre>
 
-<p>If an element of the list 'Weather' doesn't match the {X, fog} pattern, it's simply ignored in the list comprehension whereas the <code>=</code> operator would have thrown an exception.</p>
+<p>如果列表中某个元素‘Weather’不能和模式{X, fog}匹配，
+	列表推导式将会直接忽略这次匹配，而使用<code>=</code>操作符会抛出异常。
+</p>
 
-<p>There is one more basic data type left for us to see for now. It is a surprising feature that makes interpreting binary data easy as pie.</p>
+<p>到此为止，我们只剩下一个基本类型没有被介绍。
+	这是一个让所有人都感到吃惊的特性，它使Erlang处理二进制类型的数据非常容易。</p>
 
 
 <img class="right" src="static/img/binometer.png" width="211" height="132" alt="Speedometer with values in binary" />
