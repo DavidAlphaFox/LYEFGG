@@ -708,9 +708,14 @@ true
 
 <img class="right" src="static/img/binometer.png" width="211" height="132" alt="Speedometer with values in binary" />
 
-<h3><a class="section" name="bit-syntax">Bit Syntax!</a></h3>
+<h3><a class="section" name="bit-syntax">位语法</a></h3>
 
-<p>Most languages have support for manipulating data such as numbers, atoms, tuples, lists, records and/or structs, etc. Most of them also only have very raw facilities to manipulate binary data. Erlang goes out of its way to provide useful abstractions when dealing with binary values with pattern matching taken to the next level. It makes dealing with raw binary data fun and easy (no, really), which was necessary for the telecom applications it was created to help with. Bit manipulation has a unique syntax and idioms that may look kind of weird at first, but if you know how bits and bytes generally work, this should make sense to you. <strong>You may want to skip the rest of this chapter otherwise</strong>.</p>
+<p>许多语言具有操作数字，原子，元组，列表，记录或结构等数据的能力。
+	并且绝大部分语言也具有操作二进制的基本能力。在操作二进制数据时，Erlang通过使用模式匹配提供了无与伦比的且实用的抽象方法。
+
+	It makes dealing with raw binary data fun and easy (no, really),
+	which was necessary for the telecom applications it was created to help with.
+	Bit manipulation has a unique syntax and idioms that may look kind of weird at first, but if you know how bits and bytes generally work, this should make sense to you. <strong>You may want to skip the rest of this chapter otherwise</strong>.</p>
 
 <p>Bit syntax encloses binary data between &lt;&lt; and &gt;&gt;, splits it in readable segments, and each segment is separated by a comma. A segment is a sequence of bits of a binary (not necessarily on a byte boundary, although this is the default behaviour). Say we want to store an orange pixel of true color (24 bits). If you've ever checked colors in Photoshop or in a CSS style sheet for the web, you know the hexadecimal notation has the format #RRGGBB.  A tint of orange is <var>#F09A29</var> in that notation, which could be expanded in Erlang to:</p>
 
