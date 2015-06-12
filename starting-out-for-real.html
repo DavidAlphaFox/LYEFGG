@@ -720,7 +720,10 @@ true
 	but if you know how bits and bytes generally work, this should make sense to you.)
 	<strong>不然的话，你也许想跳过本章剩余部分</strong>。</p>
 
-<p>Bit syntax encloses binary data between &lt;&lt; and &gt;&gt;, splits it in readable segments, and each segment is separated by a comma. A segment is a sequence of bits of a binary (not necessarily on a byte boundary, although this is the default behaviour). Say we want to store an orange pixel of true color (24 bits). If you've ever checked colors in Photoshop or in a CSS style sheet for the web, you know the hexadecimal notation has the format #RRGGBB.  A tint of orange is <var>#F09A29</var> in that notation, which could be expanded in Erlang to:</p>
+<p>位语法用&lt;&lt;和&gt;&gt;将二进制数据括起来，用逗号将二进制数据分割成多个可读的段。
+	每一个段都是二进制数据的一部分有序的比特（段并不一定按字节为边界分割，但是默认是用字节为边界进行分割）。
+	假设我们要使用一个像素的真色彩（24位）来保存橙色。如果你曾经看过颜色是怎么在Photoshop或Web的CSS中的表示方法，你就会知道颜色的
+	16进制的格式#RRGGBB。使用这种方式来表示一种橙色我们可以写成<var>#F09A29</var>，在Erlang中这将被写作：</p>
 
 <pre class="brush:eshell">
 1&gt; Color = 16#F09A29.
@@ -729,9 +732,12 @@ true
 &lt;&lt;240,154,41&gt;&gt;
 </pre>
 
-<p>This basically says "Put the binary values of <var>#F09A29</var> on 24 bits of space (Red on 8 bits, Green on 8 bits and Blue also on 8 bits) in the variable Pixel." The value can later be taken to be written to a file. This doesn't look like much, but once written to a file, what you'd get by opening it in a text editor would be a bunch of unreadable characters. When you read back from the file, Erlang would interpret the binary into the nice <var>&lt;&lt;240,151,41&gt;&gt;</var> format again!</p>
+<p>基本上可以这么说，“把<var>#F09A29</var>的二进制放入一个24位（8位红色，8位绿色，还有8位蓝色）的可变像素中。”
+	这个值我们以后可以写到文件中。当我们将它写入文件后，用记事本打开会看到一堆乱码，但是在shell中不会。
+ (This doesn't look like much, but once written to a file, what you'd get by opening it in a text editor would be a bunch of unreadable characters.)
+	当你读取这个文件时，Erlang会将二进制数据再次解释成<var>&lt;&lt;240,151,41&gt;&gt;</var>这漂亮的格式！</p>
 
-<p>What's more interesting is the ability to pattern match with binaries to unpack content:</p>
+<p>使用模式匹配去解析二进制数据的能力更加有趣：</p>
 
 <pre class="brush:eshell">
 3&gt; Pixels = &lt;&lt;213,45,132,64,76,32,76,0,0,234,32,15&gt;&gt;.
@@ -743,8 +749,10 @@ true
 &lt;&lt;213,45,132,64,76,32,76,0,0,234,32,15&gt;&gt;
 </pre>
 
-<p>What we did on command 3 is declare what would be precisely 4 pixels of RGB colors in binary.<br />
-	On expression 4, we tried to unpack 4 values from the binary content. It throws an exception, because we have more than 4 segments, we in fact have 12! So what we do is tell Erlang that each variable on the left side will hold 24 bits of data. That's what <code>Var:24</code> means. We can then take the first pixel and unpack it further into single color values:</p>
+<p>第3个命令，我们创建了一个4像素的RGB颜色的二进制。<br />
+	第4个表达式中，我们尝试从中解析出4个值。它抛出了异常，因为这超过我们期望的4个段，我们实际上声明了12个段！
+	所以我们要做的就是，告诉Erlang左边每个变量都是24位的。
+	这就是<code>Var:24</code>的含义。我们可以取出第一个像素并将它解析成单个颜色：</p>
 
 <pre class="brush:eshell">
 6&gt; &lt;&lt;R:8, G:8, B:8&gt;&gt; = &lt;&lt;Pix1:24&gt;&gt;.
