@@ -712,10 +712,13 @@ true
 
 <p>许多语言具有操作数字，原子，元组，列表，记录或结构等数据的能力。
 	并且绝大部分语言也具有操作二进制的基本能力。在操作二进制数据时，Erlang通过使用模式匹配提供了无与伦比的且实用的抽象方法。
-
-	It makes dealing with raw binary data fun and easy (no, really),
-	which was necessary for the telecom applications it was created to help with.
-	Bit manipulation has a unique syntax and idioms that may look kind of weird at first, but if you know how bits and bytes generally work, this should make sense to you. <strong>You may want to skip the rest of this chapter otherwise</strong>.</p>
+	Erlang将处理原始的二进制数据变得有趣且简单（并不完全），这也是Erlang所针对的电信类的应用所需要的。
+	(It makes dealing with raw binary data fun and easy (no, really),
+	which was necessary for the telecom applications it was created to help with.)
+	乍看起来位操作独特的语法和惯用法会让你感到非常怪，但如果你知道比特和字节是怎么工作的，你应该会觉得位操作的语法并不怪。
+	(Bit manipulation has a unique syntax and idioms that may look kind of weird at first,
+	but if you know how bits and bytes generally work, this should make sense to you.)
+	<strong>不然的话，你也许想跳过本章剩余部分</strong>。</p>
 
 <p>Bit syntax encloses binary data between &lt;&lt; and &gt;&gt;, splits it in readable segments, and each segment is separated by a comma. A segment is a sequence of bits of a binary (not necessarily on a byte boundary, although this is the default behaviour). Say we want to store an orange pixel of true color (24 bits). If you've ever checked colors in Photoshop or in a CSS style sheet for the web, you know the hexadecimal notation has the format #RRGGBB.  A tint of orange is <var>#F09A29</var> in that notation, which could be expanded in Erlang to:</p>
 
