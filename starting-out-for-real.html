@@ -761,7 +761,8 @@ true
 213
 </pre>
 
-<p>"Yeah that's dandy. What if I only wanted the first color from the start though? will I have to unpack all these values all the time?" Hah! Doubt not! Erlang introduces more syntactic sugar and pattern matching to help you around:</p>
+<p>“这确实不错。如果我只想要开头的那个颜色。难道要我每次都要解析所有的值吗？”
+	当然不要怀疑！Erlang提供了很多语法糖和模式匹配来帮助你：</p>
 
 <pre class="brush:eshell">
 8&gt; &lt;&lt;R:8, Rest/binary&gt;&gt; = Pixels.
@@ -770,7 +771,7 @@ true
 213
 </pre>
 
-<p>Nice, huh? That's because Erlang accepts more than one way to describe a binary segment. Those are all valid:</p>
+<p>非常漂亮， 是吧？这是因为Erlang拥有好多种描述二进制段的方式。并且它们都是合法的：</p>
 <pre class="expand">
 	Value
 	Value:Size
@@ -778,15 +779,17 @@ true
 	Value:Size/TypeSpecifierList
 </pre>
 
-<p>where <var>Size</var> is going to represent bits or bytes (depending on <var>Type</var> and <var>Unit</var> below), and <var>TypeSpecifierList</var> represents one or more of the following:</p>
+<p>这里<var>Size</var>会被表示成比特数或字节数（根据<var>Type</var>和<var>Unit</var>），
+	并且<var>TypeSpecifierList</var>代表一个或多个下面的类型：</p>
 
 <dl>
 	<dt>Type</dt>
-	<dd>Possible values: <code>integer | float | binary | bytes | bitstring | bits | utf8 | utf16 | utf32</code></dd>
-	<dd>This represents the kind of binary data used. Note that 'bytes' is shorthand for 'binary' and 'bits' is shorthand for 'bitstring'. When no type is specified, Erlang assumes an 'integer' type.</dd>
+	<dd>可能值：<code>integer | float | binary | bytes | bitstring | bits | utf8 | utf16 | utf32</code></dd>
+	<dd>这代表二进制数据类型。 注意‘bytes’是'binary'的简写，‘bits’是‘bitstring’的简写。
+		当没有类型指定的时候，Erlang会假定使用'integer'类型。</dd>
 	<dt>Signedness</dt>
-	<dd>Possible values: <code>signed | unsigned</code></dd>
-	<dd>Only matters for matching when the type is integer. The default is 'unsigned'.</dd>
+	<dd>可能值： <code>signed | unsigned</code></dd>
+	<dd>只有类型是‘intger’的时候，这才会有作用。默认值是‘unsigned’。</dd>
 	<dt>Endianness</dt>
 	<dd>Possible values: <code>big | little | native</code></dd>
 	<dd>Endianness only matters when the Type is either integer, utf16, utf32, or float. This has to do with how the system reads binary data. As an example, the BMP image header format holds the size of its file as an integer stored on 4 bytes. For a file that has a size of 72 bytes, a little-endian system would represent this as <code>&lt;&lt;72,0,0,0&gt;&gt;</code> and a big-endian one as <code>&lt;&lt;0,0,0,72&gt;&gt;</code>. One will be read as '72' while the other will be read as '1207959552', so make sure you use the right endianness. There is also the option to use 'native', which will choose at run-time if the CPU uses little-endianness or big-endianness natively. By default, endianness is set to 'big'.</dd>
