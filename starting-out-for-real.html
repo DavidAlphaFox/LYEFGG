@@ -897,16 +897,21 @@ true
 </div>
 
 
-<h3><a class="section" name="binary-comprehensions">Binary Comprehensions</a></h3>
+<h3><a class="section" name="binary-comprehensions">二进制推导式</a></h3>
 
-<p>Binary comprehensions are to bit syntax what list comprehensions are to lists: a way to make code short and concise. They are relatively new in the Erlang world as they were there in previous revisions of Erlang, but required a module implementing them to use a special compile flag in order to work. Since the R13B revisions (those used here), they've become standard and can be used anywhere, including the shell:</p>
+<p>
+	对于位语法来说二进制推导式，就像列表的列表推导式：
+	一种使代码简单明了的方法。二进制推导式在Erlang中相对来说是比较新的特性，在之前的Erlang版本中需要使用一个特殊的编译标志和一个模块去实现。
+	从R13B版本（本教程所使用的），二进制推导式变成了标准并且可以在任何地方使用，包括shell:</p>
 
 <pre class="brush:eshell">
 1&gt; [ X || &lt;&lt;X&gt;&gt; &lt;= &lt;&lt;1,2,3,4,5&gt;&gt;, X rem 2 == 0].     
 [2,4]
 </pre>
 
-<p>The only change in syntax from regular list comprehensions is the <code>&lt;-</code> which became <code>&lt;=</code> and using binaries (&lt;&lt;&gt;&gt;) instead of lists ([]). Earlier in this chapter we've seen an example where there was a binary value of many pixels on which we used pattern matching to grab the RGB values of each pixel. It was alright, but on larger structures, it would become possibly harder to read and maintain. The same exercise can be done with a one-line binary comprehension, which is much cleaner:</p>
+<p>在语法上和通常的列表相比<code>&lt;-</code>变成了<code>&lt;=</code>并且使用二进制（&lt;&lt;&gt;&gt;）代替了列表（[]）。
+	在本章的前半部分，我们已经看到了用模式匹配的方式从多个二进制像素中提取每个像素的RGB值的例子。
+	这很好，但是对于大型的结构，这很可能变得难于阅读和维护。这个例子可以用一行的二进制推导式重写，并且会更加清晰：</p>
 
 <pre class="brush:eshell">
 2&gt; Pixels = &lt;&lt;213,45,132,64,76,32,76,0,0,234,32,15&gt;&gt;.
@@ -915,14 +920,16 @@ true
 [{213,45,132},{64,76,32},{76,0,0},{234,32,15}]
 </pre>
 
-<p>Changing <code>&lt;-</code> to <code>&lt;=</code> let us use a binary stream as a generator. The complete binary comprehension basically changed binary data to integers inside tuples. Another binary comprehension syntax exists to let you do the exact opposite:</p>
+<p>将<code>&lt;-</code>替换成<code>&lt;=</code>，可以让我们用二进制来做生成表达式。
+	整个二进制推导式简单的将二进制数据改写成了，数字元组。
+	另一个二进制推导式语法，可以让我做完全相反的事情：</p>
 
 <pre class="brush:eshell">
 4&gt; &lt;&lt; &lt;&lt;R:8, G:8, B:8&gt;&gt; ||  {R,G,B} &lt;- RGB &gt;&gt;.
 &lt;&lt;213,45,132,64,76,32,76,0,0,234,32,15&gt;&gt;
 </pre>
 
-<p>Be careful, as the elements of the resulting binary require a clearly defined size if the generator returned binaries:</p>
+<p>请注意，如果生成表达式返回二进制的话，作为结果的元素需要非常明确的长度定义：</p>
 
 <pre class="brush:eshell">
 5&gt; &lt;&lt; &lt;&lt;Bin&gt;&gt; || Bin &lt;- [&lt;&lt;3,7,5,4,7&gt;&gt;] &gt;&gt;.
@@ -931,7 +938,7 @@ true
 &lt;&lt;3,7,5,4,7&gt;&gt;
 </pre>
 
-<p>It's also possible to have a binary comprehension with a binary generator, given the fixed-size rule above is respected:</p>
+<p> 当然二进制推导式可以使用二进制生成式，只要遵守上面说的长度定义</p>
 
 <pre class="brush:eshell">
 7&gt; &lt;&lt; &lt;&lt;(X+1)/integer&gt;&gt; || &lt;&lt;X&gt;&gt; &lt;= &lt;&lt;3,7,5,4,7&gt;&gt; &gt;&gt;.
@@ -939,7 +946,10 @@ true
 </pre>
 
 <div class="note">
-	<p><strong>Note:</strong> At the time of this writing, binary comprehensions were seldom used and not documented very well. As such, it was decided not to dig more than what is necessary to identify them and understand their basic working. To understand more bit syntax as a whole, read the <a class="external" href="http://user.it.uu.se/~pergu/papers/erlang05.pdf" title="Bit-level Binaries and Generalized Comprehensions in Erlang">white paper defining their specification</a>.</p>
+	<p><strong>注意：</strong>
+		在本文编写的时候，二进制推导式还很少被使用并且没有很好的文档。
+		因此，除了二进制推导式的写法和基本工作方式外，就不多介绍。
+		如果想更多和完整的了解位语法，阅读下<a class="external" href="http://user.it.uu.se/~pergu/papers/erlang05.pdf" title="Bit-level Binaries and Generalized Comprehensions in Erlang">二进制推导式的规范的白皮书</a>。</p>
 </div>
 				<ul class="navigation">
 											<li><a href="starting-out.html" title="Previous chapter">&lt; Previous</a></li>
