@@ -879,13 +879,21 @@ true
 
 <img class="right" src="static/img/string.png" width="38" height="142" alt="A string" />
 
-<p>There's a whole other aspect to binary notation: bit strings.
-	Binary strings are bolted on top of the language the same way they are with lists, but they're much more efficient in terms of space.
-	This is because normal lists are linked lists (1 'node' per letter) while bit strings are more like C arrays. Bit strings use the syntax <code>&lt;&lt;"this is a bit string!"&gt;&gt;</code>. The downside of binary strings compared to lists is a loss in simplicity when it comes to pattern matching and manipulation. Consequently, people tend to use binary strings when storing text that won't be manipulated too much or when space efficiency is a real issue.</p>
+<p>
+	二进制操作的另一面：比特字符串。在语言层面上二进制字符串和列表表现一致，但是更加有效。
+	这是因为普通列表是链表（一个字符一个‘节点’），但二进制字串更像一个C数组。
+	比特字符串的语法是<code>&lt;&lt;"this is a bit string!"&gt;&gt;</code>。
+	当使用模式匹配和字符串操作的时候，缺点是，比特字符串的语法比列表的语法更复杂。
+	所以，当空间效率成为问题或不进行非常多的字符串操作时，人们更倾向用二进制字符串。</p>
 
 <div class="note">
-	<p><strong>Note:</strong> Even though bit strings are pretty light, you should avoid using them to tag values. It could be tempting to use string literals to say <code>{&lt;&lt;"temperature"&gt;&gt;,50}</code>, but always use atoms when doing that. Previously in this chapter, atoms were said to be taking only 4 or 8 bytes in space, no matter how long they are. By using them, you'll have basically no overhead when copying data from function to function or sending it to another Erlang node on another server. <br />
-    Conversely, do not use atoms to replace strings because they are lighter. Strings can be manipulated (splitting, regular expressions, etc) while atoms can only be compared and nothing else.</p>
+	<p><strong>注意：</strong>
+		尽管比特字符串非常轻量，但是你最好不要用它做标签。
+		尽管使用二进制字串非常具有诱惑力像<code>{&lt;&lt;"temperature"&gt;&gt;,50}</code>这样，
+		但是对于这种状况，应当使用原子。在前面的章节中，我们说过原子不管多长每次都会占用4到8字节。
+		因为使用原子，我们可以用非常小的代价从一个函数向另一个函数或从一个Erlang节点向另一个节点复制数据。<br />
+		同样，即便原子很轻量，不要使用原子代替字符串。
+		原子除了可以比较之外不能做更多的操作，而字符串可以被各种操作（分割，正则匹配等等）。</p>
 </div>
 
 
