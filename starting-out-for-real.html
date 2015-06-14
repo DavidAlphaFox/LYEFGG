@@ -836,9 +836,14 @@ true
 72
 </pre>
 
-<p>You can see there are more than one way to read, store and interpret binary data. This is a bit confusing, but still much simpler than using the usual tools given by most languages.</p>
+<p>
+	你可以看到不止一种读取，存储和解释二进制数据的方法。
+	这会有一点让你困惑，但是这个依然比大多数语言给出的常用工具简单许多。
+</p>
 
-<p>The standard binary operations (shifting bits to left and right, binary 'and', 'or', 'xor', or 'not') also exist in Erlang. Just use the functions <code>bsl</code> (Bit Shift Left), <code>bsr</code> (Bit Shift Right), <code>band</code>, <code>bor</code>, <code>bxor</code>, and <code>bnot</code>.</p>
+<p>Erlang中也有常用的二进制操作符（左位移和右位移，二进制‘and’，‘or’，’xor‘和‘not’）。
+	只需要用这函数<code>bsl</code>（左位移），
+	<code>bsr</code>（右位移），<code>band</code>，<code>bor</code>，<code>bxor</code>和<code>bnot</code>。</p>
 
 <pre class="brush:eshell">
 2#00100 = 2#00010 bsl 1.
@@ -846,7 +851,8 @@ true
 2#10101 = 2#10001 bor 2#00101.
 </pre>
 
-<p>With that kind of notation and the bit syntax in general, parsing and pattern matching binary data is a piece of cake. One could parse TCP segments with code like this:</p>
+<p>有了这些符号和位语法，在一般情况下，分析和模式匹配的二进制数据就是小菜一碟。
+	我们可以使用这样的代码来分析TCP的段：</p>
 
 <pre class="brush:erl">
 &lt;&lt;SourcePort:16, DestinationPort:16,
@@ -856,18 +862,26 @@ true
   Payload/binary&gt;&gt; = SomeBinary.
 </pre>
 
-<p>The same logic can then be applied to anything binary: video encoding, images, other protocol implementations, etc.</p>
+<p>相同的逻辑可以使用于任何一种二进制数据上：视频编码，图象和其它协议等。</p>
 
 <div class="note koolaid">
-	<p><strong>Don't drink too much Kool-Aid:</strong><br />
-		Erlang is slow compared to languages like C or C++. Unless you are a patient person, it would be a bad idea to do stuff like converting videos or images with it, even though the binary syntax makes it extremely interesting as I hinted above. Erlang is just not that great at heavy number crunching.</p>
+	<p><strong>不要盲从：</strong><br />
+		Erlang is slow compared to languages like C or C++.
+		和C或C++相比，Erlang比较慢。
+		除非你是个有耐心的人，虽然我上面提的位语法非常有趣，但是用它来处理视频或图片转换，将是个非常坏的想法。
+		Erlang并不擅长处理数字。</p>
 	
-	<p>Take note, however, that Erlang is still mighty fast for applications that do not require number crunching: reacting to events, message passing (with the help of atoms being extremely light), etc. It can deal with events in matters of milliseconds and as such is a great candidate for soft-real-time applications.</p>
+	<p>请注意，即便是这样，Erlang对非数字处理的应用还是很快的：
+		事件响应，消息传递（因为原子非常轻量）等。
+		它可以在毫秒内处理事件，因此用于软实时应用是非常不错的选择。
+	</p>
 </div>
 
 <img class="right" src="static/img/string.png" width="38" height="142" alt="A string" />
 
-<p>There's a whole other aspect to binary notation: bit strings. Binary strings are bolted on top of the language the same way they are with lists, but they're much more efficient in terms of space. This is because normal lists are linked lists (1 'node' per letter) while bit strings are more like C arrays. Bit strings use the syntax <code>&lt;&lt;"this is a bit string!"&gt;&gt;</code>. The downside of binary strings compared to lists is a loss in simplicity when it comes to pattern matching and manipulation. Consequently, people tend to use binary strings when storing text that won't be manipulated too much or when space efficiency is a real issue.</p>
+<p>There's a whole other aspect to binary notation: bit strings.
+	Binary strings are bolted on top of the language the same way they are with lists, but they're much more efficient in terms of space.
+	This is because normal lists are linked lists (1 'node' per letter) while bit strings are more like C arrays. Bit strings use the syntax <code>&lt;&lt;"this is a bit string!"&gt;&gt;</code>. The downside of binary strings compared to lists is a loss in simplicity when it comes to pattern matching and manipulation. Consequently, people tend to use binary strings when storing text that won't be manipulated too much or when space efficiency is a real issue.</p>
 
 <div class="note">
 	<p><strong>Note:</strong> Even though bit strings are pretty light, you should avoid using them to tag values. It could be tempting to use string literals to say <code>{&lt;&lt;"temperature"&gt;&gt;,50}</code>, but always use atoms when doing that. Previously in this chapter, atoms were said to be taking only 4 or 8 bytes in space, no matter how long they are. By using them, you'll have basically no overhead when copying data from function to function or sending it to another Erlang node on another server. <br />
