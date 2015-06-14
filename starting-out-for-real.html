@@ -789,18 +789,27 @@ true
 		当没有类型指定的时候，Erlang会假定使用'integer'类型。</dd>
 	<dt>Signedness</dt>
 	<dd>可能值： <code>signed | unsigned</code></dd>
-	<dd>只有类型是‘intger’的时候，这才会有作用。默认值是‘unsigned’。</dd>
+	<dd>只有类型是‘intger’的时候，符号类型才会有作用。默认值是‘unsigned’。</dd>
 	<dt>Endianness</dt>
-	<dd>Possible values: <code>big | little | native</code></dd>
-	<dd>Endianness only matters when the Type is either integer, utf16, utf32, or float. This has to do with how the system reads binary data. As an example, the BMP image header format holds the size of its file as an integer stored on 4 bytes. For a file that has a size of 72 bytes, a little-endian system would represent this as <code>&lt;&lt;72,0,0,0&gt;&gt;</code> and a big-endian one as <code>&lt;&lt;0,0,0,72&gt;&gt;</code>. One will be read as '72' while the other will be read as '1207959552', so make sure you use the right endianness. There is also the option to use 'native', which will choose at run-time if the CPU uses little-endianness or big-endianness natively. By default, endianness is set to 'big'.</dd>
+	<dd>可能值：<code>big | little | native</code></dd>
+	<dd>只有类型是‘intger’，‘utf8’，‘utf16’，‘utf32’或‘float’时，字节序才起作用。这决定了系统将如何去读取二进制数据。
+		举例子来说，BMP图像文件头的格式包含了一个4字节的整数用来表示文件的大小。
+		对于一个有72字节大小的文件，小端系统将会这样存储<code>&lt;&lt;72,0,0,0&gt;&gt;</code>而大端系统会<code>&lt;&lt;0,0,0,72&gt;&gt;</code>这样存储。
+		在一个平台上将读出来是‘72’但是在另一个平台上会被对出来是‘1207959552’，所以要确认你使用了正确的字节序。
+		同样有‘native’这个操作，这个操作是根据运行时的CPU来决定字节序的。默认的字节序是‘big’。</dd>
 	<dt>Unit</dt>
-	<dd>written <code>unit:Integer</code></dd>
-	<dd>This is the size of each segment, in bits. The allowed range is 1..256 and is set by default to 1 for integers, floats and bit strings and to 8 for binary. The utf8, utf16 and utf32 types require no unit to be defined. The multiplication of Size by Unit is equal to the number of bits the segment will take and must be evenly divisible by 8. The unit size is usually used to ensure byte-alignment.</dd>
+	<dd>写法<code>unit:Integer</code></dd>
+	<dd>
+		这个是按比特计算的每个段大小。它的范围是1到256，integer默认是1，floats，bitstring和binary默认是8。
+		utf8,utf16和utf32的类型是不需要段大小的。段的大小是，Size和Unit的乘积，段的大小一定要被8整除。(
+		The multiplication of Size by Unit is equal to the number of bits the segment will take and must be evenly divisible by 8.)
+		Unit的大小一般是用来进行字节对齐的。
+	</dd>
 </dl>
 
-<p>The TypeSpecifierList is built by separating attributes by a '-'.</p>
+<p>TypeSpecifierList一般是用'-'连接的多个属性。</p>
 
-<p>Some examples may help digest the definitions:</p>
+<p>下面的例子会帮助你理解：</p>
 
 <pre class="brush:eshell">
 10&gt; &lt;&lt;X1/unsigned&gt;&gt; =  &lt;&lt;-44&gt;&gt;.
