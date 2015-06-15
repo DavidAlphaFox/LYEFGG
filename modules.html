@@ -209,7 +209,10 @@ greet_and_add_two(X) -&gt;
     add(X,2).
 </pre>
 
-<p>We are done with the "useless" module. You can save the file under the name <code>useless.erl</code>. The file name should be the module name as defined in the <code>-module</code> attribute, followed by '.erl', which is the standard Erlang source extension.</p>
+<p>We are done with the "useless" module.
+	我们完成了"useless"模块。你现在可以将它保存到<code>useless.erl</code>里。
+	‘.erl’是标准的Erlang代码扩展名，文件名应该定义在<code>-module</code>属性中的模块名，加上‘.erl’扩展名。
+</p>
 
 <p>Before showing how to compile the module and finally try all its exciting functions, we will see how to define and use macros. Erlang macros are really similar to C's '#define' statements, mainly used to define short functions and constants. They are simple expressions represented by text that will be replaced before the code is compiled for the VM. Such macros are mainly useful to avoid having magic values floating around your modules. A macro is defined as a module attribute of the form: <code>-define(MACRO, some_value).</code> and is used as <code>?MACRO</code> inside any function defined in the module. A 'function' macro could be written as <code>-define(sub(X,Y), X-Y).</code> and used like <code>?sub(23,47)</code>, later replaced by <code>23-47</code> by the compiler. Some people will use more complex macros, but the basic syntax stays the same.</p>
 
