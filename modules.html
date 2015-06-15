@@ -229,7 +229,13 @@ greet_and_add_two(X) -&gt;
 	‘.erl’是标准的Erlang代码扩展名，文件名应该定义在<code>-module</code>属性中的模块名，加上‘.erl’扩展名。
 </p>
 
-<p>Before showing how to compile the module and finally try all its exciting functions, we will see how to define and use macros. Erlang macros are really similar to C's '#define' statements, mainly used to define short functions and constants. They are simple expressions represented by text that will be replaced before the code is compiled for the VM. Such macros are mainly useful to avoid having magic values floating around your modules. A macro is defined as a module attribute of the form: <code>-define(MACRO, some_value).</code> and is used as <code>?MACRO</code> inside any function defined in the module. A 'function' macro could be written as <code>-define(sub(X,Y), X-Y).</code> and used like <code>?sub(23,47)</code>, later replaced by <code>23-47</code> by the compiler. Some people will use more complex macros, but the basic syntax stays the same.</p>
+<p>在展示如何编译模块，并最终尝试所有激动人心的函数前，我们将看到如何定义和使用宏。
+	Erlang的宏和C的‘#define’语句非常相似，主要用于定义短函数和常量。
+	它们是用文本表示的非常简单的表达式，在代码被编译到VM前它将被替换掉。
+	这类宏主要用来避免潜伏在你模块中那些魔法数值。
+	宏定义以<code>-define(MACRO, some_value).</code>形式定义为模块属性，并且在模块中的任何函数内用<code>?MACRO</code>来引用。
+	‘函数’宏可以这样来写<code>-define(sub(X,Y), X-Y).</code>，并且可以通过 <code>?sub(23,47)</code>来使用，
+	在编译的时候编译器会替换为<code>23-47</code>。有些人会使用更复杂的宏，但是基础的语法是一样的。</p>
 
 
 <h3><a class="section" name="compiling-the-code">Compiling the code</a></h3>
