@@ -180,17 +180,32 @@ greet_and_add_two(X) -&gt;
 
 <img class="left" src="static/img/imports.png" width="145" height="134" alt="A box being put in another one" title="Yes, I'm reusing drawings on that one" />
 
-<p>Do not forget to add <code>greet_and_add_two/1</code> to the exported function list. The calls to <code>hello/0</code> and <code>add/2</code> don't need to have the module name prepended to them because they were declared in the module itself.</p>
+<p>
+	不要忘记在导出列表中添加<code>greet_and_add_two/1</code>。
+	因为是在同一个模块中声名的函数，所以对<code>hello/0</code>和<code>add/2</code>的调用，并不需要在前面添加模块的名称。
+</p>
 
-<p>Had you wanted to be able to call <code>io:format/1</code> in the same manner as <code>add/2</code> or any other function defined within the module, you could have added the following module attribute at the beginning of the file: <code>-import(io, [format/1]).</code>. Then you could have called <code>format("Hello, World!~n").</code> directly. More generally, the <code>-import</code> attribute follows this recipe:</p>
+<p>
+	你是受否想让调用<code>io:format/1</code>像调用<code>add/2</code>或其它这个某块中定义的函数一样，
+	你可以在文件开头添加以下模块属性： <code>-import(io, [format/1]).</code>。
+	然后你就可以直接调用<code>format("Hello, World!~n").</code>。
+	更常见的，<code>-import</code>属性遵循以下原则：</p>
 
 <pre class="brush:erl">
 -import(Module, [Function1/Arity, ..., FunctionN/Arity]).
 </pre>
 
-<p>Importing a function is not much more than a shortcut for programmers when writing their code. Erlang programmers are often discouraged from using the <code>-import</code> attribute as some people find it reduces the readability of code. In the case of <code>io:format/2</code>, the function <code>io_lib:format/2</code> also exists. Finding which one is used means going to the top of the file to see from which module it was imported. Consequently, leaving the module name in is considered good practice. Usually, the only functions you'll see imported come from the lists module: its functions are used with a higher frequency than those from most other modules.</p>
+<p>
+	程序员在写代码的时候，导入函数并不比程序员的快捷方式强。
+	(Importing a function is not much more than a shortcut for programmers when writing their code.)
+	Erlang程序员非常不鼓励使用<code>-import</code>属性，因为有些人发现它降低了代码的可读性。
+	在<code>io:format/2</code>和<code>io_lib:format/2</code>同时存在的情况下。
+	为了找出使用了那个函数，就要到文件头去看那个模块被引入。
+	所以，保留模块名被认为是更好的做法。通常，你会看到唯一引入的函数是从列表模块：
+	列表模块中的函数比别的模块中的函数使用频率更高。
+</p>
 
-<p>Your <code><a class="source" href="static/erlang/useless.erl" title="final implementation">useless</a></code> module should now look like the following file:</p>
+<p>你的<code><a class="source" href="static/erlang/useless.erl" title="final implementation">useless</a></code>模块将会看起来像下面的文件：</p>
 
 <pre class="brush:erl">
 -module(useless).
