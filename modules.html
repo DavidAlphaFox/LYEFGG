@@ -34,15 +34,22 @@
 			<div id="content">
             <div class="noscript"><noscript>Hey there, it appears your Javascript is disabled. That's fine, the site works without it. However, you might prefer reading it with syntax highlighting, which requires Javascript!</noscript></div>
 <h2>Modules</h2>
-<h3><a class="section" name="what-are-modules">What are modules</a></h3>
+<h3><a class="section" name="what-are-modules">什么是模块</a></h3>
 
 <img class="left" src="static/img/modules.png" width="168" height="148" alt="A box with functions written on it" title="And yes, I do believe functions are squiggly little colorfoul lines stuffed in a cardboard box." />
 
-<p>Working with the interactive shell is often considered a vital part of using dynamic programming languages. It is useful to test all kinds of code and programs. Most of the basic data types of Erlang were used without even needing to open a text editor or saving files. You could drop your keyboard, go play ball outside and call it a day, but you would be a terrible Erlang programmer if you stopped right there. Code needs to be saved somewhere to be used!</p>
+<p>使用交互式的shell被认为是动态语言非常重要的一部分。通常对于测试各种代码是非常有用的。Erlang中绝大部分的基础数据类型都不需要编写一个文件来使用。
+你可以丢掉键盘，出去打一天球，但是如果你在这停下来，你将是个非常差的Erlang程序员。代码需保存起来，以备将来使用！</p>
 
-<p>This is what modules are for. Modules are a bunch of functions regrouped in a single file, under a single name. Additionally, all functions in Erlang must be defined in modules. You have already used modules, perhaps without realizing it. The BIFs mentioned in the previous chapter, like <code>hd</code> or <code>tl</code>, actually belong to the <code>erlang</code> module, as well as all of the arithmetic, logic and Boolean operators. BIFs from the <code>erlang</code> module differ from other functions as they are automatically imported when you use Erlang. Every other function defined in a module you will ever use needs to be called with the form <code>Module:Function(Arguments)</code>.</p>
+<p>这就是模块的作用。模块是将很多函数放到同一个命名空间，存储到一个文件中。
+	另外，所有的函数都需要在模块中定义。你已经使用了模块，但是你没有察觉它。
+	前面章节提到过BIF，像 <code>hd</code>和<code>tl</code>，实际上它们属于<code>erlang</code>这个模块，
+	同样所有的数学，逻辑和布尔操作符都属于这个模块。
+	和其它的函数不同的是，当你使用Erlang的时候，属于<code>erlang</code>这个模块会被自动引入。
+	剩下的函数，你就需要用 <code>Module:Function(Arguments)</code>这种形式来调用了。
+</p>
 
-<p>You can see for yourself:</p>
+<p>你可以自己尝试下：</p>
 
 
 <pre class="brush:eshell">
@@ -57,9 +64,17 @@ b
 </pre>
 
 
-<p>Here, the <code>seq</code> function from the list module was not automatically imported, while <code>element</code> was. The error 'undefined shell command' comes from the shell looking for a shell command like <code>f()</code> and not being able to find it. There are some functions from the <code>erlang</code> module which are not automatically imported, but they're not used too frequently.</p>
+<p>List模块中的<code>seq</code>函数并没有被自动引入，但是<code>element</code>就被自动引入了。
+	’undefined shell command‘这个错误是因为shell在查找像<code>f()</code>这样的shell命令，并且没有找到该命令的时候产生的。
+	<code>erlang</code>模块中有些不常使用的函数，并不会自动引入。
+</p>
 
-<p>Logically, you should put functions about similar things inside a single module. Common operations on lists are kept in the <code>lists</code> module, while functions to do input and output (such as writing to the terminal or in a file) are regrouped in the <code>io</code> module. One of the only modules you will encounter which doesn't respect that pattern is the aforementioned <code>erlang</code> module that has functions which do math, conversions, deal with multiprocessing, fiddle with the virtual machine's settings, etc. They have no point in common except being built-in functions. You should avoid creating modules like <code>erlang</code> and instead focus on clean logical separations.</p>
+<p>按道理来说，你应当将功能类似的函数放到一个模块中。
+	列表相关的操作都被放到了<code>lists</code>模块中，关于IO的操作（输出到终端或写文件）都被放到了<code>io</code>模块中。
+	你将遇到唯一一个不遵守前面提到的规则的模块是<code>erlang</code>模块，因为它包含了数学，转换，多进程和调整虚拟机相关的设置等。
+	它们除了都是内置函数就没有其它的共同点了。
+	你应当避免创建一个像<code>erlang</code>的模块并且要专注于清晰的逻辑分层。
+</p>
 
 <h3><a class="section" name="module-declaration">Module Declaration</a></h3>
 
