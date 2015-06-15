@@ -134,22 +134,29 @@ b
 	</p>
 </div>
 
-<p>Our useless module will first export a useful function named 'add', which will take two arguments. The following <code>-export</code> attribute can be added after the module declaration:</p>
+<p>我们无用的模块将导出第一个有用的函数叫‘add’，它将接受2个参数。
+	<code>-export</code>属性将被添加到模块的声名中：</p>
 
 <pre class="brush:erl">
 -export([add/2]).
 </pre>
 
-<p>And now write the function:</p>
+<p>接着，让我写这个函数：</p>
 
 <pre class="brush:erl">
 add(A,B) -&gt;
     A + B.
 </pre>
 
-<p>The syntax of a function follows the form <code>Name(Args) -&gt; Body.</code>, where <var>Name</var> has to be an atom and <var>Body</var> can be one or more Erlang expressions separated by commas. The function is ended with a period. Note that Erlang doesn't use the 'return' keyword. 'Return' is useless! Instead, the last logical expression of a function to be executed will have its value returned to the caller automatically without you having to mention it.</p>
+<p>函数的语法是<code>Name(Args) -&gt; Body.</code>，其中<var>Name</var>是一个原子，
+	<var>Body</var>是用逗号分割的多个Erlang表达式。函数以句号结束。Erlang并不使用‘return’关键字。
+	‘Rerturn’是没用的！取而代之，函数的最后一个逻辑表达式所返回的值将会返回给调用者。
+</p>
 
-<p>Add the following function (why yes, every tutorial needs a 'Hello world' example! Even at the fourth chapter!), without forgetting to add it to the <code>-export</code> attribute.</p>
+<p>
+	添加下面的函数（为什么，因为每个教程都会有一个‘Hello world’的例子！即便在第四章！），
+	并且不要忘记将它添加到<code>-export</code>属性中。
+</p>
 
 <pre class="brush:erl">
 %% Shows greetings.
@@ -158,9 +165,12 @@ hello() -&gt;
     io:format("Hello, world!~n").
 </pre>
 
-<p>What we see from this function is that comments are single-line only and begin with a <code>%</code> sign (using <code>%%</code> is purely a question of style.) The <code>hello/0</code> function also demonstrates how to call functions from foreign modules inside yours. In this case, <code>io:format/1</code> is the standard function to output text, as written in the comments.</p>
+<p>我们从这个函数可以看到，注释单行是用<code>%</code>符号开头（使用<code>%%</code>完全是风格问题）。
+	<code>hello/0</code>函数同样展示了怎么从外部模块调用模块内的函数。在这个场景,就像注释里面写的，
+	<code>io:format/1</code>是一个标准的输出到文本的函数。
+</p>
 
-<p>A last function will be added to the module, using both functions <code>add/2</code> and <code>hello/0</code>:</p>
+<p>最后一个添加到模块中的函数，使用了<code>add/2</code>和<code>hello/0</code>：</p>
 
 <pre class="brush:erl">
 greet_and_add_two(X) -&gt;
