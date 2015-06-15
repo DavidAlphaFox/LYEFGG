@@ -76,34 +76,62 @@ b
 	你应当避免创建一个像<code>erlang</code>模块的模块并且要专注于清晰的逻辑分层。
 </p>
 
-<h3><a class="section" name="module-declaration">Module Declaration</a></h3>
+<h3><a class="section" name="module-declaration">模块声明</a></h3>
 
 <img class="right" src="static/img/declaration.png" width="95" height="139" alt="A scroll with small text on it" title="I HEREBY DECLARE THIS MODULE AS INDEPENDENT FROM THE OTHERS"/>
 
-<p>When writing a module, you can declare two kinds of things: <em>functions</em> and <em>attributes</em>. Attributes are metadata describing the module itself such as its name, the functions that should be visible to the outside world, the author of the code, and so on. This kind of metadata is useful because it gives hints to the compiler on how it should do its job, and also because it lets people retrieve useful information from compiled code without having to consult the source.</p>
+<p>当编写一个模块的时候，你能声明两种东西： <em>函数</em>和<em>属性</em>.
+	属性是模块用来描述它自己的元数据，其中包括模块的名字，什么函数是对外可见的和代码编写者等。
+	这种元数据是非常有用的，它能告诉编译器该如何编译同时它可以让人们从编译过的代码中得到有用信息而不需要去看代码。
+</p>
 
-<p>There is a large variety of module attributes currently used in Erlang code across the world; as a matter of fact, you can even declare your own attributes for whatever you please. There are some pre-defined attributes that will appear more frequently than others in your code. All module attributes follow the form <code>-Name(Attribute).</code>. Only one of them is necessary for your module to be compilable:</p>
+<p>
+	有大量的模块属性在全世界的Erlang代码中使用，事实上，你可以根据你的喜好定义你自己的属性。
+	(There is a large variety of module attributes currently used in Erlang code across the world;
+	as a matter of fact, you can even declare your own attributes for whatever you please.)
+	这里有很多预先定义好的属性，在代码中，它们比别的属性更加常用。所有这些模块属性都使用这种写法<code>-Name(Attribute).</code>。
+	为了让你的模块能编译，它们当中唯一必须的是：</p>
 
 <dl>
 	<dt>-module(Name).</dt>
-	<dd>This is always the first attribute (and statement) of a file, and for good reason: it's the name of the current module, where <var>Name</var> is an <a class="chapter" href="starting-out-for-real.html#atoms" title="atom definition">atom</a>. This is the name you'll use to call functions from other modules. The calls are made with the <code>M:F(A)</code> form, where <var>M</var> is the module name, <var>F</var> the function, and <var>A</var> the arguments.</dd>
+	<dd>
+		这始终是一个文件的第一个属性（和语句），因为一个很好的理由：
+		它是这个模块的名字，并且这个<var>Name</var>是一个<a class="chapter" href="starting-out-for-real.html#atoms" title="atom definition">原子</a>。
+		这个就是你用来从别的模块调用函数的名字。
+		这种调用的写法是<code>M:F(A)</code>，其中<var>M</var>是模块名，<var>F</var>是函数，<var>A</var>是参数。
+	</dd>
 </dl>
 
-<p>It's time to code already! Our first module will be very simple and useless. Open your text editor and type in the following, then save it under <code>useless.erl</code>:</p>
+<p>是时候让我们写一些代码了！我们第一个模块将会非常简单且无用。
+	打开文本编辑器输入下面这些，然后把它们保存到<code>useless.erl</code>中：</p>
 
 <pre class="brush:erl">
 -module(useless).
 </pre>
 
-<p>This line of text is a valid module. Really! Of course it's useless without functions. Let's first decide what functions will be exported from our 'useless' module. To do this, we will use another attribute:</p>
+<p>
+	这一行文本是一个有效的模块。
+	真的！当然没有函数它很没用。让我们先决定什么函数从我们的‘useless’模块中导出。
+	为了做这事情，我们将用另一个属性：
+</p>
 
 <dl>
 	<dt>-export([Function1/Arity, Function2/Arity, ..., FunctionN/Arity]).</dt>
-	<dd>This is used to define what functions of a module can be called by the outside world. It takes a list of functions with their respective arity. The arity of a function is an integer representing how many arguments can be passed to the function. This is critical information, because different functions defined within a module can share the same name if and only if they have a different arity. The functions <code>add(X,Y)</code> and <code>add(X,Y,Z)</code> would thus be considered different and written in the form <code>add/2</code> and <code>add/3</code> respectively.</dd>
+	<dd>
+		这是用来定义该模块什么函数可以由外界被调用。
+		它需要一个有元数的函数列表。(It takes a list of functions with their respective arity.)
+		函数的元数是一个整数，代表有几个参数将传入函数。
+		这个是非常重要的信息，因为在同一个模块中，我们可以定义同名但元数不同的函数。
+		函数<code>add(X,Y)</code>和<code>add(X,Y,Z)</code>被认为是不同的，分别用<code>add/2</code>和<code>add/3</code>
+		来表示。
+	</dd>
 </dl>
 
 <div class="note">
-	<p><strong>Note:</strong> Exported functions represent a module's interface. It is important to define an interface revealing strictly what is necessary for it to be used and nothing more. Doing so lets you fiddle with all the other [hidden] details of your implementation without breaking code that might depend on your module.</p>
+	<p><strong>注意：</strong>
+		导出的函数代表模块的接口。定义一个只导出必要函数的接口是非常重要的。(It is important to define an interface revealing strictly what is necessary for it to be used and nothing more.)
+		这样做，可以让你随意优化其它的［隐藏的］实现细节，而不至于因为优化导致其它依赖你代码的模块不工作。
+	</p>
 </div>
 
 <p>Our useless module will first export a useful function named 'add', which will take two arguments. The following <code>-export</code> attribute can be added after the module declaration:</p>
