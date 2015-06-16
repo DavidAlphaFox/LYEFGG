@@ -298,20 +298,30 @@ Hello, world!
 		基准测试表明从这个实现中只有一点性能提升并且该想法已经被放弃了。</p>
 </div>
 
-<p>There are a whole lot of compilation flags existing to get more control over how a module is compiled. You can get a list of all of them in the <a class="docs" href="http://erlang.org/doc/man/compile.html">Erlang documentation</a>. The most common flags are:</p>
+<p>
+	Erlang有很多编译标志来控制模块的编译。
+	你可以从<a class="docs" href="http://erlang.org/doc/man/compile.html">Erlang文档</a>中找到这些编译标志。
+	常用的标志有：</p>
 
 <dl>
 	<dt>-debug_info</dt>
-	<dd>Erlang tools such as debuggers, code coverage and static analysis tools will use the debug information of a module in order to do their work.</dd>
+	<dd>Erlang的工具像调试器，代码覆盖和静态分析工具等将使用模块的调试信息来工作。</dd>
 	<dt>-{outdir,Dir}</dt>
-	<dd>By default, the Erlang compiler will create the 'beam' files in the current directory. This will let you choose where to put the compiled file.</dd>
+	<dd>默认情况下，Erlang的编译器将在当前目录中创建‘beam’文件。
+		这个标志将让你选择编译的文件放在何处。</dd>
 	<dt>-export_all</dt>
-	<dd>Will ignore the <code>-export</code> module attribute and will instead export all functions defined. This is mainly useful when testing and developing new code, but should not be used in production.</dd>
+	<dd>这个标志将忽略<code>-export</code>模块属性，并将导出所有的函数。
+		这个主要用于测试和开发新的代码，但是你不应当在生产代码中使用。
+	</dd>
 	<dt>-{d,Macro} or {d,Macro,Value}</dt>
-	<dd>Defines a macro to be used in the module, where <var>Macro</var> is an atom. This is more frequently used when dealing when unit-testing, ensuring that a module will only have its testing functions created and exported when they are explicitly wanted. By default, <var>Value</var> is 'true' if it's not defined as the third element of the tuple.</dd>
+	<dd>在模块中定义一个宏，其中<var>Macro</var>原子。
+		这个主要用于单元测试，确保每个模块中的测试函数能正确的被创建和导出。(This is more frequently used when dealing when unit-testing, ensuring that a module
+		will only have its testing functions created and exported when they are explicitly wanted.)
+		默认情况下，如果不定义元组的第三个元素<var>Value</var>默认为‘true’。
+	</dd>
 </dl>
 
-<p>To compile our <code>useless</code> module with some flags, we could do one of the following:</p>
+<p>为了一些标志编译<code>useless</code>模块，我们可以像下面这样做：</p>
 
 <pre class="brush:eshell">
 7&gt; compile:file(useless, [debug_info, export_all]).
@@ -320,16 +330,27 @@ Hello, world!
 {ok,useless}
 </pre>
 
-<p>You can also be sneaky and define compile flags from within a module, with a module attribute. To get the same results as from expressions 7 and 8, the following line could be added to the module:</p>
+<p>
+	你可以在模块内定义编译标志当作模块属性。
+	从表达式7和8可以获得相同的结果，我们可以将下面几行添加到模块中：</p>
 
 <pre class="brush:erl">
 -compile([debug_info, export_all]).
 </pre>
 
-<p>Then just compile and you'll get the same results as if you manually passed flags. Now that we're able to write down functions, compile them and execute them, it's time to see how far we can take them!</p>
+<p>
+	然后只要编译，就能和你手工指定编译标志的结果一样。
+	现在，我们可以编写函数，编译和执行，是时候看我们能走多远了！
+</p>
+
 
 <div class="note">
-	<p><strong>Note:</strong> another option is to compile your Erlang module to native code. Native code compiling is <strong>not</strong> available for every platform and OS, but on those that support it, it can make your programs go faster (about 20% faster, based on anecdotal evidence). To compile to native code, you need to use the <code>hipe</code> module and call it the following way: <code>hipe:c(Module,OptionsList).</code> You could also use <code>c(Module,[native]).</code> when in the shell to achieve similar results. Note that the .beam file generated will contain both native and non-native code, and the native part will not be portable across platforms.</p>
+	<p><strong>注意：</strong>
+		另一个选项是将Erlang编译成本地代码。
+		本地代码<strong>不</strong>支持所有的平台，在所支持的平台上我们的程序会有一定的性能的提升（根据传闻，会有20%的性能提升）。
+		为了编译成本地代码，你需要使用<code>hipe</code>模块，并用下面的方式调用：
+		<code>hipe:c(Module,OptionsList).</code>，当然在shell中你使用<code>c(Module,[native]).</code>也可以得到相似的结果。
+		注意生成的.beam将会包含本地代码和字节码，并且本地代码是不可以跨平台的。</p>
 </div>
 
 
