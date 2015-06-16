@@ -354,11 +354,17 @@ Hello, world!
 </div>
 
 
-<h3><a class="section" name="more-about-modules">More About Modules</a></h3>
+<h3><a class="section" name="more-about-modules">更多关于模块的知识</a></h3>
 
-<p>Before moving on to learning more about writing functions and barely useful snippets of code, there are a few other miscellaneous bits of information that might be useful to you in the future that I'd like to discuss.</p>
+<p>
+	在继续学习更多关于编写函数和有用代码的片段前，这里还有一些其它的信息将来可能会有用途，我将在这个讨论下。
+</p>
 
-<p>The first one concerns metadata about modules. I mentioned in the beginning of this chapter that module attributes are metadata describing the module itself. Where can we find this metadata when we don't have an access to the source? Well the compiler plays nice with us: when compiling a module, it will pick up most module attributes and store them (along with other information) in a <code>module_info/0</code> function. You can see the metadata of the <code>useless</code> module the following way:</p>
+<p>首先是关于模块的元信息。我在本章的开头就提过模块属性是描述模块自身的元信息。
+	当我们无法得到代码时，我们怎么找到这些元信息？
+	编译器会做的非常好：当编译一个模块，编译器会提取绝大部分模块属性（连同其它信息）一起被保存到<code>module_info/0</code>函数中。
+	你可以通过下面的方式看到<code>useless</code>模块的元信息：
+</p>
 
 <pre class="brush:eshell">
 9&gt; useless:module_info().
@@ -378,19 +384,41 @@ Hello, world!
 </pre>
 
 
-<p>The snippet above also shows an additional function, <code>module_info/1</code> which will let you grab one specific piece of information. You can see exported functions, imported functions (none in this case!), attributes (this is where your custom metadata would go), and compile options and information. Had you decided to add <code>-author("An Erlang Champ").</code> to your module, it would have ended up in the same section as <code>vsn</code>. There are limited uses to module attributes when it comes to production stuff, but they can be nice when doing little tricks to help yourself out: I'm using them in my <a class="source" href="static/erlang/tester.erl" title="Automatic testing module. See warnings/0.">testing script</a> for this book to annotate functions for which unit tests could be better; the script looks up module attributes, finds the annotated functions and shows a warning about them.</p>
+<p>
+	上面的这个段代码告诉了我们一个额外的函数<code>module_info/1</code> ，该函数可以让你获取特殊的信息。
+	你可以看到导出函数，导入函数（上面的例子没有！），属性（你自定义的元信息也在这里）还有编译选项和其它信息。
+	当你决定在你的模块中添加<code>-author("An Erlang Champ").</code>，它将在和<code>vsn</code>同一个节显示。
+	在生产环境中，模块属性的用途非常有限，但是你这有一些小技巧帮助自己：
+	我为本书编写了一些注释函数在
+	<a class="source" href="static/erlang/tester.erl" title="Automatic testing module. See warnings/0.">测试脚本</a>中使用，
+	这些脚本会让单元测试更好一些；这个脚本检查模块属性，找出注释函数并显示它们的相关警告。</p>
 
 <div class="note">
-    <p><strong>Note:</strong> <code>vsn</code> is an automatically generated unique value differentiating each version of your code, excluding comments. It is used in code hot-loading (upgrading an application while it runs, without stopping it) and by some tools related to release handling. You can also specify a <code>vsn</code> value yourself if you want: just add <code>-vsn(VersionNumber)</code> to your module.</p>
+    <p><strong>注意：</strong>
+		<code>vsn</code>是一个不包含注释且自动为不同的代码版本生成唯一码。
+		它被一些发布用具用于代码热替换（在不停止应用的情况下升级）。
+		如果你想，你也可以自己定义<code>vsn</code>：只要在模块中添加<code>-vsn(VersionNumber)</code>。
+	</p>
 </div>
 
 <img class="right explanation" src="static/img/circular-dependencies.png" width="237" height="255" alt="A small graph with three nodes: Mom, Dad and You. Mom and Dad are parents of You, and You is brother of Dad. Text under: 'If circular dependencies are digusting in real life, maybe they should be disgusting in your programs too'" title="Seems clear enough."/>
 
-<p>Another point that would be nice to approach regards general module design: avoid circular dependencies! A module <var>A</var> should not call a module <var>B</var> that also calls module <var>A</var>. Such dependencies usually end up making code maintenance difficult. In fact, depending on too many modules even if they're not in a circular dependency can make maintenance harder. The last thing you want is to wake up in the middle of the night only to find a maniac software engineer or computer scientist trying to gouge your eyes out because of terrible code you have written.</p>
+<p>另一点是关于通用的模块设计，能做到这样是最好的：避免循环依赖！
+	一个模块<var>A</var>应当避免调用一个调用模块<var>A</var>的模块<var>B</var>。
+	这种依赖通常最终使代码维护困难。实际上，即便不是循环依赖，依赖太多模块也是让维护变困难。
+	你所能想到的最后一件事情是，当你半夜醒来发现一个疯狂的软件工程师或计算机科学家想把你眼睛挖出来，就因为你写的差劲的代码。
+	(The last thing you want is to wake up in the middle of the night
+	only to find a maniac software engineer or computer scientist trying to gouge your eyes out
+	because of terrible code you have written.)
+</p>
 
-<p>For similar reasons (maintenance and fear for your eyes), it is usually considered a good practice to regroup functions that have similar roles close together. Starting and stopping an application or creating and deleting a record in some database are examples of such a scenario.</p>
+<p>同样的原因（维护者和你恐惧的眼神），想相同功能的函数放在一起，被认为是非常好的实践。
+	启动和停止应用程序或在数据库内创建和删除记录就是这样例子。
+	(For similar reasons (maintenance and fear for your eyes), it is usually considered a good practice to regroup functions that have similar roles close together.
+	Starting and stopping an application or creating and deleting a record in some database are examples of such a scenario.)
+</p>
 
-<p>Well, that's enough for the pedantic moralizations. How about we explore Erlang a little more?</p>
+<p>好了， 我们已经听了足够多的理论。让我们更多探索一点Erlang，好吗？</p>
 				<ul class="navigation">
 											<li><a href="starting-out-for-real.html" title="Previous chapter">&lt; Previous</a></li>
 										
