@@ -238,11 +238,14 @@ greet_and_add_two(X) -&gt;
 	在编译的时候编译器会替换为<code>23-47</code>。有些人会使用更复杂的宏，但是基础的语法是一样的。</p>
 
 
-<h3><a class="section" name="compiling-the-code">Compiling the code</a></h3>
+<h3><a class="section" name="compiling-the-code">编译代码</a></h3>
 
-<p>Erlang code is compiled to bytecode in order to be used by the virtual machine. You can call the compiler from many places: <code>$ <a class="docs" href="http://erlang.org/doc/man/erlc.html" title="erlc manual">erlc</a> flags file.erl</code> when in the command line, <code>compile:file(FileName)</code> when in the shell or in a module, <code>c()</code> when in the shell, etc.</p>
+<p>
+	Erlang代码都是被编译成字节码供虚拟机使用。
+	你可以在很多地方调用编译器：在命令行中可以用<code>$ <a class="docs" href="http://erlang.org/doc/man/erlc.html" title="erlc manual">erlc</a> flags file.erl</code>，
+	在shell或者模块中可以用<code>compile:file(FileName)</code>，在shell中可以用<code>c()</code>等等。</p>
 
-<p>It's time to compile our useless module and try it. Open the Erlang shell, type in:</p>
+<p>是时候尝试编译我们的useless模块。打开Erlang的shell，输入：</p>
 
 <pre class="brush:eshell">
 1&gt; cd("/path/to/where/you/saved/the-module/").
@@ -250,14 +253,19 @@ greet_and_add_two(X) -&gt;
 ok
 </pre>
 
-<p>By default, the shell will only look for files in the same directory it was started in and the standard library: <code>cd/1</code> is a function defined exclusively for the Erlang shell, telling it to change the directory to a new one so it's less annoying to browse for our files. Windows users should remember to use forward slashes. When this is done, do the following:</p>
+<p>
+	默认情况下，shell只寻找同目录下的文件，这个目录一般是标准库的目录和Erlang启动的文件夹：
+	Erlang的shell定义了一个<code>cd/1</code>命令，用来告诉Erlang进行目录切换，这样浏览我们的文件就不那么麻烦了。
+	Windows用户记得要用正斜杠。当这些都完成了，执行下面的命令：</p>
 
 <pre class="brush:eshell">
 2&gt; c(useless).
 {ok,useless}
 </pre>
 
-<p>If you have another message, make sure the file is named correctly, that you are in the right directory and that you've made no mistake in your <a class="source" href="static/erlang/useless.erl" title="check against THIS!">module</a>. Once you successfully compile code, you'll notice that a <code>useless.beam</code> file was added next to <code>useless.erl</code> in your directory. This is the compiled module. Let's try our first functions ever:</p>
+<p>如果你看到别的信息，确认是否在正确的文件夹下，文件名是否正确，并且你的<a class="source" href="static/erlang/useless.erl" title="check against THIS!">模块</a>中没有错误。
+	一旦你成功编译代码，你会看文件夹下除了<code>useless.erl</code>还新增加了<code>useless.beam</code>文件。这个就是被编译过的模块。
+	让我们尝试我们第一个函数：</p>
 
 <pre class="brush:eshell">
 3&gt; useless:add(7,2).
@@ -272,12 +280,22 @@ Hello, world!
 ** exception error: undefined function useless:not_a_real_function/0
 </pre>
 
-<p>The functions work as expected: <code>add/2</code> adds numbers, <code>hello/0</code> outputs "Hello, world!", and <code>greet_and_add_two/1</code> does both! Of course, you might be asking why <code>hello/0</code> returns the atom 'ok' after outputting text. This is because Erlang functions and expressions must <strong>always</strong> return something, even if they would not need to in other languages. As such, <code>io:format/1</code> returns 'ok' to denote a normal condition, the absence of errors.</p>
+<p>函数都如预期那样工作了：<code>add/2</code>将两个数相加，<code>hello/0</code>输出”Hello, world!“，<code>greet_and_add_two/1</code>同时做了前面两个函数的事情！
+	当然，你也许会问<code>hello/0</code>在完成输出后为什么会返回‘ok’。
+	这是因为Erlang的函数和表达式必须<strong>总是</strong>返回某个值，即便在其它语言中这不是必须的。
+	所以，<code>io:format/1</code>返回‘ok’表示一切正常，没有错误。</p>
 
-<p>Expression 6 shows an error being thrown because a function doesn't exist. If you have forgotten to export a function, this is the kind of error message you will have when trying it out.</p>
+<p>第6个表达式显示一个错误告诉我们某个函数并不存在。
+	如果我们忘记导出某个函数，当你要尝试调用该函数的时候，这个错误信息就会显示出来。
+</p>
 
 <div class="note">
-	<p><strong>Note:</strong> If you were ever wondering, '.beam' stands for <em>Bogdan/Björn's Erlang Abstract Machine</em>, which is the VM itself. Other virtual machines for Erlang exist, but they're not really used anymore and are history: JAM (Joe's Abstract Machine, inspired by Prolog's <a class="external" href="http://en.wikipedia.org/wiki/Warren_Abstract_Machine" title="Warren Abstract Machin">WAM</a> and old BEAM, which attempted to compile Erlang to C, then to native code. Benchmarks demonstrated little benefits in this practice and the concept was given up.</p>
+	<p><strong>注意：</strong>
+		如果曾经你想知道‘.beam’的含义，‘.beam’实际上代表<em>Bogdan/Björn's Erlang Abstract Machine</em>，Erlang虚拟的名字。
+		其它的Erlang虚拟机也存在过，并且这已经不再被使用已经成为历史了：
+		JAM（Joe's Abstract Machine），一个受到Prolog's <a class="external" href="http://en.wikipedia.org/wiki/Warren_Abstract_Machine" title="Warren Abstract Machin">WAM</a>影响的早期虚拟机，
+		它尝试将Erlang编译成C，再编译成本地代码。
+		基准测试表明从这个实现中只有一点收益并且该想法已经被放弃了。</p>
 </div>
 
 <p>There are a whole lot of compilation flags existing to get more control over how a module is compiled. You can get a list of all of them in the <a class="docs" href="http://erlang.org/doc/man/compile.html">Erlang documentation</a>. The most common flags are:</p>
