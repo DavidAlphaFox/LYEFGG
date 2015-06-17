@@ -132,7 +132,10 @@ function(_) -&gt;
 -compile(export_all). %% replace with -export() later, for God's sake!
 </pre>
 
-<p>The first function we'll write is <code>head/1</code>, acting exactly like <code>erlang:hd/1</code> which takes a list as an argument and returns its first element. It'll be done with the help of the cons operator (<code>|</code>):</p>
+<p>
+    第一个函数我们将编写<code>head/1</code>，它将像<code>erlang:hd/1</code>一样接收一个列表作为参数并返回列表的第一个元素。
+    我将使用链接操作符（<code>|</code>）帮助我完成这件事：
+</p>
 
 <pre class="brush:erl">
 head([H|_]) -&gt; H.
