@@ -33,13 +33,17 @@
 			</div><!-- menu -->
 			<div id="content">
             <div class="noscript"><noscript>Hey there, it appears your Javascript is disabled. That's fine, the site works without it. However, you might prefer reading it with syntax highlighting, which requires Javascript!</noscript></div>
-<h2>Syntax in functions</h2>
+<h2>函数中的语法</h2>
 
-<h3><a class="section" name="pattern-matching">Pattern Matching</a></h3>
+<h3><a class="section" name="pattern-matching">模式匹配</a></h3>
 
 <img class="right" src="static/img/snail.png" width="222" height="84" alt="A snail greeting you." title="The following code doesn't care about snails :(" />
 
-<p>Now that we have the ability to store and compile our code, we can begin to write more advanced functions. Those that we have written so far were extremely simple and a bit underwhelming. We'll get to more interesting stuff. The first function we'll write will need to greet someone differently according to gender. In most languages you would need to write something similar to this:</p>
+<p>
+    我们现在有能力存储和编译我们的代码了，我们可以开始写更多功能的函数了。
+    到目前为止，我们已经写了一些简单但令人印象深刻的函数。下面我们将写一些更加有趣的东西。
+    我们第一个函数将是根据性别不同来到招呼的函数。
+    在绝大部分语言中，你会像下面这样写：</p>
 
 <pre class="brush:erl">
 function greet(Gender,Name)
@@ -52,7 +56,7 @@ function greet(Gender,Name)
 end
 </pre>
 
-<p>With pattern-matching, Erlang saves you a whole lot of boilerplate code. A similar function in Erlang would look like this:</p>
+<p>使用模式匹配，Erlang为你节省了大量的重复代码。同样的函数在Erlang中看起来是这样的：</p>
 
 <pre class="brush:erl">
 greet(male, Name) -&gt;
@@ -63,7 +67,10 @@ greet(_, Name) -&gt;
     io:format("Hello, ~s!", [Name]).
 </pre>
 
-<p>I'll admit that the printing function is a lot uglier in Erlang than in many other languages, but that is not the point. The main difference here is that we used pattern matching to define both what parts of a function should be used and bind the values we need at the same time. There was no need to first bind the values and then compare them! So instead of:</p>
+<p>
+    我承认，和其它语言相比Erlang的输出函数是多么的丑陋，但是这一点都不重要。
+    主要的不同是，我们用模式匹配同时定义了该使用哪个函数和哪个值被绑定。
+    其实我们没有必要先绑定的值，然后比较它们！所以我们不这么做：</p>
 
 <pre class="brush:erl">
 function(Args)
@@ -75,7 +82,7 @@ function(Args)
       Expression
 </pre>
 
-<p>We write:</p>
+<p>我们这样写：</p>
 
 <pre class="brush:erl">
 function(X) -&gt;
@@ -86,7 +93,14 @@ function(_) -&gt;
   Expression.
 </pre>
 
-<p>in order to get similar results, but in a much more declarative style. Each of these <code>function</code> declarations is called a <em>function clause</em>. Function clauses must be separated by semicolons (<code>;</code>) and together form a <em>function declaration</em>. A function declaration counts as one larger statement, and it's why the final function clause ends with a period.  It's a "funny" use of tokens to determine workflow, but you'll get used to it. At least you'd better hope so because there's no way out of it!</p>
+<p>我们得到了同样的结果，但是这样更具有陈述性。(in order to get similar results, but in a much more declarative style.)
+    所有<code>function</code>声名中的每一个都被成为<em>函数分句</em>。
+    函数分句必须用分号（<code>;</code>）分开，当这些分句放在一起就是<em>函数声明</em>。
+    一个函数声明被认为是一个更大语句，并且函数声明中最后一个函数分句需要用句号结尾。
+    用符号决定工作流这很“有趣”，但是你很快就会适应这件事情。
+    (It's a "funny" use of tokens to determine workflow, but you'll get used to it.)
+    只要你希望如此，因为没有其它的方式了！
+</p>
 
 <div class="note">
 	<p><strong>Note:</strong> <code>io:format</code>'s formatting is done with the help of tokens being replaced in a string. The character used to denote a token is the tilde (<code>~</code>). Some tokens are built-in such as <code>~n</code>, which will be changed to a line-break. Most other tokens denote a way to format data. The function call <code>io:format("~s!~n",["Hello"]).</code> includes the token <code>~s</code>, which accepts strings and bitstrings as arguments, and <code>~n</code>. The final output message would thus be <code>"Hello!\n"</code>. Another widely used token is <code>~p</code>, which will print an Erlang term in a nice way (adding in indentation and everything).</p>
