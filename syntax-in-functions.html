@@ -103,8 +103,21 @@ function(_) -&gt;
 </p>
 
 <div class="note">
-	<p><strong>Note:</strong> <code>io:format</code>'s formatting is done with the help of tokens being replaced in a string. The character used to denote a token is the tilde (<code>~</code>). Some tokens are built-in such as <code>~n</code>, which will be changed to a line-break. Most other tokens denote a way to format data. The function call <code>io:format("~s!~n",["Hello"]).</code> includes the token <code>~s</code>, which accepts strings and bitstrings as arguments, and <code>~n</code>. The final output message would thus be <code>"Hello!\n"</code>. Another widely used token is <code>~p</code>, which will print an Erlang term in a nice way (adding in indentation and everything).</p>
-	<p>The <code>io:format</code> function will be seen in more details in later chapters dealing with input/output with more depth, but in the meantime you can try the following calls to see what they do:  <code>io:format("~s~n",[&lt;&lt;"Hello"&gt;&gt;])</code>, <code>io:format("~p~n",[&lt;&lt;"Hello"&gt;&gt;])</code>, <code>io:format("~~~n")</code>, <code>io:format("~f~n", [4.0])</code>, <code>io:format("~30f~n", [4.0])</code>. They're a small part of all that's possible and all in all they look a bit like <code>printf</code> in many other languages. If you can't wait until the chapter about I/O, you can read the <a class="docs" href="http://erlang.org/doc/man/io.html#format-3" title="straight from the horse's mouth">online documentation</a> to know more.</p>
+	<p><strong>注意：</strong>
+        <code>io:format</code>是通过字符串中可替换的符号的帮助来完成字符串输出格式化。
+        用来代表可替换符号字符是波浪号（<code>~</code>）。
+        一些替换符号是内置的如换行符号<code>~n</code>。
+        绝大部分其它替换符号代表格式化数据的方式。
+        当函数调用<code>io:format("~s!~n",["Hello"]).</code>时，其中包含了一个接受字符串或比特字符串的<code>~s</code>替换符
+        和<code>~n</code>替换符，这个最终输出是<code>"Hello!\n"</code>。
+        另一个比较常用的替换符是<code>~p</code>，它可以非常好的输出Erlang的任何数据类型（为其添加适当的缩进等）。</p>
+	<p>我们将在稍后关于输入／输出相关的章节深入介绍<code>io:format</code>，
+        但是当下你可以尝试下这些，看它们会输出什么：
+        <code>io:format("~s~n",[&lt;&lt;"Hello"&gt;&gt;])</code>，
+        <code>io:format("~p~n",[&lt;&lt;"Hello"&gt;&gt;])</code>，<code>io:format("~~~n")</code>，
+        <code>io:format("~f~n", [4.0])</code>, <code>io:format("~30f~n", [4.0])</code>。
+        这个和很多其它的语言中<code>printf</code>非常像。
+        如果你没耐心等到介绍I/O的章节，那么阅读下<a class="docs" href="http://erlang.org/doc/man/io.html#format-3" title="straight from the horse's mouth">在线文档</a>去了解更多。</p>
 </div>
 
 
