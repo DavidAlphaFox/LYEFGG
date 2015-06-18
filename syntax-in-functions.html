@@ -148,7 +148,9 @@ head([H|_]) -&gt; H.
 second([_,X|_]) -&gt; X.
 </pre>
 
-<p>The list will just be deconstructed by Erlang in order to be pattern matched. Try it in the shell!</p>
+<p>
+    Erlang为了能进行模式匹配，列表将被解构。在shell中尝试下吧！
+</p>
 
 <pre class="brush:eshell">
 1&gt; c(functions).
@@ -159,7 +161,14 @@ second([_,X|_]) -&gt; X.
 2
 </pre>
 
-<p>This could be repeated for lists as long as you want, although it would be impractical to do it up to thousands of values. This can be fixed by writing recursive functions, which we'll see how to do later on. For now, let's concentrate on more pattern matching. The concept of free and bound variables we discussed in <a class="chapter local" href="starting-out-for-real.html#invariable-variables" title="Invariable Variables">Starting Out (for real)</a> still holds true for functions: we can then compare and know if two parameters passed to a function are the same or not. For this, we'll create a function <code>same/2</code> that takes two arguments and tells if they're identical:</p>
+<p>
+    只要你想，你可以为列表重复任意长次数，虽然这不是很实际但是可以达到数千个值。
+    (This could be repeated for lists as long as you want, although it would be impractical to do it up to thousands of values.)
+    这个可以通过使用稍后介绍的递归函数变得更好。目前，还是更多关注模式匹配。
+    关于自由变量和绑定变量，我们在<a class="chapter local" href="starting-out-for-real.html#invariable-variables" title="Invariable Variables">真正的开始中</a>讨论过，并且在函数中表现也是不变的：
+    然后我们可以比较并且知道如果两个传入函数的参数是相同还是不同。
+    对于这一点，我们创建了<code>same/2</code>函数，它接收两个参数并判断它们是否相同：
+ </p>
 
 <pre class="brush:erl">
 same(X,X) -&gt;
