@@ -141,7 +141,8 @@ function(_) -&gt;
 head([H|_]) -&gt; H.
 </pre>
 
-<p>If you type <code>functions:head([1,2,3,4]).</code> in the shell (once the module is compiled), you can expect the value '1' to be given back to you. Consequently, to get the second element of a list you would create the function:</p>
+<p>如果你在shell中输入<code>functions:head([1,2,3,4]).</code>（模块要编译成功），
+    一可以看到值‘1’被返回。所以你想得到列表的第二个元素你可以创建这样一个函数：</p>
 
 <pre class="brush:erl">
 second([_,X|_]) -&gt; X.
