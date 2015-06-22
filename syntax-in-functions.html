@@ -93,7 +93,7 @@ function(_) -&gt;
   Expression.
 </pre>
 
-<p>我们得到了同样的结果，但是这样更具有陈述性。(in order to get similar results, but in a much more declarative style.)
+<p>我们得到了同样的结果，但是这样更具有声明式的风格。(in order to get similar results, but in a much more declarative style.)
     所有<code>function</code>声名中的每一个都被成为<em>函数分句</em>。
     函数分句必须用分号（<code>;</code>）分开，当这些分句放在一起就是<em>函数声明</em>。
     一个函数声明被认为是一个更大语句，并且函数声明中最后一个函数分句需要用句号结尾。
@@ -176,13 +176,29 @@ same(X,X) -&gt;
 same(_,_) -&gt;
     false.
 </pre>
-<p>And it's that simple. Before explaining how the function works, we'll go over the concept of bound and unbound variables again, just in case:</p>
+<p>
+    并且这十分简单。再解释这个函数是如何工作之前，我们将再次讨论一下绑定变量和非绑定变量的概念：
+</p>
 
 <img class="explanation" src="static/img/musical-chair.png" width="357" height="281" alt="A game of musical chair with 3 chairs: two occupied by a cat and a snake, and one free. The cat and snake are labelled 'values', the chairs on which they sit are labelled 'bound', and the free chair is labelled 'unbound'" />
 
-<p>If this game of musical chairs was Erlang, you'd want to sit on the empty chair. Sitting on one already occupied wouldn't end well! Joking aside, unbound variables are variables without any values attached to them (like our empty chair). Binding a variable is simply attaching a value to an unbound variable. In the case of Erlang, when you want to assign a value to a variable that is already bound, an error occurs <em>unless the new value is the same as the old one</em>. Let's imagine our snake on the right: if another snake comes around, it won't really change much to the game. You'll just have more angry snakes. If a different animal comes to sit on the chair (a honey badger, for example), things will go bad. Same values for a bound variable are fine, different ones are a bad idea. You can go back to the subchapter about <a class="chapter" href="starting-out-for-real.html#invariable-variables" title="Starting Out (for real)">Invariable Variables</a> if this concept is not clear to you.</p>
+<p>
+    如果Erlang是一个抢椅子的游戏，你会想坐到空椅子上。如果坐在任何一个已经被抢占的椅子上，将不会有什么好结果！
+    玩笑归玩笑，没有绑定的变量是一个没有任何值绑定的变量（就像我们的空椅子）。
+    绑定一个变量就是将一个值附加到变量上。
+    在Erlang中，如果你想给一个已经绑定的变量赋值，就会引起报错，<em>除非新的值和已经绑定的值相等</em>。
+    让我们想想一下右侧的蛇：如果别的蛇也加入进来，它也不太可能对游戏产生太多的影响。你只是看到了更多愤怒的蛇。
+    如果一个完全不同类型的动物坐在蛇的椅子上（例如说，蜜獾），事情将会变得糟糕了。
+    对于一个绑定的变量赋相同的值是没有问题的，但是如果赋不同的值，这就是个不怎么好的事情了。
+    如果你对这个概念还不是那么清晰，你可以回到前面关于<a class="chapter" href="starting-out-for-real.html#invariable-variables" title="Starting Out (for real)">不变的变量</a>
+    这个章节再次阅读。</p>
 
-<p>Back to our code: what happens when you call <code>same(a,a)</code> is that the first <var>X</var> is seen as unbound: it automatically takes the value <code>a</code>. Then when Erlang goes over to the second argument, it sees <var>X</var> is already bound. It then compares it to the <code>a</code> passed as the second argument and looks to see if it matches. The pattern matching succeeds and the function returns <code>true</code>. If the two values aren't the same, this will fail and go to the second function clause, which doesn't care about its arguments (when you're the last to choose, you can't be picky!) and will instead return false. Note that this function can effectively take any kind of argument whatsoever! It works for any type of data, not just lists or single variables. As a rather advanced example, the following function prints a date, but only if it is formatted correctly:</p>
+<p>回到我们的代码中：当你调用<code>same(a,a)</code>时，第一个<var>X</var>被当作未绑定的：它自动绑定值<code>a</code>。
+    然后，当Erlang看到第二个参数的时候，它发现<var>X</var>已经被绑定了。Erlang决定用第二个参数<code>a</code>去进行比较，看它们是否相等。
+    模式匹配成功，然后函数返回<code>true</code>。如果两个值不相同的时候，这个函数分句将失败，Erlang将尝试第二个函数分句，
+    而第二个函数分句根本不关心传入的参数（当这是你最后的选择，你就别挑剔了！）直接返回false。你可以注意到该函数可以有效的处理任何类型的参数。
+    它可以适配任何类型的数据，不仅仅是列表和单变量。作为一个更复杂的例子，下面的函数将打印日期，不过前提是传入的日期的格式是正确的：
+</p>
 
 <pre class="brush:erl">
 valid_time({Date = {Y,M,D}, Time = {H,Min,S}}) -&gt;
@@ -192,7 +208,8 @@ valid_time(_) -&gt;
     io:format("Stop feeding me wrong data!~n").
 </pre>
 
-<p>Note that it is possible to use the <code>=</code> operator in the function head, allowing us to match both the content inside a tuple (<code>{Y,M,D}</code>) and the tuple as a whole (<var>Date</var>). The function can be tested the following way:</p>
+<p>注意了嘛，它可以在函数声明中使用<code>=</code>操作符，这将准许我们同时匹配元组内的数据(<code>{Y,M,D}</code>)和整个元组(<var>Date</var>)。
+    该函数可以使用下面的方式进行测试：</p>
 
 <pre class="brush:eshell">
 4&gt; c(functions).
@@ -206,7 +223,10 @@ Stop feeding me wrong data!
 ok
 </pre>
 
-<p>There is a problem though! This function could take anything for values, even text or atoms, as long as the tuples are of the form <code>{{A,B,C}, {D,E,F}}</code>. This denotes one of the limits of pattern matching: it can either specify really precise values such as a known number of atom, or abstract values such as the head|tail of a list, a tuple of <var>N</var> elements, or anything (<code>_</code> and unbound variables), etc. To solve this problem, we use guards.</p>
+<p>但这里面依然存在一个问题！这个函数可以接受任何类型，即便是文本和原子，只要保持元组是<code>{{A,B,C}, {D,E,F}}</code>这个格式。
+    这代表了模式匹配的一个局限性：
+    变量可以是精确的值如原子和已知数字，抽象的值如列表的head|tail，含有<var>N</var>个元素的元组，或其它值（<code>_</code>和未绑定的变量）等。
+    为了解决这个问题，我们将使用哨位。</p>
 
 
 <h3><a class="section" name="guards-guards">Guards, Guards!</a></h3>
