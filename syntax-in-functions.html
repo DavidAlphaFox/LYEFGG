@@ -229,12 +229,18 @@ ok
     为了解决这个问题，我们将使用哨位。</p>
 
 
-<h3><a class="section" name="guards-guards">Guards, Guards!</a></h3>
+<h3><a class="section" name="guards-guards">哨位，哨位！</a></h3>
 
 <img class="right" src="static/img/driving-age.png" width="199" height="160" alt="A baby driving a car" title="Baby on board // How I've adored // That sign on my car's windowpane... (&copy; The Simpsons)" />
 
-<p>Guards are additional clauses that can go in a function's head to make pattern matching more expressive. As mentioned above, pattern matching is somewhat limited as it cannot express things like a range of value or certain types of data. A concept we couldn't represent is counting: is this 12 years old basketball player too short to play with the pros? Is this distance too long to walk on your hands? Are you too old or too young to drive a car? You couldn't answer these with simple pattern matching. I mean, you could represent the driving question such as:</p>
-
+<p>
+    哨位是函数生命中可以让模式匹配更具表现力。
+    就像前面所提到的，模式匹配在匹配值的范围和类型上非常受限。
+    这导致我们不能表述计数性的概念：(A concept we couldn't represent is counting:)
+    和职业篮球选手打比赛，这个12岁的篮球玩家是不是矮了一点？用手掌走这么远是不是太远了？
+    你是否太老或者太年轻而不能开车？你无法使用简单的模式匹配回答这些问题。
+    我的意思是，你可以这样表述这个驾驶问题：</p>
+                
 <pre class="brush:erl">
 old_enough(0) -&gt; false;
 old_enough(1) -&gt; false;
