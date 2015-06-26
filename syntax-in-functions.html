@@ -240,7 +240,7 @@ ok
     和职业篮球选手打比赛，这个12岁的篮球玩家是不是矮了一点？用手掌走这么远是不是太远了？
     你是否太老或者太年轻而不能开车？你无法使用简单的模式匹配回答这些问题。
     我的意思是，你可以这样表述这个驾驶问题：</p>
-                
+
 <pre class="brush:erl">
 old_enough(0) -&gt; false;
 old_enough(1) -&gt; false;
@@ -251,14 +251,25 @@ old_enough(15) -&gt; false;
 old_enough(_) -&gt; true.
 </pre>
 
-<p>But it would be incredibly impractical. You can do it if you want, but you'll be alone to work on your code forever. If you want to eventually make friends, start a new <code><a class="source" href="static/erlang/guards.erl" title="guards module">guards</a></code> module so we can type in the "correct" solution to the driving question:</p>
+<p>
+    但是这是非常不切合实际的。
+    如果你想，你可以这么做，但是将来只有你一个人能维护你自己的代码。
+    如果你还想有朋友的话，编写一个新的
+    <code><a class="source" href="static/erlang/guards.erl" title="guards module">guards</a></code>
+    模块，这样可以让我们键入驾驶问题的“正确的”解决方案：</p>
 
 <pre class="brush:erl">
 old_enough(X) when X &gt;= 16 -&gt; true;
 old_enough(_) -&gt; false.
 </pre>
 
-<p>And you're done! As you can see, this is much shorter and cleaner. Note that a basic rule for guard expression is they must return <code>true</code> to succeed. The guard will fail if it returns <code>false</code> or if it throws an exception. Suppose we now forbid people who are over 104 years old to drive. Our valid ages for drivers is now from 16 years old up to 104 years old. We need to take care of that, but how? Let's just add a second guard clause:</p>
+<p>
+    是的，写完了！就像你看到的，这更简短和清晰。
+    注意，哨位表达式的基本规则是它们在成功的时候必须返回<code>true</code>。
+    如果哨位失败，将会返回<code>false</code>或抛出异常。
+    假设，我们现在禁止超过104岁的人驾驶汽车。
+    现在，我们合法的驾车年龄为16岁到104岁。
+    我们现在需要关心这件事情了，但是怎么做？让我们添加第二个哨位分句：</p>
 
 <pre class="brush:erl">
 right_age(X) when X &gt;= 16, X =&lt; 104 -&gt;
