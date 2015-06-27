@@ -279,7 +279,9 @@ right_age(_) -&gt;
     false.
 </pre>
 
-<p>The comma (<code>,</code>) acts in a similar manner to the operator <code>andalso</code> and the semicolon (<code>;</code>) acts a bit like <code>orelse</code> (described in "<a class="chapter local" href="starting-out-for-real.html#bool-and-compare">Starting Out (for real)</a>"). Both guard expressions need to succeed for the whole guard to pass. We could also represent the function the opposite way:</p>
+<p>逗号（<code>,</code>）扮演着<code>andalso</code>的角色而分号（<code>;</code>）扮演着<code>orelse</code>（可以参考"<a class="chapter local" href="starting-out-for-real.html#bool-and-compare">真正的开始</a>"这章）的角色。
+    两个哨位表达式都成功，整个哨位才会被判断为真。
+    我们也可以用相反的方式来写这个函数：</p>
 
 <pre class="brush:erl">
 wrong_age(X) when X &lt; 16; X &gt; 104 -&gt;
@@ -290,19 +292,37 @@ wrong_age(_) -&gt;
 
 <img class="left" src="static/img/guard.png" width="135" height="230" alt="Guard" />
 
-<p>And we get correct results from that too. Test it if you want (you should always test stuff!). In guard expressions, the semi-colon (<code>;</code>) acts like the <code>orelse</code> operator: if the first guard fails, it then tries the second, and then the next one, until either one guard succeeds or they all fail.</p>
+<p>我们可以得到同样的结果。如果你想，你可以测试下这个（你应当每次都测试下！）。
+    在哨位表达式中，分号（<code>;</code>）和<code>orelse</code>操作符意义相同：
+    如果第一个哨位失败了，它将测试第二个，并且一直测试下去，直到某一个哨位返回了真或者所有哨位都失败了。
+</p>
 
-<p>You can use a few more functions than comparisons and boolean evaluation in functions, including math operations (<code>A*B/C &gt;= 0</code>) and functions about data types, such as <code>is_integer/1</code>, <code>is_atom/1</code>, etc. (We'll get back on them in the following chapter). One negative point about guards is that they will not accept user-defined functions because of side effects. Erlang is not a purely functional programming language (like <a class="external" href="http://learnyouahaskell.com/" title="PURE! PURE! OH GOD SO PURELY FUNCTIONAL!">Haskell</a> is) because it relies on side effects a lot: you can do I/O, send messages between actors or throw errors as you want and when you want. There is no trivial way to determine if a function you would use in a guard would or wouldn't print text or catch important errors every time it is tested over many function clauses. So instead, Erlang just doesn't trust you (and it may be right to do so!)</p>
+<p>
+    你不但可以使用比较和布尔计算,还可以使用数学操作符（<code>A*B/C &gt;= 0</code>）和类型函数，如<code>is_integer/1</code>, <code>is_atom/1</code>等。
+    （我们会尽快的在后面的章节中介绍这些）。但是哨位有一个缺点，因为用户定义的函数存在副作用，它不能使用用户定义的函数。
+    Erlang并不是一个纯函数式的语言（像 <a class="external" href="http://learnyouahaskell.com/" title="PURE! PURE! OH GOD SO PURELY FUNCTIONAL!">Haskell</a>这种）,
+    因为Erlang很大程度上依赖副作用：
+    你可以做I/O,在actor之间发送消息或在任何你想的时候丢出异常。
+    这里没有一个明确的方法可以判断你将在哨位中将使用的函数是否会打印文本或每次在测试过许多个函数分句后都捕获重要的错误。
+    因此，Erlang并不信任你（也许这是正确的方式！）</p>
 
-<p>That being said, you should be good enough to understand the basic syntax of guards to understand them when you encounter them.</p>
+<p>话虽如此，当你遇到哨位表达式的时候，你已经具备了理解哨位基本语法的知识了。</p>
 
 <div class="note">
-    <p><strong>Note:</strong> I've compared <code>,</code> and <code>;</code> in guards to the operators <code>andalso</code> and <code>orelse</code>. They're not exactly the same, though. The former pair will catch exceptions as they happen while the latter won't. What this means is that if there is an error thrown in the first part of the guard <code>X &gt;= N; N &gt;= 0</code>, the second part can still be evaluated and the guard might succeed; if an error was thrown in the first part of <code>X &gt;= N orelse N &gt;= 0</code>, the second part will also be skipped and the whole guard will fail.</p>
+    <p><strong>注意：</strong> 我在哨位表达式中将<code>,</code>和<code>;</code>比作<code>andalso</code>和<code>orelse</code>。
+        但是，它们不完全一样。 前面的那一对可以捕获异常，而后面的那一对却不会。
+        这代表着，如果哨位表达式<code>X &gt;= N; N &gt;= 0</code>的第一部分抛出异常，那么第二部分还是会被执行并且整个哨位也许会成功；
+        但是当哨位表达式<code>X &gt;= N orelse N &gt;= 0</code>的第一部分抛出异常，第二部分就会直接被跳过并在IE整个表达式就返回失败。
+    </p>
 
-    <p>However (there is always a 'however'), only <code>andalso</code> and <code>orelse</code> can be nested inside guards. This means <code>(A orelse B) andalso C</code> is a valid guard, while <code>(A; B), C</code> is not. Given their different use, the best strategy is often to mix them as necessary.</p>
+    <p>但是（永远都会有一个‘意外’），只有<code>andalso</code>和<code>orelse</code>可以在哨位表达式中嵌套。
+        着代表者表达式<code>(A orelse B) andalso C</code>是合法的，而<code>(A; B), C</code>是不合法的。
+        对于不同场景我们因该区别对待，最好的策略是如果有必要就混合使用它们。
+    </p>
+
 </div>
 
-<h3><a class="section" name="what-the-if">What the If!?</a></h3>
+<h3><a class="section" name="what-the-if">关于If！？</a></h3>
 
 <p><code>If</code>s act like guards and share guards' syntax, but outside of a function clause's head. In fact, the <code>if</code> clauses are called <em>Guard Patterns</em>. Erlang's <code>if</code>s are different from the <code>if</code>s you'll ever encounter in most other languages; compared to them they're weird creatures that might have been more accepted had they had a different name. When entering Erlang's country, you should leave all you know about <code>if</code>s at the door. Take a seat because we're going for a ride.</p>
 
