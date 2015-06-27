@@ -324,9 +324,15 @@ wrong_age(_) -&gt;
 
 <h3><a class="section" name="what-the-if">关于If！？</a></h3>
 
-<p><code>If</code>s act like guards and share guards' syntax, but outside of a function clause's head. In fact, the <code>if</code> clauses are called <em>Guard Patterns</em>. Erlang's <code>if</code>s are different from the <code>if</code>s you'll ever encounter in most other languages; compared to them they're weird creatures that might have been more accepted had they had a different name. When entering Erlang's country, you should leave all you know about <code>if</code>s at the door. Take a seat because we're going for a ride.</p>
+<p><code>If</code>和哨位很像并且使用哨位的语法，但是它在函数声明之外的部分使用。
+    实际上，<code>if</code>语句被成为<em>条件模式</em>。
+    Erlang的<code>if</code>语句和你在很多其它语言中遇到的<code>if</code>语句很不同；
+    将它们放在一起比较的话，它们是完全的不同的生物，如果使用不同的名字的话也会更容易被接受。
+    (compared to them they're weird creatures that might have been more accepted had they had a different name.)
+    当我进入Erlang的世界，你应当忘记以前所有关于<code>if</code>的知识。
+    请随意，因为接下来我们将去兜兜风。</p>
 
-<p>To see how similar to guards the if expression is, look at the following examples:</p>
+<p>为了让你知道if表达式和哨位是多么的相似，让我们来看看下面的例子：</p>
 
 <pre class="brush:erl">
 -module(what_the_if).
@@ -345,7 +351,7 @@ heh_fine() -&gt;
     end.
 </pre>
 
-<p>Save this as <code><a class="source" href="static/erlang/what_the_if.erl" title="what_the_if module">what_the_if.erl</a></code> and let's try it:</p>
+<p>将这段代码保存为<code><a class="source" href="static/erlang/what_the_if.erl" title="what_the_if module">what_the_if.erl</a></code>并且让我试运行下：</p>
 
 <pre class="brush:eshell">
 1&gt; c(what_the_if).
@@ -359,7 +365,12 @@ heh_fine() -&gt;
 
 <img class="right" src="static/img/labyrinth.png" width="163" height="143" alt="Labyrinth with no exit" title="no exit branch possible! oh no!" />
 
-<p>Uh oh! the compiler is warning us that no clause from the if on line 12 (<code>1 =:= 2, 1 =:= 1</code>) will ever match because its only guard evaluates to <code>false</code>. Remember, in Erlang, everything has to return something, and <code>if</code> expressions are no exception to the rule. As such, when Erlang can't find a way to have a guard succeed, it will crash: it cannot <em>not</em> return something. As such, we need to add a catch-all branch that will always succeed no matter what. In most languages, this would be called an 'else'. In Erlang, we use 'true' (this explains why the VM has thrown "no true branch found" when it got mad):</p>
+<p>啊哦！编译器警告我们，因为只有一个计算结果为<code>false</code>的条件分支，第12行的if语句永远都不会进行匹配。
+    请记住，在Erlang中所有的东西都需要返回值<code>if</code>表达式也不例外。
+    因此，当Erlang无法找到计算结果真的条件分支，它将崩溃：
+    它不会<em>不</em>返回值。因此，我们需要添加一个捕获所有且永远返回的分支。
+    在绝大部分语言中，这个将是‘else’。在Erlang中，我们将使用‘true’（这就解释了为什么VM会抛出"no true branch found"）：
+</p>
 
 <pre class="brush:erl">
 oh_god(N) -&gt;
@@ -368,7 +379,7 @@ oh_god(N) -&gt;
     end.
 </pre>
 
-<p>And now if we test this new function (the old one will keep spitting warnings, ignore them or take them as a reminder of what not to do):</p>
+<p>并且现在，如果我们测试这个新的函数（老的函数依然会报警，忽略它或者把当们当作一个告诉你该如何做的提醒）：</p>
 
 <pre class="brush:eshell">
 3&gt; c(what_the_if).
@@ -381,7 +392,11 @@ might_succeed
 always_does
 </pre>
 
-<p>Here's another function showing how to use many guards in an <code>if</code> expression. The function also illustrates how any expression must return something: <var>Talk</var> has the result of the <code>if</code> expression bound to it, and is then concatenated in a string, inside a tuple. When reading the code, it's easy to see how the lack of a <code>true</code> branch would mess things up, considering Erlang has no such thing as a null value (ie.: lisp's nil, C's NULL, Python's None, etc):</p>
+<p>这还有另一个函数，它将告诉你如何<code>if</code>表达式中在使用多个条件。
+    同样这个函数也向你说明了为何让任何的表达式都返回值：
+    <var>Talk</var>将绑定<code>if</code>表达式的结果，并且在一个元组中做成一个字符串。
+    当你读这段代码的时候，你就会很容易发现为什么缺少<code>true</code>分支会将事情搞的一塌糊涂，
+    考虑到Erlang没有所谓的null值（如：lisp的nil，C的NULL，Python的None等）：</p>
 
 <pre class="brush:erl">
 %% note, this one would be better as a pattern match in function heads!
@@ -396,7 +411,7 @@ help_me(Animal) -&gt;
     {Animal, "says " ++ Talk ++ "!"}.
 </pre>
 
-<p>And now we try it:</p>
+<p>让我们尝试下：</p>
 
 <pre class="brush:eshell">
 6&gt; c(what_the_if).
