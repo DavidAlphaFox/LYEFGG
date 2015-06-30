@@ -424,10 +424,18 @@ help_me(Animal) -&gt;
 {"it hurts!","says fgdadfgna!"}
 </pre>
 
-<p>You might be one of the many Erlang programmers wondering why 'true' was taken over 'else' as an atom to control flow; after all, it's much more familiar. Richard O'Keefe gave the following answer on the Erlang mailing lists. I'm quoting it directly because I couldn't have put it better:</p>
+<p>
+    你也许像其它很多Erlang程序员一样，想问为什么使用‘true’而不是‘else’做为控制流；
+    毕竟，你对它更熟悉。
+    Richard O'Keefe在Erlang邮件列表中给出了回答。
+    因为我没办法找到一个好地方展示它们，所以我直接引用了它们：</p>
 
 <blockquote title="From the Erlang mailing lists: http://erlang.org/pipermail/erlang-questions/2009-January/041228.html">
-	<p>It may be more FAMILIAR, but that doesn't mean 'else' is a good thing.  I know that writing ';&nbsp;true&nbsp;-&gt;' is a very easy way to get 'else' in Erlang, but we have a couple of decades of psychology-of-programming results to show that it's a bad idea. I have started to replace:</p>
+	<p>
+        即便你对它更熟悉，但是这不代表‘else’是一个好的选择。
+        我知道通过使用’;&nbsp;true&nbsp;-&gt;‘，可以很容易在Erlang中得到‘else’，
+        但几十年的编程心理学研究结果表明，这是一个坏主意。我开始进行如下替换：
+        </p>
 	<pre>
                           by
 	if X &gt; Y -&gt; a()		if X &gt; Y  -&gt; a()
@@ -439,15 +447,28 @@ help_me(Animal) -&gt;
 	 ; true  -&gt; c()		 ; X ==Y -&gt; c()
 	end			end
 	</pre>
-	<p>which I find mildly annoying when _writing_ the code but enormously helpful when _reading_ it.</p>
+	<p>
+        虽然在书写的时候，让人感到很繁琐和烦躁，但对我们阅读代码的非常有帮助。
+    </p>
 </blockquote>
 
-<p>'Else' or 'true' branches should be "avoided" altogether: <code>if</code>s are usually easier to read when you cover all logical ends rather than relying on a <em>"catch all"</em> clause.</p>
+<p>‘Else’或‘true’分之都应当“避免”：
+    <code>if</code>语句中比起最后依赖一个<em>“捕获所有”</em>明确给出所有逻辑判断是更容易阅读的。
+</p>
 
-<p>As mentioned before, there are only a limited set of functions that can be used in guard expressions (we'll see more of them in <a class="chapter" href="types-or-lack-thereof.html#type-conversions" title="Type conversions">Types (or lack thereof)</a>). This is where the real conditional powers of Erlang must be conjured. I present to you: the <code>case</code> expression!</p>
+<p>
+    就像前面所提到的，只能在哨位表达式中使用非常有限的函数（我们将在 <a class="chapter" href="types-or-lack-thereof.html#type-conversions" title="Type conversions">类型（或缺失的参考）</a>中介绍更多）。
+    Erlang条件表达式真正的力量才刚刚被唤出。
+    容我向你介绍：<code>case</code>语句</p>
 
 <div class="note">
-	<p><strong>Note:</strong> All this horror expressed by the function names in <code>what_the_if.erl</code> is expressed in regards to the <code>if</code> language construct when seen from the perspective of any other languages' <code>if</code>. In Erlang's context, it turns out to be a perfectly logical construct with a confusing name.</p>
+	<p><strong>注意：</strong>
+        当用同一个角度去看其它任何语言的<code>if</code>语法时，
+        所有<code>what_the_if.erl</code>中的函数让我看到的麻烦事情其实是和语法<code>if</code>语法结构没有任何关系的。
+        (All this horror expressed by the function names in <code>what_the_if.erl</code>
+        is expressed in regards to the <code>if</code> language construct
+        when seen from the perspective of any other languages' <code>if</code>.
+        在Erlang的语言环境中，它只是一个用错了名字但挺完美的逻辑结构。</p>
 </div>
 
 
