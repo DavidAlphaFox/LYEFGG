@@ -474,9 +474,13 @@ help_me(Animal) -&gt;
 
 <h3><a class="section" name="in-case-of">In Case ... of</a></h3>
 
-<p>If the <code>if</code> expression is like a guard, a <code>case ... of</code> expression is like the whole function head: you can have the complex pattern matching you can use with each argument, and you can have guards on top of it!</p>
+<p>如果说<code>if</code>表达式像哨位，那么<code>case ... of</code>表达式就像整个函数头：
+    你可以使用非常复杂的模式匹配，同样你可以在上面使用哨位！</p>
 
-<p>As you're probably getting pretty familiar with the syntax, we won't need too many examples. For this one, we'll write the append function for sets (a collection of unique values) that we will represent as an unordered list. This is possibly the worst implementation possible in terms of efficiency, but what we want here is the syntax:</p>
+<p>
+    既然你已经对这些语法很熟悉了，我们就不需要大量的例子。
+    目前，我们将写一个向sets（一个只包含唯一值的集合）中添加数据的函数，这个sets我们将用一个无序集合来表示。
+    这个实现，也许在性能方面是非常差的，但是我们在这重点阐述语法：</p>
 
 <pre class="brush:erl">
 insert(X,[]) -&gt;
