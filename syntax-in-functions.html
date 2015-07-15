@@ -536,7 +536,12 @@ beachf(_) -&gt;
 
 <h3><a class="section" name="which-to-use">该用哪个？</a></h3>
 
-<p>Which to use is rather hard to answer. The difference between function calls and <code>case ... of</code> are very minimal: in fact, they are represented the same way at a lower level, and using one or the other effectively has the same cost in terms of performance. One difference between both is when more than one argument needs to be evaluated: <code>function(A,B)&nbsp;-&gt; ... end.</code> can have guards and values to match against <var>A</var> and <var>B</var>, but a case expression would need to be formulated a bit like:</p>
+<p>该用哪个是一个非常难回答的问题。
+    因为在带哨位的函数和<code>case ... of</code>之间区别非常小：
+    事实上，它们在底层的实现上是一样的并且在性能上两者的效率是一样的。
+    两者中唯一的不同是，当有多于一个参数需要进行条件判断的时候：
+    <code>function(A,B)&nbsp;-&gt; ... end.</code>可以使用多个哨位同时处理<var>A</var> and <var>B</var>
+    但是case表达式就需要像下面这样进行格式化了：</p>
 
 <pre class="brush:erl">
 case {A,B} of
@@ -544,11 +549,26 @@ case {A,B} of
 end.
 </pre>
 
-<p>This form is rarely seen and might surprise the reader a bit. In similar situations, using a function call might be more appropriate. On the other hand the <code>insert/2</code> function we had written earlier is arguably cleaner the way it is rather than having an immediate function call to track down on a simple <code>true</code> or <code>false</code> clause.</p>
+<p>
+    这种形式很少见，可能会让诸位读者惊讶一下。
+    在相似的场景中，使用函数也许更合适一些。
+    另一方面，我们早先写的<code>insert/2</code>函数按理说应当使用带哨位的函数，
+    但是该函数并不是简单的只返回一个<code>true</code>或<code>false</code>。
+</p>
 
-<p>Then the other question is why would you ever use <code>if</code>, given <code>case</code>s and functions are flexible enough to even encompass <code>if</code> through guards? The rationale behind <code>if</code> is quite simple: it was added to the language as a short way to have guards without needing to write the whole pattern matching part when it wasn't needed.</p>
+<p>
+    然后另一个问题，和<code>case</code>表达式和函数已经很灵活了，
+    甚至使用哨位都比<code>if</code>灵活，为什么我们还要用<code>if</code>？
+    使用<code>if</code>背后的原因非常简单：
+    它被作为当我们需要哨位，但是又不需要写出整个模式匹配的时候，一种简便方式加入语言中了。
+    (it was added to the language as a short way to have guards without needing to write the whole pattern matching part when it wasn't needed.)</p>
 
-<p>Of course, all of this is more about personal preferences and what you may encounter more often. There is no good solid answer. The whole topic is still debated by the Erlang community from time to time. Nobody's going to go try to beat you up because of what you've chosen, as long as it is easy to understand. As Ward Cunningham once put it, <cite>"Clean code is when you look at a routine and it's pretty much what you expected."</cite></p>
+<p>
+    当然，这一切更多的是个人的喜好和你经常遇到。
+    当然也没有一个非常好的固定的答案。这个话题在Erlang社区中一直存在，并且大家一直辩论。
+    只要你的选择容易理解，也没有人会因为你的选择而一定要击败你。
+    就像沃德·坎宁安曾经所说的<cite>“整洁的代码就是当你看一段子程序的时候，它比你想像的要好“</cite>
+</p>
 
 				<ul class="navigation">
 											<li><a href="modules.html" title="Previous chapter">&lt; Previous</a></li>
