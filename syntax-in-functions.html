@@ -493,10 +493,15 @@ insert(X,Set) -&gt;
 </pre>
 
 
-<p>If we send in an empty set (list) and a term <var>X</var> to be added, it returns us a list containing only <var>X</var>. Otherwise, the function <code>lists:member/2</code> checks whether an element is part of a list and returns true if it is, false if it is not. In the case we already had the element <var>X</var> in the set, we do not need to modify the list. Otherwise, we add <var>X</var> as the list's first element.</p>
+<p>
+    如果我们传入一个空set（列表）和一个<var>X</var>，这个函数将返回一个只包含<var>X</var>的列表。
+    否则将使用<code>lists:member/2</code>函数来判断X是否是列表的成员，如果是则返回真，如果不是则返回假。
+    在这个例子中，我们的set已经包含了<var>X</var>，所以我们不需要改动这个列表。否则，我们将<var>X</var>放到列表头上。
+    </p>
 
 
-<p>In this case, the pattern matching was really simple. It can get more complex (you can compare your code with <a class="source" href="static/erlang/cases.erl" title="cases.erl">mine</a>):</p>
+<p>本例中，使用的是非常简单的模式匹配。
+    它可以更加的复杂（你可以将你的代码和<a class="source" href="static/erlang/cases.erl" title="cases.erl">我的</a>比较一下）：</p>
 
 <pre class="brush:erl">
 beach(Temperature) -&gt;
@@ -512,7 +517,10 @@ beach(Temperature) -&gt;
     end.
 </pre>
 
-<p>Here, the answer of "is it the right time to go to the beach" is given in 3 different temperature systems: Celsius, Kelvins and Fahrenheit degrees. Pattern matching and guards are combined in order to return an answer satisfying all uses. As pointed out earlier, <code>case ... of</code> expressions are pretty much the same thing as a bunch of function heads with guards. In fact we could have written our code the following way:</p>
+<p>这里，给出了使用3种不同温度计量单位下：摄氏，开式和华氏，"是否是适当的时间去海滩"的回答。
+    为了得到一个完善的回答，我们混合使用了模式匹配和哨位。
+    就像我们早先提过的那样，<code>case ... of</code>表达式非常像有一堆哨位的函数头。
+    实际上我们可以这样写我们的代码：</p>
 
 <pre class="brush:erl">
 beachf({celsius, N}) when N &gt;= 20, N =&lt; 45 -&gt;
@@ -522,11 +530,11 @@ beachf(_) -&gt;
     'avoid beach'.
 </pre>
 
-<p>This raises the question: when should we use <code>if</code>, <code>case ... of</code> or functions to do conditional expressions?</p>
+<p>此时我们会产生一个问题：我们应该将<code>if</code>，<code>case ... of</code>和带有哨位的函数，分别用在什么样的场景中？</p>
 
 <img class="right" src="static/img/coppertone.png" width="164" height="258" alt="parody of the coppertone logo mixed with the squid on the tunnel page of this site" title="We are squids. At the beach." />
 
-<h3><a class="section" name="which-to-use">Which to use?</a></h3>
+<h3><a class="section" name="which-to-use">该用哪个？</a></h3>
 
 <p>Which to use is rather hard to answer. The difference between function calls and <code>case ... of</code> are very minimal: in fact, they are represented the same way at a lower level, and using one or the other effectively has the same cost in terms of performance. One difference between both is when more than one argument needs to be evaluated: <code>function(A,B)&nbsp;-&gt; ... end.</code> can have guards and values to match against <var>A</var> and <var>B</var>, but a case expression would need to be formulated a bit like:</p>
 
