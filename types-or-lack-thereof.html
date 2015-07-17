@@ -33,11 +33,19 @@
 			</div><!-- menu -->
 			<div id="content">
             <div class="noscript"><noscript>Hey there, it appears your Javascript is disabled. That's fine, the site works without it. However, you might prefer reading it with syntax highlighting, which requires Javascript!</noscript></div>
-<h2>Types (or lack thereof)</h2>
+<h2>类型（或者说缺少的参考）</h2>
 
-<h3><a class="section" name="dynamite-strong-typing">Dynamite-strong Typing</a></h3>
+<h3><a class="section" name="dynamite-strong-typing">强类型</a></h3>
 
-<p>As you might have noticed when typing in examples from <a class="local chapter" href="starting-out-for-real.html" title="Starting Out (for real)">Starting Out (for real)</a>, and then modules and functions from <a class="local chapter" href="modules.html" title="Modules">Modules</a> and <a class="chapter local" href="syntax-in-functions.html" title="Syntax in Functions">Syntax in Functions</a>, we never needed to write the type of a variable or the type of a function. When pattern matching, the code we had written didn't have to know what it would be matched against. The tuple <code>{<var>X</var>,<var>Y</var>}</code> could be matched with <code>{atom, 123}</code> as well as <code>{"A string", &lt;&lt;"binary stuff!"&gt;&gt;}</code>, <code>{2.0, ["strings","and",atoms]}</code> or really anything at all.</p>
+<p>
+	你也许已经注意到了当你在输入
+	<a class="local chapter" href="starting-out-for-real.html" title="Starting Out (for real)">真正的开始</a>这章的例子时,
+	还有<a class="local chapter" href="modules.html" title="Modules">模块</a>和
+	<a class="chapter local" href="syntax-in-functions.html" title="Syntax in Functions">函数中的语法</a>中的例子时,
+	我们从来没有被要求声明一个函数或变量的类型。
+	当使用模式匹配的时候，我们所写的代码也不知道它将匹配到什么类型。
+	元组<code>{<var>X</var>,<var>Y</var>}</code>可以匹配<code>{atom, 123}</code>同样也可以匹配 <code>{"A string", &lt;&lt;"binary stuff!"&gt;&gt;}</code>,
+	<code>{2.0, ["strings","and",atoms]}</code>或者其它的任何东西。</p>
 
 <p>When it didn't work, an error was thrown in your face, but only once you ran the code. This is because Erlang is <em>dynamically typed</em>: every error is caught at runtime and the compiler won't always yell at you when compiling modules where things may result in failure, like in <a class="chapter local" href="starting-out-for-real.html#bool-and-compare" title="Boolean Algebra &amp; Comparison Operators">Starting Out (for real)</a>'s <code>"llama + 5"</code> example.</p>
 
