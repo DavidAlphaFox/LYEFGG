@@ -47,7 +47,10 @@
 	元组<code>{<var>X</var>,<var>Y</var>}</code>可以匹配<code>{atom, 123}</code>同样也可以匹配 <code>{"A string", &lt;&lt;"binary stuff!"&gt;&gt;}</code>,
 	<code>{2.0, ["strings","and",atoms]}</code>或者其它的任何东西。</p>
 
-<p>When it didn't work, an error was thrown in your face, but only once you ran the code. This is because Erlang is <em>dynamically typed</em>: every error is caught at runtime and the compiler won't always yell at you when compiling modules where things may result in failure, like in <a class="chapter local" href="starting-out-for-real.html#bool-and-compare" title="Boolean Algebra &amp; Comparison Operators">Starting Out (for real)</a>'s <code>"llama + 5"</code> example.</p>
+<p>当它不能工作时，错误信息会直接显示出来，但是这只会发生在你执行代码的时候。
+	这是因为Erlang时<em>动态类型</em>：
+	每个运行期发生的错误，编译器在编译模块的时候并不会告诉你，就像
+	<a class="chapter local" href="starting-out-for-real.html#bool-and-compare" title="Boolean Algebra &amp; Comparison Operators">真正的开始</a>中<code>"llama + 5"</code>的例子。</p>
 
 <img class="right" src="static/img/ham.png" width="388" height="246" alt="A knife slicing ham." title="I'll let you decide which is static and which is dynamic" />
 
