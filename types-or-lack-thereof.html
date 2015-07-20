@@ -58,7 +58,14 @@
 	一个经常被提出来的想法是，一个具有完善的静态类型系统的编译器，可以在你执行代码之前就会检查出非常多的问题。
 	因此，静态类型语言被认为比动态类型语言更安全。
 	和很多动态语言比较这也许是真的，但是Erlang却不敢苟同，当然Erlang有记录在案的记录可以证明这一点。
-	The best example is the often reported <em>nine nines</em> (99.9999999%) of availability offered on the <a class="external" href="http://www.erlang.se/publications/Ulf_Wiger.pdf" title="Ulf Wiger - Four-fold Increase in Productivity and Quality">Ericsson AXD 301 ATM switches</a>, consisting of over 1 million lines of Erlang code. Please note that this is not an indication that none of the components in an Erlang-based system failed, but that a general switch system was available 99.9999999% of the time, planned outages included. This is partially because Erlang is built on the notion that a failure in one of the components should not affect the whole system. Errors coming from the programmer, hardware failures or [some] network failures are accounted for: the language includes features which will allow you to distribute a program over to different nodes, handle unexpected errors, and <em>never</em> stop running.</p>
+	最好的例子是具有超过一百万行Erlang代码的<a class="external" href="http://www.erlang.se/publications/Ulf_Wiger.pdf" title="Ulf Wiger - Four-fold Increase in Productivity and Quality">Ericsson AXD 301 ATM switches</a>,
+	通常该系统被报告具有<em>9个9</em>（99.9999999%）的高可用性。
+	请注意，这并不表示，Erlang为基础的系统的中组件不是没有故障的，
+	但是一个交换机包括计划停机的情况下达到99.9999999%可用是非常不错的。
+	这部分原因是，Erlang的设计理念是，一旦一个组件出现故障，它不应当影响整个系统。
+	这些错误可能赖在，编程错误，硬件异常或网络失效：
+	而Erlang语言，包含的很多特性可以让你的程序分布式部署到不同的节点上，处理不可以预知的错误，和<em>永不</em>停机。
+</p>
 
 <p>To make it short, while most languages and type systems aim to make a program error-free, Erlang uses a strategy where it is assumed that errors will happen anyway and makes sure to cover these cases: Erlang's dynamic type system is not a barrier to reliability and safety of programs. This sounds like a lot of prophetic talking, but you'll see how it's done in the later chapters.</p>
 
