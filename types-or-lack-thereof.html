@@ -96,9 +96,12 @@
 	Erlang的标准库，提供了一系列函数来完成这件事情。</p>
 
 
-<h3><a class="section" name="type-conversions">Type conversions</a></h3>
+<h3><a class="section" name="type-conversions">类型转换</a></h3>
 
-<p>Erlang, like many languages, changes the type of a term by casting it into another one. This is done with the help of built-in functions, as many of the conversions could not be implemented in Erlang itself. Each of these functions take the form &lt;type&gt;_to_&lt;type&gt; and are implemented in the <code>erlang</code> module. Here are a few of them:</p>
+<p>Erlang，像其它很多语言一样，可以通过转换来改变一个数据的类型。
+	通常这些都是通过Erlang的内置函数来完成的，但是很多类型转换Erlang自身并没有实现。
+	这类函数通常使用&lt;type&gt;_to_&lt;type&gt;这种格式，并且它们都是在<code>erlang</code>这个模块内实现的。
+	下面是一些例子：</p>
 
 <pre class="brush:eshell">
 1&gt; erlang:list_to_integer("54").
