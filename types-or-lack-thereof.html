@@ -73,10 +73,15 @@
 	这听起来像在做预言一样，但是我们将在后面的章节看到我们怎么做。</p>
 
 <div class="note">
-    <p><strong>Note:</strong> Dynamic typing was historically chosen for simple reasons; those who implemented Erlang at first mostly came from dynamically typed languages, and as such, having Erlang dynamic was the most natural option to them.</p>
+    <p><strong>注意：</strong>
+		选择动态类型是因为一个简单的原因；
+		最开始的时候，实现Erlang的人是使用动态类型的语言，
+		因此，Erlang使用动态类型是非常自然的选择。</p>
 </div>
 
-<p>Erlang is also strongly typed. A weakly typed language would do implicit type conversions between terms. If Erlang were to be weakly typed we could possibly do the operation <code>6 = 5 + "1".</code> while in practice, an exception for bad arguments will be thrown:</p>
+<p>同时Erlang是一个非常抢类型的语言。一个弱类型的语言会在类型之间做自动的转换。
+	如果Erlang是弱类型语言，我们将在看到<code>6 = 5 + "1".</code>这种代码，但是我们在实践当中
+	会得到一个错误参数的异常：</p>
 
 <pre class="brush:eshell">
 1&gt; 6 + "1".
@@ -85,7 +90,10 @@
         called as 6 + "1"
 </pre>
 
-<p>Of course, there are times when you could want to convert one kind of data to another one: changing regular strings into bit strings to store them or an integer to a floating point number. The Erlang standard library provides a number of functions to do it.</p>
+<p>
+	当然，再非常多的时候，我们想将一个类型的数据转换成另一个类型的数据：
+	将常规字符串变成二进制字符串去存储，或者将整形转化成浮点型。
+	Erlang的标准库，提供了一系列函数来完成这件事情。</p>
 
 
 <h3><a class="section" name="type-conversions">Type conversions</a></h3>
