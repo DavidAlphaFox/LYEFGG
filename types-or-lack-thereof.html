@@ -132,9 +132,14 @@
 	我们将在本书中看到即便不是所有类型也是绝大部分，但实际上我们并不需要使用它们全部。</p>
 
 
-<h3><a class="section" name="to-guard-a-data-type">To Guard a Data Type</a></h3>
+<h3><a class="section" name="to-guard-a-data-type">数据类型哨位</a></h3>
 
-<p>Erlang basic data types are easy to spot, visually: tuples have the curly brackets, lists the square brackets, strings are enclosed in double quotation marks, etc. Enforcing a certain data type has thus been possible with pattern matching: a function <code>head/1</code> taking a list could only accept lists because otherwise, the matching (<code>[H|_]</code>) would have failed.</p>
+<p>Erlang的基本数据类型非常容易通过视觉判断出来：
+	元组使用大括号，列表使用中括号，字符串使用双引号，等等。
+	对特定的数据类型我们可以使用模式匹配：
+	<code>head/1</code>函数接受且只能接受列表当作参数，
+	因为其它数据类型使用(<code>[H|_]</code>)这个模式匹配会失败。
+</p>
 
 <img class="left" src="static/img/my-name-is.png" width="146" height="79" alt="Hi, My name is Tuple" />
 
