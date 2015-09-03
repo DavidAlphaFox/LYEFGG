@@ -143,7 +143,10 @@
 
 <img class="left" src="static/img/my-name-is.png" width="146" height="79" alt="Hi, My name is Tuple" />
 
-<p>However, we've had a problem with numeric values because we couldn't specify ranges. Consequently, we used guards in functions about temperature, the age to drive, etc. We're hitting another roadblock now. How could we write a guard that ensures that patterns match against data of a single specific type, like numbers, atoms or bitstrings?</p>
+<p>即便这样，我们依然无法很好的处理数字类型的值，因为我们无法控制数值的范围。
+	因此，我们在温度和判断驾驶年龄等函数中使用哨位。
+	但是我们现在又碰到了另一个障碍。我们如何写一个匹配特定的数据类型模式哨位，去匹配想数字，原子或者字符串？
+</p>
 
 <p>There are functions dedicated to this task. They will take a single argument and return true if the type is right, false otherwise. They are part of the few functions allowed in guard expressions and are named the <em>type test BIFs</em>:</p>
 
