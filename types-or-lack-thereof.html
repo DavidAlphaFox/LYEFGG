@@ -168,13 +168,22 @@ is_record/3         is_reference/1      is_tuple/1
 	这个章节中介绍的异常会让事情变得更清晰。在那之前，请相信我。</p>
 
 <div class="note">
-    <p><strong>Note:</strong> type test BIFs constitute more than half of the functions allowed in guard expressions. The rest are also BIFs, but do not represent type tests. These are: <br />
+    <p><strong>注意：</strong>
+		类型测试BIF，占哨位表达式中可使用的函数一半以上。
+		剩下的函数依然是BIF，但是它们并非类型测试。
+		它们是： <br />
 <code>abs(Number), bit_size(Bitstring), byte_size(Bitstring), element(N, Tuple), float(Term), hd(List), length(List), node(), node(Pid|Ref|Port), round(Number), self(), size(Tuple|Bitstring), tl(List), trunc(Number), tuple_size(Tuple).</code></p>
 
-    <p>The functions <code>node/1</code> and <code>self/0</code> are related to distributed Erlang and processes/actors. We'll eventually use them, but we've still got other topics to cover before then.</p>
+    <p><code>node/1</code>和<code>self/0</code>函数是关于Erlang分布式中的进程/Actor。
+		我们最终会使用它们，但是需要等到我们学习到相关章节。</p>
 </div>
 
-<p>It may seem like Erlang data structures are relatively limited, but lists and tuples are usually enough to build other complex structures without worrying about anything. As an example the basic node of a binary tree could be represented as <code>{node, Value, Left, Right}</code>, where <var>Left</var> and <var>Right</var> are either similar nodes or empty tuples. I could also represent myself as:</p> 
+<p>
+	表面上来看Erlang的数据结构非常受限，
+	但是列表和元组可以无障碍的构造出其它非常复杂的结构。
+	一个例子，一个二叉树的基本节点可以用<code>{node, Value, Left, Right}</code>来表示，这里<var>Left</var>和<var>Right</var>
+	代表着相同的节点或者空元组。我也可以用元组来描述我自己：
+</p>
 
 <pre class="brush:erl">
 {person, {name, &lt;&lt;"Fred T-H"&gt;&gt;},
@@ -183,11 +192,18 @@ is_record/3         is_reference/1      is_tuple/1
          {skills, ["programming", "bass guitar", "underwater breakdancing"]}}.
 </pre>
 
-<p>Which shows that by nesting tuples and list and filling them with data, we can obtain complex data structures and build functions to operate on them.</p>
+<p>
+	这个例子告诉我们通过嵌套元组和列表，并使用数据填充它们，
+	我们可以得到复杂的数据结构并且构建函数对它们进行操作。
+</p>
           
 <div class="note update">
-    <p><strong>Update:</strong><br />
-    The release R13B04 saw the addition of the BIF <code>binary_to_term/2</code>, which lets you unserialize data the same way <code>binary_to_term/1</code> would, except the second argument is an option list. If you pass in <code>[safe]</code>, the binary won't be decoded if it contains unknown atoms or <a class="chapter local" href="higher-order-functions.html" title="Higher Order Functions chapter">anonymous functions</a>, which could exhaust memory.</p>
+    <p><strong>一些更新：</strong><br />
+		Erlang的R13B04版本，我们可以看到<code>binary_to_term/2</code>这个新加入的BIF，
+		这个和<code>binary_to_term/1</code>函数是一样，除了第二参数是个可选的列表。
+		如果你传入<code>[safe]</code>，如果一个二进制包含未知原子或<a class="chapter local" href="higher-order-functions.html" title="Higher Order Functions chapter">匿名函数</a>
+		则这个二进制将不会解码，这将可能耗尽内存。
+	</p>
 </div>
 
 <h3><a class="section" name="for-type-junkies">For Type Junkies</a></h3>
