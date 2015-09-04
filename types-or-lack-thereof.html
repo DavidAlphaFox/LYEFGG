@@ -148,7 +148,9 @@
 	但是我们现在又碰到了另一个障碍。我们如何写一个匹配特定的数据类型模式哨位，去匹配想数字，原子或者字符串？
 </p>
 
-<p>There are functions dedicated to this task. They will take a single argument and return true if the type is right, false otherwise. They are part of the few functions allowed in guard expressions and are named the <em>type test BIFs</em>:</p>
+<p> 有些函数专门完成此类任务。
+	这些函数将接受单个参数，如果参数类型是所需的则返回真，否则返回假。
+	它们是名字为<em>类型检测BIF</em>且是可以在哨位条件表达式中使用的函数的一部分：/p>
 
 <pre class="brush:eshell">
 is_atom/1           is_binary/1         
