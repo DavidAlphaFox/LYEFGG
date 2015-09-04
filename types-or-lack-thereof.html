@@ -161,7 +161,13 @@ is_pid/1            is_port/1           is_record/2
 is_record/3         is_reference/1      is_tuple/1          
 </pre>
 
-<p>They can be used like any other guard expression, wherever guard expressions are allowed. You might be wondering why there is no function just giving the type of the term being evaluated (something akin to <code>type_of(X)&nbsp;-&gt; Type</code>). The answer is pretty simple. Erlang is about programming for the right cases: you only program for what you know will happen and what you expect. Everything else should cause errors as soon as possible. Although this might sound insane, the explanations you'll get in <a class="chapter" href="errors-and-exceptions.html">Errors and Exceptions</a> will hopefully make things clearer. Until then, just trust me on that.</p>
+<p> 只要是允许使用哨位表达式的地方，它们都可以像其它哨位表达式那样使用。
+	你也许会想知道，为什么没有函数直接返回变量的数据类型（类似<code>type_of(X)&nbsp;-&gt; Type</code>）。
+	这答案很简单。
+	Erlang is about programming for the right cases: you only program for what you know will happen and what you expect.
+	Everything else should cause errors as soon as possible. Although this might sound insane,
+	the explanations you'll get in <a class="chapter" href="errors-and-exceptions.html">Errors and Exceptions</a>
+	will hopefully make things clearer. Until then, just trust me on that.</p>
 
 <div class="note">
     <p><strong>Note:</strong> type test BIFs constitute more than half of the functions allowed in guard expressions. The rest are also BIFs, but do not represent type tests. These are: <br />
