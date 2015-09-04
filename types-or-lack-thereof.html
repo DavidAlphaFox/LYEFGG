@@ -163,11 +163,9 @@ is_record/3         is_reference/1      is_tuple/1
 
 <p> 只要是允许使用哨位表达式的地方，它们都可以像其它哨位表达式那样使用。
 	你也许会想知道，为什么没有函数直接返回变量的数据类型（类似<code>type_of(X)&nbsp;-&gt; Type</code>）。
-	这答案很简单。
-	Erlang is about programming for the right cases: you only program for what you know will happen and what you expect.
-	Everything else should cause errors as soon as possible. Although this might sound insane,
-	the explanations you'll get in <a class="chapter" href="errors-and-exceptions.html">Errors and Exceptions</a>
-	will hopefully make things clearer. Until then, just trust me on that.</p>
+	这答案很简单。Erlang是一种针对正确场景的计算机语言：你为会发生什么，期待什么而编程。
+	其它情况下应尽可能快的报错。尽管这听起来很疯狂，在<a class="chapter" href="errors-and-exceptions.html">错误和异常</a>
+	这个章节中介绍的异常会让事情变得更清晰。在那之前，请相信我。</p>
 
 <div class="note">
     <p><strong>Note:</strong> type test BIFs constitute more than half of the functions allowed in guard expressions. The rest are also BIFs, but do not represent type tests. These are: <br />
