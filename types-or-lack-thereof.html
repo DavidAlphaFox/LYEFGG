@@ -206,11 +206,19 @@ is_record/3         is_reference/1      is_tuple/1
 	</p>
 </div>
 
-<h3><a class="section" name="for-type-junkies">For Type Junkies</a></h3>
+<h3><a class="section" name="for-type-junkies">对那些非常喜欢类型系统的人</a></h3>
 
 <img class="right" src="static/img/type-dance.png" width="284" height="161" alt="A sign for homeless people: 'Will dance for types'" title="You know you would" />
 
-<p>This section is meant to be read by programmers who can not live without a static type system for one reason or another. It will include a little bit more advanced theory and everything may not be understood by everyone. I will briefly describe tools used to do static type analysis in Erlang, defining custom types and getting more safety that way. These tools will be described for anyone to understand much later in the book, given that it is not necessary to use any of them to write reliable Erlang programs. Because we'll show them later, I'll give very little details about installing, running them, etc. Again, this section is for those who really can't live without advanced type systems.</p>
+<p>
+	这个章节适合对静态类型非常依赖的程序员去阅读。(This section is meant to be read by programmers who can not live without a static type system for one reason or another.)
+	本节包含了一些并不是所有人都能理解的一些高级理论。
+	我将主要介绍那些Erlang用于进行静态类型分析的工具，使用这些工具，我们可以自定义类型并且能让我们使用类型系统更加安全。
+	介绍这些工具，是为了能让任何人更好的理解本书后面的章节，但是并代表编写一个实用的Erlang程序，需要使用这些工具。
+	(These tools will be described for anyone to understand much later in the book,given that it is not necessary to use any of them to write reliable Erlang programs.)
+	因为稍后我们将介绍它们，我将告诉你这些工具安装，执行等的一些细节。
+	再次，本节主要是为了那些非常依赖高级类型系统的人所写。
+	(Again, this section is for those who really can't live without advanced type systems.)</p>
 
 <p>Through the years, there were some attempts to build type systems on top of Erlang. One such attempt happened back in 1997, conducted by Simon Marlow, one of the lead developers of the Glasgow Haskell Compiler, and Philip Wadler, who worked on Haskell's design and has contributed to the theory behind monads (<a class="external" href="http://homepages.inf.ed.ac.uk/wadler/papers/erlang/erlang.pdf" title="A Practical Subtyping System for Erlang">Read the paper</a> on said type system). Joe Armstrong later <a class="external" href="http://webcem01.cem.itesm.mx:8005/erlang/cd/downloads/hopl_erlang.pdf" title="A history of Erlang">commented on the paper</a>:</p>
 
