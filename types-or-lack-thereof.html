@@ -269,9 +269,17 @@ and(true,true) -&gt; true.
 	它确实非常有趣也非常有实践意义的。
 </p>
 
-<p>The details about type definitions and function annotations are described in the Erlang Enhancement Proposal 8 (<a class="external" href="http://www.erlang.org/eeps/eep-0008.html" title="EEP 8">EEP 8</a>). If you're interested in using success typings in Erlang, check out the <a class="external" href="http://user.it.uu.se/~tobiasl/publications/typer.pdf" title="TypEr: A Type Annotator of Erlang Code">TypEr application</a> and Dialyzer, both part of the standard distribution. To use them, type in <code>$ typer --help</code> and <code>$ dialyzer --help</code> (<code>typer.exe --help</code> and <code>dialyzer.exe --help</code> for Windows, if they're accessible from the directory you are currently in).</p>
+<p>在Erlang增强提案中(<a class="external" href="http://www.erlang.org/eeps/eep-0008.html" title="EEP 8">EEP 8</a>)详细的描述了类型定义和函数注解。
+	如果你对Erlang中完善的类型感兴趣的话，你可以查看下<a class="external" href="http://user.it.uu.se/~tobiasl/publications/typer.pdf" title="TypEr: A Type Annotator of Erlang Code">TypEr application</a>
+	和Dialyzer，在Erlang的常规发行版中都能找到这两个工具。
+	你可以通过输入<code>$ typer --help</code> 和<code>$ dialyzer --help</code>来使用它们（
+	在Windows上，如果在你的当前目录中可以看到这两个程序，你可以通过输入<code>typer.exe --help</code> 和 <code>dialyzer.exe --help</code>
+	来使用它们）。</p>
 
-<p>TypEr will be used to generate type annotations for functions. Used on this small <a class="source" href="static/erlang/fifo.erl" title="A Queue module" >FIFO implementation</a>, it spits the following type annotations:</p>
+<p>
+	TypEr可以为函数生成类型注解。
+	我们将在这个非常小的 <a class="source" href="static/erlang/fifo.erl" title="A Queue module" >FIFO实现</a>上使用它，
+	它会生成下面的类型注解：</p>
 
 <pre class="brush:erl">
 %% File: fifo.erl
@@ -284,9 +292,20 @@ and(true,true) -&gt; true.
 
 <img class="right explanation" src="static/img/fifo.png" width="237" height="162" alt="Implementation of fifo (queues): made out of two stacks (last-in first-out)." title="Implementation of fifo (queues): made out of two stacks (last-in first-out)." />
 
-<p>Which is pretty much right. Improper lists should be avoided because <code>lists:reverse/1</code> doesn't support them, but someone bypassing the module's interface would be able to get through it and submit one. In this case, the functions <code>push/2</code> and <code>pop/2</code> might still succeed for a few calls before they cause an exception. This either tells us to add guards or refine our type definitions manually. Suppose we add the signature <code>-spec push({fifo,list(),list()},_)&nbsp;-&gt; {fifo,nonempty_list(),list()}.</code> and a function that passes an improper list to <code>push/2</code> to the module: when scanning it in Dialyzer (which checks and matches the types), the error message <samp>"The call fifo:push({fifo,[1|2],[]},3) breaks the contract '&lt;Type definition here&gt;'</samp> is output.</p>
+<p>这是非常正确的。因为<code>lists:reverse/1</code>不支持非常规列表，所以非常规列表是应当避免的，
+	但是如果某人会绕过模块的接口直接放入一个非常规列表（Improper lists 不知道该如何翻译为好，感觉这概念完全是来自于LISP）。
+	在这种情况下，<code>push/2</code>和<code>pop/2</code>这两个函数依然会成功，直到某些特定条件被触发。
+	这告诉我们，要么加上哨位做限制要么手工优化我们的类型定义。
+	假设我们改称<code>-spec push({fifo,list(),list()},_)&nbsp;-&gt; {fifo,nonempty_list(),list()}.</code>
+	并且一个函数给这个模块的<code>push/2</code>函数传入非常规列表：
+	当我们用Dialyzer（一个检查和匹配类型的工具）扫描这个温家你的时候，我们会看到这样的错误消息
+	<samp>"The call fifo:push({fifo,[1|2],[]},3) breaks the contract '&lt;Type definition here&gt;'</samp>。</p>
 
-<p>Dialyzer will complain only when code will break other code, and if it does, it'll usually be right (it will complain about more stuff too, like clauses that will never match or general discrepancies). Polymorphic data types are also possible to write and analyze with Dialyzer: the <code>hd()</code> function could be annotated with <code>-spec([A])&nbsp;-&gt; A.</code> and be analyzed correctly, although Erlang programmers seem to rarely use this type syntax.</p>
+<p>当某些代码出现异常的时候，Dialyzer就会向你各种抱怨，并且一旦它真的开始抱怨了，它一般是正确的（
+	Dialyzer会在很多情况下输出错误纤细，如分支永远不会使用或函数定义和实现不同等）。
+	多态数据类型一样可以使用Dialyzer来分析：
+	尽管Erlang的程序员很少使用以下写法，但是我们依然可以将<code>hd()</code>函数的注解写成<code>-spec([A])&nbsp;-&gt; A.</code>，
+	并且它能被Dialyzer正确分析。</p>
 
 <div class="note koolaid">
 	<p><strong>Don't drink too much Kool-Aid:</strong><br />
