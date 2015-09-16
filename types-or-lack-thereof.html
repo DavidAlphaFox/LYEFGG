@@ -308,19 +308,29 @@ and(true,true) -&gt; true.
 	并且它能被Dialyzer正确分析。</p>
 
 <div class="note koolaid">
-	<p><strong>Don't drink too much Kool-Aid:</strong><br />
-        Some of the things you can't expect Dialyzer and TypEr to do is type classes with constructors, first order types and recursive types. The types of Erlang are only annotations without effects or restrictions on actual compiling unless you enforce them yourself. The type checker will never tell you a program that can run right now (or has run for two years) has a type bug when it effectively causes no error when running (although you could have buggy code running correctly...)</p>
+	<p><strong>不要盲从：</strong><br />
+		你不要期望Dialyzer和TypEr能处理好所有类型，一些东西，例如带有构造函数的类型，一阶类型和类型递归。
+		Erlang的类型系统只是注解，只有在你希望的时候，否则对实际的编译是没有任何影响和限制。
+		当类型系统检查了你的代码并且认为没有问题的时候，
+		它没办法告诉你当你代码执行了（即便你可能碰到一些错误的代码能正确运行。。。），
+		这些代码是否正确（或能稳定的执行2年或更久）。</p>
 
-    <p>While recursive types are something that would be really interesting to have, they're unlikely to ever appear in the current forms of TypEr and Dialyzer (the paper above explains why). Defining your own types to simulate recursive types by adding one or two levels manually is the best you can do at the moment.</p>
+    <p> 尽管类型递归非常有趣，但是当前TypEr和Dialyzer并没有包含（上面的论文解释了原因）。
+		眼下，通过定义自己的类型来模拟类型递归可能是最好的选择。</p>
 
-    <p>It's certainly not a full-blown type system, not as strict or powerful as what languages like Scala, Haskell or Ocaml propose. Its warning and error messages are also usually a bit cryptic and not really user friendly. However, it's still a very good compromise if you really can't live in a dynamic world or wish for additional safety; just expect it to be a tool in your arsenal, not too much more.</p>
+    <p> 当然Erlang的类型系统并不像Scala，Haskell或OCaml那样全面。
+		并且它的警告和错误信息有点像密码一样不那么用户友好。
+		如果你不能忍受动态类型或获得更多的安全，这是一种不错的妥协；
+		只把它当作一个工具，不要过度依赖它。</p>
 </div>
 
 <div class="note update">
-    <p><strong>Update:</strong><br />
-       Since version R13B04, recursive types are now available as an experimental feature for Dialyzer. This makes the previous <em>Don't drink too much Kool-aid</em> partially wrong. Shame on me.</p>
+    <p><strong>更新</strong><br />
+       从R13B04版本之后，Dialyzer中类型递归被认为是一个实验特性。
+		这让前面的<em>不要盲从</em>部分是错误的。</p>
 
-    <p>Note that the <a class="docs" href="http://erlang.org/doc/reference_manual/typespec.html" title="Official Types and Functions Specifications spec">type documentation has also become official</a> (although it remains subject to change) and is more complete than what can be found in EEP8.</p>
+    <p>注意<a class="docs" href="http://erlang.org/doc/reference_manual/typespec.html" title="Official Types and Functions Specifications spec">类型文档</a>也被官方化了（即便还在不断变更），
+		但这已经比EEP8更完善了。</p>
 
 </div>
 				<ul class="navigation">
