@@ -220,19 +220,39 @@ is_record/3         is_reference/1      is_tuple/1
 	再次，本节主要是为了那些非常依赖高级类型系统的人所写。
 	(Again, this section is for those who really can't live without advanced type systems.)</p>
 
-<p>Through the years, there were some attempts to build type systems on top of Erlang. One such attempt happened back in 1997, conducted by Simon Marlow, one of the lead developers of the Glasgow Haskell Compiler, and Philip Wadler, who worked on Haskell's design and has contributed to the theory behind monads (<a class="external" href="http://homepages.inf.ed.ac.uk/wadler/papers/erlang/erlang.pdf" title="A Practical Subtyping System for Erlang">Read the paper</a> on said type system). Joe Armstrong later <a class="external" href="http://webcem01.cem.itesm.mx:8005/erlang/cd/downloads/hopl_erlang.pdf" title="A history of Erlang">commented on the paper</a>:</p>
+<p>
+	这些年，在Erlang构建类型系统做了很多尝试。
+	1997年Haskell编译器主要开发者Simon Marlow及Haskell的设计和monads理论
+	(<a class="external" href="http://homepages.inf.ed.ac.uk/wadler/papers/erlang/erlang.pdf" title="A Practical Subtyping System for Erlang">论文</a> 可怜的系统类型)
+	的贡献者Philip Wadler这两位大神，进行了一次伟大的尝试。
+	Joe Armstrong稍后对该论文进行了<a class="external" href="http://webcem01.cem.itesm.mx:8005/erlang/cd/downloads/hopl_erlang.pdf" title="A history of Erlang">评价</a>:</p>
 
 <blockquote title="Joe Armstrong - A History of Erlang">
-    <p>One day Phil phoned me up and announced that a) Erlang needed a type system, b) he had written a small prototype of a type system and c) he had a one year’s sabbatical and was going to write a type system for Erlang and “were we interested?” Answer —“Yes.”</p>
+    <p>某天Philip给我来电话说 a) Erlang需要一个类型系统， b) 他已经写了一个小的原型 c) 他现在要休一年的假并且他想给Erlang写一个类型系统 并且问到 “我们对这想法是否感兴趣？” 我的回答是－”感兴趣“</p>
 
-    <p>Phil Wadler and Simon Marlow worked on a type system for over a year and the results were published in [20]. The results of the project were somewhat disappointing. To start with, only a subset of the language was type-checkable, the major omission being the lack of process types and of type checking inter-process messages.</p>
+    <p>Phil Wadler和Simon Marlow花费了一年的时间来做这个类型系统并将结果发布了出来[20]。
+		但是这个项目的结果又带你让人失望。首先只是语言的一小部分类型可以被检查，更重要的是缺少对Erlang进程和进程间消息的检查。
+	</p>
 </blockquote>
 
-<p>Processes and messages both being one of the core features of Erlang, it may explain why the system was never added to the language. Other attempts at typing Erlang failed. The efforts of the HiPE project (attempts to make Erlang's performances much better) produced Dialyzer, a static analysis tool still in use today, with its very own type inference mechanism.</p>
+<p>进程和消息这两者都是Erlang的核心特性，这也许可以解释上面提到的类型系统从未被加入到Erlang的原因。
+	其它在Erlang中添加类型系统的尝试也都失败了。HiPE项目（一个想提升Erlang性能的项目）努力成果是开发出了Dialyzer工具，
+	一个具有类型推导能力的静态类型分析工具。</p>
 
-<p>The type system that came out of it is based on success typings, a concept different from Hindley-Milner or soft-typing type systems. Success types are simple in concept: the type-inference will not try to find the exact type of every expression, but it will guarantee that the types it infers are right, and that the type errors it finds are really errors.</p>
+<p>成功的类型划分才能带来完善的类型系统这个和Hindley-Milner或软件定义类型系统的原则不同。
+	(The type system that came out of it is based on success typings,
+	a concept different from Hindley-Milner or soft-typing type systems.)
+	成功的类型系统的原则很简单：
+	类型推断不会尝试找出每个表达式的确切类型，但是它会保证类型推断的正确性，
+	并且当类型系统报错的时候，它将告诉真正在何处出错。
+	(the type-inference will not try to find the exact type of every expression,
+	but it will guarantee that the types it infers are right,
+	and that the type errors it finds are really errors.)</p>
 
-<p>The best example would come from the implementation of the function <code>and</code>, which will usually take two Boolean values and return 'true' if they're both true, 'false' otherwise. In Haskell's type system, this would be written <code>and :: bool -&gt; bool -&gt; bool</code>. If the <code>and</code> function had to be implemented in Erlang, it could be done the following way:</p>
+<p>最好的例子是<code>and</code>函数，
+	一个传入两个布尔值，并且当两个值都是真的时候返回‘true’否则返回‘fasle’。
+	在Haskell的类型系统中，可以这样写 <code>and :: bool -&gt; bool -&gt; bool</code>。
+	如果<code>and</code>在Erlang中实现，它将会按照下面的方式实现：</p>
 
 <pre class="brush:erl">
 and(false, _) -&gt; false;
@@ -240,7 +260,14 @@ and(_, false) -&gt; false;
 and(true,true) -&gt; true.
 </pre>
 
-<p>Under success typing, the inferred type of the function would be <code>and(_,_) -&gt; bool()</code>, where <var>_</var> means 'anything'. The reason for this is simple: when running an Erlang program and calling this function with the arguments <code>false</code> and <code>42</code>, the result would still be 'false'. The use of the <code>_</code> wildcard in pattern matching made it that in practice, any argument can be passed as long as one of them is 'false' for the function to work. ML types would have thrown a fit (and its users had a heart attack) if you had called the function this way. Not Erlang. It might make more sense to you if you decide to read the paper on the <a class="external" href="http://www.it.uu.se/research/group/hipe/papers/succ_types.pdf" title="Tobias Lindahl &amp; Constantinos Sagonas - Practical Type Inference Based on Success Typings">implementation of success types</a>, which explains the rationale behind the behavior. I really encourage any type junkies out there to read it, it's an interesting and practical implementation definition.</p>
+<p>在完善的类型下，该函数的类型推导将是<code>and(_,_) -&gt; bool()</code>，其中<var>_</var>代表‘任意值’。
+	这里面的原因非常简单：当执行Erlang程序的时候并且用<code>false</code>和<code>42</code>来调用这个函数，我们得到结果依然是
+	‘false’。在模式匹配中使用<code>_</code>是非常有价值的，当一个参数是‘fasle’的时候就可以保证函数正常工作。
+	如果你这样调用这个函数，ML类型的语言的类型系统会抛出一个适配异常（用户内心的痛呀）。但是Erlang不会。
+	如果你想了解更多这方面的知识，你可以去阅读下 <a class="external" href="http://www.it.uu.se/research/group/hipe/papers/succ_types.pdf" title="Tobias Lindahl &amp; Constantinos Sagonas - Practical Type Inference Based on Success Typings">实现完善的类型</a>，
+	这将会解释这种行为后面的关系。我非常鼓励那种缺了类型就很难受的人们去阅读下，
+	它确实非常有趣也非常有实践意义的。
+</p>
 
 <p>The details about type definitions and function annotations are described in the Erlang Enhancement Proposal 8 (<a class="external" href="http://www.erlang.org/eeps/eep-0008.html" title="EEP 8">EEP 8</a>). If you're interested in using success typings in Erlang, check out the <a class="external" href="http://user.it.uu.se/~tobiasl/publications/typer.pdf" title="TypEr: A Type Annotator of Erlang Code">TypEr application</a> and Dialyzer, both part of the standard distribution. To use them, type in <code>$ typer --help</code> and <code>$ dialyzer --help</code> (<code>typer.exe --help</code> and <code>dialyzer.exe --help</code> for Windows, if they're accessible from the directory you are currently in).</p>
 
