@@ -33,7 +33,7 @@
 			</div><!-- menu -->
 			<div id="content">
             <div class="noscript"><noscript>Hey there, it appears your Javascript is disabled. That's fine, the site works without it. However, you might prefer reading it with syntax highlighting, which requires Javascript!</noscript></div>
-<h2>Recursion</h2>
+<h2>递归</h2>
 <h3><a class="section" name="hello-recursion">你好 递归!</a></h3>
 
 <img class="right" src="static/img/reCURSE.png" width="337" height="182" alt="A car on the road. Dialogue: 'Are we there yet? - No! - Are we there yet? - No! - Are we there yet? - reCURSE YOU KIDS!" title="I apologize for this terrible pun. No great idea could be found to illustrate recursion so you're stuck with this." />
@@ -65,7 +65,13 @@
 4! = 4 x 3 x 2 x 1 x 1
 </pre>
 
-<p>How can such a function be translated from mathematical notation to Erlang? The conversion is simple enough. Take a look at the parts of the notation: <code>n!</code>, <samp>1</samp> and <code>n((n-1)!)</code> and then the <code>if</code>s. What we've got here is a function name (<code>n!</code>), guards (the <code>if</code>s) and a the function body (<samp>1</samp> and <code>n((n-1)!)</code>). We'll rename <code>n!</code> to <code>fac(N)</code> to restrict our syntax a bit and then we get the following:</p>
+<p>
+    那我们如何将这些数学语言翻译为Erlang？
+    这个过程非常简单。
+    我们可以看下这些数学符号：
+    <code>n!</code>,<samp>1</samp>和<code>n((n-1)!)</code>还有<code>if</code>。
+    我们可以得到一个函数名(<code>n!</code>)，哨位(the <code>if</code>)和函数体(<samp>1</samp>和<code>n((n-1)!)</code>)。
+    由于语法的限制的原因，我们将<code>n!</code>重命名为<code>fac(N)</code>：</p>
 
 <pre class="brush:erl">
 -module(recursive).
@@ -75,14 +81,20 @@ fac(N) when N == 0 -&gt; 1;
 fac(N) when N &gt; 0  -&gt; N*fac(N-1).
 </pre>
 
-<p>And this factorial function is now done! It's pretty similar to the mathematical definition, really. With the help of pattern matching, we can shorten the definition a bit:</p>
+<p> 这个阶乘函数就算完成了！
+    这个函数和数学定义非常相似。
+    如果我们使用模式匹配，会让我们的函数定义更简单一些：</p>
 
 <pre class="brush:erl">
 fac(0) -&gt; 1;
 fac(N) when N &gt; 0 -&gt; N*fac(N-1).
 </pre>
 
-<p>So that's quick and easy for some mathematical definitions which are recursive in nature. We looped! A definition of recursion could be made short by saying "a function that calls itself." However, we need to have a stopping condition (the real term is <em>base case</em>), because we'd otherwise loop infinitely. In our case, the stopping condition is when <var>n</var> is equal to <samp>0</samp>. At that point we no longer tell our function to call itself and it stops its execution right there.</p>
+<p> 所以对那些本身就是递归的数学定义，我们可以很容易且很快的翻译到Erlang中。
+    并且我们处在循环中！简单的说递归，我们可以定义为“一个不断调用自己的函数”。
+    因为我们无限的循环，我们需要一个终止条件（真正的术语叫<em>基本条件</em>）。
+    在这个案例中，终止条件时当<var>n</var>等于<samp>0</samp>。
+    此时此刻，我们可以停止调用函数自身且停止执行了。</p>
 
 
 <h3><a class="section" name="length">Length</a></h3>
