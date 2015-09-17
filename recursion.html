@@ -34,13 +34,23 @@
 			<div id="content">
             <div class="noscript"><noscript>Hey there, it appears your Javascript is disabled. That's fine, the site works without it. However, you might prefer reading it with syntax highlighting, which requires Javascript!</noscript></div>
 <h2>Recursion</h2>
-<h3><a class="section" name="hello-recursion">Hello recursion!</a></h3>
+<h3><a class="section" name="hello-recursion">你好 递归!</a></h3>
 
 <img class="right" src="static/img/reCURSE.png" width="337" height="182" alt="A car on the road. Dialogue: 'Are we there yet? - No! - Are we there yet? - No! - Are we there yet? - reCURSE YOU KIDS!" title="I apologize for this terrible pun. No great idea could be found to illustrate recursion so you're stuck with this." />
 
-<p>Some readers accustomed with imperative and object-oriented programming languages might be wondering why loops weren't shown already. The answer to this is "what is a loop?" Truth is, functional programming languages usually do not offer looping constructs like <code>for</code> and <code>while</code>. Instead, functional programmers rely on a silly concept named <em>recursion</em>.</p>
+<p> 那些熟悉命令式和面向对象编程语言的读者会想，我们到现在为止为什么还没有介绍循环体。
+    对这个问题的回答是“什么是循环？”，在函数类编程语言中通常不提供<code>for</code>和<code>while</code>这种循环控制体。
+    取而代之的，函数类编程语言使用<em>递归</em>这一概念。</p>
 
-<p>I suppose you remember how invariable variables were explained in the intro chapter. If you don't, you can <a class="chapter" href="starting-out-for-real.html#invariable-variables" title="invariable variables, from Starting out (for real)">give them more attention</a>! Recursion can also be explained with the help of mathematical concepts and functions. A basic mathematical function such as the factorial of a value is a good example of a function that can be expressed recursively. The factorial of a number <var>n</var> is the product of the sequence <code>1 x 2 x 3 x ... x <var>n</var></code>, or alternatively <code><var>n</var> x (<var>n</var>-1) x (<var>n</var>-2) x ... x 1</code>. To give some examples, the factorial of 3 is <code>3! = 3 x 2 x 1 = 6</code>. The factorial of 4 would be <code>4! = 4 x 3 x 2 x 1 = 24</code>. Such a function can be expressed the following way in mathematical notation:</p>
+<p> 我想你还记得在入门那章中是如何介绍不变的变量。
+    如果你不记得了，可以再 <a class="chapter" href="starting-out-for-real.html#invariable-variables" title="invariable variables, from Starting out (for real)">回顾</a>一下！
+    递归同样可以记住数学概念和函数来解释。
+    一个基本的数学函数，如值的阶乘解释递归函数的一个非常好的例子。
+    一个数<var>n</var>的阶乘可以产生一个序列 <code>1 x 2 x 3 x ... x <var>n</var></code>，
+    或反向的序列<code><var>n</var> x (<var>n</var>-1) x (<var>n</var>-2) x ... x 1</code>。
+    我们举一个实例， 3的阶乘是<code>3! = 3 x 2 x 1 = 6</code>。
+    4的阶乘将是 <code>4! = 4 x 3 x 2 x 1 = 24</code>。
+    这样的函数可以被用下面的数语言来描述：</p>
 
 <img src="static/img/fac.png" alt="n! = { 1 if n = 0 }, { n((n-1)!) if n &gt; 0 }" width="214" height="60" />
 
