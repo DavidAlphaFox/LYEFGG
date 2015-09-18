@@ -1,5 +1,7 @@
 # LYEFGG
-learn you some erlang for great good 翻译，原网站http://learnyousomeerlang.com
+learn you some erlang for great good 翻译		
+原网站 http://learnyousomeerlang.com		
+译文站 http://www.mbooks.me/LYEFGG/content.html
 
 贡献者
 --------------
