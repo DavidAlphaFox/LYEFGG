@@ -97,30 +97,51 @@ fac(N) when N &gt; 0 -&gt; N*fac(N-1).
     此时此刻，我们可以停止调用函数自身且停止执行了。</p>
 
 
-<h3><a class="section" name="length">Length</a></h3>
+<h3><a class="section" name="length">长度函数</a></h3>
 
-<p>Let's try to make it slightly more practical. We'll implement a function to count how many elements a list contains. So we know from the beginning that we will need:</p>
+<p> 让我们在多做一些实践。
+    我们将实现一个计算列表中元素数量的函数。
+    所以在一开始我们就知道我应需要什么：</p>
 <ul>
-    <li>a base case;</li>
-    <li>a function that calls itself;</li>
-    <li>a list to try our function on.</li>
+    <li>一个基本情况；</li>
+    <li>一个调用自身的函数；</li>
+    <li>一个用于测试我们函数的列表。</li>
 </ul>
 
-<p>With most recursive functions, I find the base case easier to write first: what's the simplest input we can have to find a length from? Surely an empty list is the simplest one, with a length of 0. So let's make a mental note that <code>[] = 0</code> when dealing with lengths. Then the next simplest list has a length of 1: <code>[_] = 1</code>. This sounds like enough to get going with our definition. We can write this down:</p>
+<p>
+    写过很多递归函数后，我发现基本情况是最容易先写出来的：
+    什么样的最简单的输入是我们最容易计算长度的？
+    当然是空列表，因为它的长度为0。
+    所以我们在处理长度的时候我们可以这样记下 <code>[] = 0</code>。
+    剩下的最简单的情况是列表只有1个元素：<code>[_] = 1</code>。
+    这听起来似乎足以让我们定义我们的基本情况。
+    我们可以将这些加入我们的代码中：</p>
 
 <pre class="brush:erl">
 len([]) -&gt; 0;
 len([_]) -&gt; 1.
 </pre>
 
-<p>Awesome! We can calculate the length of lists, given the length is either 0 or 1! Very useful indeed. Well of course it's useless, because it's not yet recursive, which brings us to the hardest part: extending our function so it calls itself for lists longer than 1 or 0. It was <a class="chapter local" href="starting-out-for-real.html#lists" title="Starting Out (for real): lists">mentioned earlier</a> that lists are defined recursively as <code>[1 | [2| ... [n | []]]]</code>. This means we can use the <code>[H|T]</code> pattern to match against lists of one or more elements, as a list of length one will be defined as <code>[X|[]]</code> and a list of length two will be defined as <code>[X|[Y|[]]]</code>. Note that the second element is a list itself. This means we only need to count the first one and the function can call itself on the second element. Given each value in a list counts as a length of 1, the function can be rewritten the following way:</p>
+<p>
+    非常好！我们可以计算列表的长度，给出的长度为0或1！这非常有用。
+    当然，也没地方可以使用它，因为它还不是递归函数，下面将是比较复杂的部分了：
+    扩展我们的函数，让它能递归，并计算超过长度超过1和0的列表。
+    我们<a class="chapter local" href="starting-out-for-real.html#lists" title="Starting Out (for real): lists">早先提到的</a>
+    列表是递归定义的<code>[1 | [2| ... [n | []]]]</code>。
+    由于长度为1的列表我们可以定义为<code>[X|[]]</code>，长度为2的列表我们可以定义为<code>[X|[Y|[]]]</code>，
+    我们就可以使用<code>[H|T]</code>这个模式匹配去匹配包含1个元素或多于1个元素的列表。
+    请注意，第二个元素它本身也是个列表。
+    这代表，我们只需要计算第一个元素然后用第二个元素做为参数调用自身。
+    我们可以认为每个列表中的元素长度为1，那么我们可以将函数这样重写下：</p>
 
 <pre class="brush:erl">
 len([]) -&gt; 0;
 len([_|T]) -&gt; 1 + len(T).
 </pre>
 
-<p>And now you've got your own recursive function to calculate the length of a list. To see how <code>len/1</code> would behave when ran, let's try it on a given list, say <code>[1,2,3,4]</code>:</p>
+<p>
+    现在，我们得到了字节计算列表长度的递归函数。
+    让我们看看<code>len/1</code>是如何执行的，我们用<code>[1,2,3,4]</code>这个列表来测试这个函数：</p>
 
 <pre class="expand">
 len([1,2,3,4]) = len([1 | [2,3,4])
@@ -135,7 +156,8 @@ len([1,2,3,4]) = len([1 | [2,3,4])
                = 4
 </pre>
 
-<p>Which is the right answer. Congratulations on your first useful recursive function in Erlang!</p>
+<p> 我们得到了一个正确的结果。
+    恭喜你，你成功的写出了第一个可用的Erlang递归函数！</p>
 
 <img class="right" src="static/img/tail-recursion.png" width="269" height="135" alt="A childish drawing of a pig with an arrow pointing to the tail mentionning 'tail recursion - Ferd, age 4'" />
 
