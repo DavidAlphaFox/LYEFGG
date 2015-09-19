@@ -161,9 +161,12 @@ len([1,2,3,4]) = len([1 | [2,3,4])
 
 <img class="right" src="static/img/tail-recursion.png" width="269" height="135" alt="A childish drawing of a pig with an arrow pointing to the tail mentionning 'tail recursion - Ferd, age 4'" />
 
-<h3><a class="section" name="length-tail-recursion">Length of a Tail Recursion</a></h3>
+<h3><a class="section" name="length-tail-recursion">尾递归长度函数</a></h3>
 
-<p>You might have noticed that for a list of 4 terms, we expanded our function call to a single chain of 5 additions. While this does the job fine for short lists, it can become problematic if your list has a few million values in it. You don't want to keep millions of numbers in memory for such a simple calculation. It's wasteful and there's a better way. Enter <em>tail recursion</em>.</p>
+<p>你可能已经发现，包含4个元素的列表，我们将我们函数展开了10次。
+    尽管这个在短列表上表现的非常豪，但是当一个列表包含数百万项时，这就成问题了。
+    你当然不想为了这么简单的函数在内存中保存数百万的数字。
+    这很浪费并且这还有一个更好的方式。让我们开始使用<em>尾递归</em></p>
 
 <p>Tail recursion is a way to transform the above linear process (it grows as much as there are elements) to an iterative one (there is not really any growth). To have a function call being tail recursive, it needs to be 'alone'. Let me explain: what made our previous calls grow is how the answer of the first part depended on evaluating the second part. The answer to <code>1 + len(Rest)</code> needs the answer of <code>len(Rest)</code> to be found. The function <code>len(Rest)</code> itself then needed the result of another function call to be found. The additions would get stacked until the last one is found, and only then would the final result be calculated. Tail recursion aims to eliminate this stacking of operation by reducing them as they happen.</p>
 
