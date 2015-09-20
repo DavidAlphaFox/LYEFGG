@@ -168,7 +168,14 @@ len([1,2,3,4]) = len([1 | [2,3,4])
     你当然不想为了这么简单的函数在内存中保存数百万的数字。
     这很浪费并且这还有一个更好的方式。让我们开始使用<em>尾递归</em></p>
 
-<p>Tail recursion is a way to transform the above linear process (it grows as much as there are elements) to an iterative one (there is not really any growth). To have a function call being tail recursive, it needs to be 'alone'. Let me explain: what made our previous calls grow is how the answer of the first part depended on evaluating the second part. The answer to <code>1 + len(Rest)</code> needs the answer of <code>len(Rest)</code> to be found. The function <code>len(Rest)</code> itself then needed the result of another function call to be found. The additions would get stacked until the last one is found, and only then would the final result be calculated. Tail recursion aims to eliminate this stacking of operation by reducing them as they happen.</p>
+<p>
+    尾递归是一种变换上述线性过程（一个随着元素数量增多而增长的过程）到一个迭代过程（没有任何实际增长）。
+    一个函数要成为尾递归函数，他需要‘无副作用’。
+    让我来解释下吧：是什么让我们的以前的函数调用不断增长，是第一调用的结果依赖于第二次对函数的调用。
+    要获得<code>1 + len(Rest)</code>的结果，就需要<code>len(Rest)</code>的结果。
+    <code>len(Rest)</code>函数本身，还需要另一次函数调用的结果。
+    这些都会用堆栈堆叠起来，直到只剩下最后一个元素并且只有最后一个元素的结果被计算出来才会结束。
+    尾递归函数的目标就是为了消除这种堆栈的堆叠。</p>
 
 <p>In order to achieve this, we will need to hold an extra temporary variable as a parameter in our function. I'll illustrate the concept with the help of the factorial function, but this time defining it to be tail recursive. The aforementioned temporary variable is sometimes called <em>accumulator</em> and acts as a place to store the results of our computations as they happen in order to limit the growth of our calls:</p>
 
