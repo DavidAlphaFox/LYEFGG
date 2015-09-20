@@ -177,7 +177,9 @@ len([1,2,3,4]) = len([1 | [2,3,4])
     这些都会用堆栈堆叠起来，直到只剩下最后一个元素并且只有最后一个元素的结果被计算出来才会结束。
     尾递归函数的目标就是为了消除这种堆栈的堆叠。</p>
 
-<p>In order to achieve this, we will need to hold an extra temporary variable as a parameter in our function. I'll illustrate the concept with the help of the factorial function, but this time defining it to be tail recursive. The aforementioned temporary variable is sometimes called <em>accumulator</em> and acts as a place to store the results of our computations as they happen in order to limit the growth of our calls:</p>
+<p> 为了达到这个目的，我们需要在我们的函数中增加一个额外的临时变量。
+    我借助阶乘函数说明了递归函数的概念，但这次我们将它定义为尾递归。
+    我刚刚描述的临时的变量很多时候被称为<em>累加器</em>并且为了限制我们调用的增长和作为我们结果存储的地方：</p>
 
 <pre class="brush:erl">
 tail_fac(N) -&gt; tail_fac(N,1).
