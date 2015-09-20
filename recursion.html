@@ -189,7 +189,12 @@ tail_fac(0,Acc) -&gt; Acc;
 tail_fac(N,Acc) when N &gt; 0 -&gt; tail_fac(N-1,N*Acc).
 </pre>
 
-<p>Here, I define both <code>tail_fac/1</code> and <code>tail_fac/2</code>. The reason for this is that Erlang doesn't allow default arguments in functions (different arity means different function) so we do that manually. In this specific case, <code>tail_fac/1</code> acts like an abstraction over the tail recursive <code>tail_fac/2</code> function. The details about the hidden accumulator of <code>tail_fac/2</code> don't interest anyone, so we would only export <code>tail_fac/1</code> from our module. When running this function, we can expand it to:</p>
+<p>
+    此处，我们定义了<code>tail_fac/1</code>和<code>tail_fac/2</code>.
+    这样做的原因是，Erlang不允许函数中使用默认参数（不同的参数个数意味着不同的功能），但是我们可以人工这么做。
+    在特殊的情况下，<code>tail_fac/1</code>可以充当尾递归函数<code>tail_fac/2</code>的抽象。
+    <code>tail_fac/2</code>隐藏的累加器细节不会影响任何人，所以我们可以从我们的模块中只导出<code>tail_fac/1</code>。
+    当执行这个函数，我们可以这样展开：</p>
 
 <pre class="expand">
 tail_fac(4)    = tail_fac(4,1)
