@@ -205,16 +205,24 @@ tail_fac(1,24) = tail_fac(1-1, 1*24)
 tail_fac(0,24) = 24
 </pre>
 
-<p>See the difference? Now we never need to hold more than two terms in memory: the space usage is constant. It will take as much space to calculate the factorial of 4 as it will take space to calculate the factorial of 1 million (if we forget 4! is a smaller number than 1M! in its complete representation, that is).</p>
+<p>
+    我们可以看到不同？
+    现在我们不会同时在内存中保存两个以上的变量：
+    因此我们内存使用是固定的。
+    即便计算1百万的阶乘和计算4的阶乘将会消耗相同的空间（在这个场景下，以至于我们忘记了4！是一个远小于1M!的数字）。
+</p>
 
-<p>With an example of tail recursive factorials under your belt, you might be able to see how this pattern could be applied to our <code>len/1</code> function. What we need is to make our recursive call 'alone'. If you like visual examples, just imagine you're going to put the <code>+1</code> part inside the function call by adding a parameter:</p>
+<p>
+    看到你面前的这个尾递归阶乘函数的例子，你也许看到了怎么将这个模式应用在我们的<code>len/1</code>函数上。
+    所有我们需要做的就是让我们的递归函数‘无副作用’。
+    如果你想看例子，你可以想像通过添加一个参数将<code>+1</code>这段代码放在你的函数调用中：</p>
 
 <pre class="brush:erl">
 len([]) -&gt; 0;
 len([_|T]) -&gt; 1 + len(T).
 </pre>
 
-<p>becomes:</p>
+<p>变成：</p>
 
 <pre class="brush:erl">
 tail_len(L) -&gt; tail_len(L,0).
@@ -223,7 +231,7 @@ tail_len([], Acc) -&gt; Acc;
 tail_len([_|T], Acc) -&gt; tail_len(T,Acc+1).
 </pre>
 
-<p>And now your length function is tail recursive.</p>
+<p>现在你编写的长度函数就是尾递归的了。</p>
 
 
 <h3><a class="section" name="more-recursive-functions">More recursive functions</a></h3>
