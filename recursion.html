@@ -240,9 +240,8 @@ tail_len([_|T], Acc) -&gt; tail_len(T,Acc+1).
 
 <p>
     我们会在写几个这样的递归函数，让我们逐渐熟悉这个东西。
-    After all, recursion being the only looping construct that exists in Erlang (except list comprehensions),
-    it's one of the most important concepts to understand.
-    It's also useful in every other functional programming language you'll try afterwards, so take notes!</p>
+    毕竟，递归是Erlang中仅有的循环体（除了列表解构),所以它是必须要牢记的原则之一。
+    这对你将来学习其它计算机语言也非常哟用，所以请记住这个！</p>
 
 <p>The first function we'll write will be <code>duplicate/2</code>. This function takes an integer as its first parameter and then any other term as its second parameter. It will then create a list of as many copies of the term as specified by the integer. Like before, thinking of the base case first is what might help you get going. For <code>duplicate/2</code>, asking to repeat something 0 time is the most basic thing that can be done. All we have to do is return an empty list, no matter what the term is. Every other case needs to try and get to the base case by calling the function itself. We will also forbid negative values for the integer, because you can't duplicate something <code>-n</code> times:</p>
 
