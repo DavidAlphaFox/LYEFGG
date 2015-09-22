@@ -17,8 +17,8 @@
 		<link rel="apple-touch-icon" sizes="114x114" href="static/img/touch-icon-iphone4.png" />
 		<title>Recursion | Learn You Some Erlang for Great Good!</title>
 	</head>
-	<>
-		<br id="wrapper">
+	<body>
+		<div id="wrapper">
 			<div id="header">
 				<h1>Learn you some Erlang</h1>
 				<span>for great good!</span>
@@ -31,7 +31,7 @@
 					<li><a href="static/erlang/learn-you-some-erlang.zip" title="Source Code">Code</a></li>
 				</ul>
 			</div><!-- menu -->
-			<br id="content">
+			<div id="content">
             <div class="noscript"><noscript>Hey there, it appears your Javascript is disabled. That's fine, the site works without it. However, you might prefer reading it with syntax highlighting, which requires Javascript!</noscript></div>
 <h2>递归</h2>
 <h3><a class="section" name="hello-recursion">你好 递归!</a></h3>
@@ -243,8 +243,7 @@ tail_len([_|T], Acc) -&gt; tail_len(T,Acc+1).
     毕竟，递归是Erlang中仅有的循环体（除了列表解构),所以它是必须要牢记的原则之一。
     这对你将来学习其它计算机语言也非常有用，所以请记住这个！</p>
 
-<p>
-    我们将要编写的第一个函数是<code>duplicate/2</code>。
+<p> 我们将要编写的第一个函数是<code>duplicate/2</code>。
     这个函数接受一个整数作为其第一个参数，然后任何类型作为其第二个参数。
     然后，它会构造一个包含指定整数个第二个参数的副本的列表。
     像以前一样，先想基本情况会对你写出剩下的情况有很大的帮助。
@@ -252,6 +251,7 @@ tail_len([_|T], Acc) -&gt; tail_len(T,Acc+1).
     在这情况下，无论第二个参数是什么，我们只需要返回一个空列表。
     剩下的情况所需要的就是，不断尝试调用自身直到到达基本情况。
     我们将不准许负整数，因为我们不直到该如何进行<code>-n</code>次复制：
+
 </p>
 
 <pre class="brush:erl">
