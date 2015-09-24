@@ -261,7 +261,7 @@ duplicate(N,Term) when N &gt; 0 -&gt;
     [Term|duplicate(N-1,Term)].
 </pre>
 
-<p>Once the basic recursive function is found, it becomes easier to transform it into a tail recursive one by moving the list construction into a temporary variable:</p>
+<p> 一旦写出基本的递归函数，通过添加一个列表构建作为临时变量我们很容易将这个函数变成尾递归的：</p>
 
 <pre class="brush:erl">
 tail_duplicate(N,Term) -&gt;
