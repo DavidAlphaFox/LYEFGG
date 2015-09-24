@@ -273,7 +273,10 @@ tail_duplicate(N,Term,List) when N &gt; 0 -&gt;
     tail_duplicate(N-1, Term, [Term|List]).
 </pre>
 
-<p>Success! I want to change the subject a little bit here by drawing a parallel between tail recursion and a while loop. Our <code>tail_duplicate/2</code> function has all the usual parts of a while loop. If we were to imagine a while loop in a fictional language with Erlang-like syntax, our function could look a bit like this:</p>
+<p> 非常成功！此时我想稍微改变下我们讨论的话题，让我们同时讨论下尾递归和while循环。
+    我们<code>tail_duplicate/2</code>函数包含了所有我们能在while循环中能用的代码。
+    让我们想像下，如果我们虚构一个有while循环且语法和Erlang相同的语言，我们用while循环完成这个函数，那么这个函数将会像这样：
+</p>
 
 <pre class="brush:erl">
 function(N, Term) -&gt;
@@ -284,9 +287,19 @@ function(N, Term) -&gt;
     List.
 </pre>
 
-<p>Note that all the elements are there in both the fictional language and in Erlang. Only their position changes. This demonstrates that a proper tail recursive function is similar to an iterative process, like a while loop.</p>
+<p>
+    请注意，函数中所有的元素都出现了在这个虚构的语言所写的函数中和Erlang写的函数中。
+    只是这些元素所放的位置不同了而已。
+    这代表正确的尾递归函数和迭代是一样的，就像一个while循环一样。</p>
 
-<p>There's also an interesting property that we can 'discover' when we compare recursive and tail recursive functions by writing a <code>reverse/1</code> function, which will reverse a list of terms. For such a function, the base case is an empty list, for which we have nothing to reverse. We can just return an empty list when that happens. Every other possibility should try to converge to the base case by calling itself, like with <code>duplicate/2</code>. Our function is going to iterate through the list by pattern matching <code>[H|T]</code> and then putting <var>H</var> after the rest of the list:</p>
+
+<p>
+    当我们分别用递归和尾递归编写一个列表反转函数<code>reverse/1</code>的时候，我们比较这两种方式的时候会‘发现’，
+    这里面还有另一个有趣的特性。对于这个函数，最基本的状况就是空列表，此时我们没有任何东西需要反转。
+    我们只要返回一个空列表就可以了。
+    其它的可能情况都应当尝试通过调用自身，直到最基本的情况上，就像<code>duplicate/2</code>函数那样。
+    我们的函数将通过模式匹配<code>[H|T]</code>来遍历整个列表然后将<var>H</var>放到剩余列表的后面：
+</p>
 
 <pre class="brush:erl">
 reverse([]) -&gt; [];
