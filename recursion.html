@@ -331,7 +331,7 @@ tail_reverse([],Acc) -&gt; Acc;
 tail_reverse([H|T],Acc) -&gt; tail_reverse(T, [H|Acc]).
 </pre>
 
-<p>If we represent this one in a similar manner as the normal version, we get:</p>
+<p> 如果我们像上一个版本那样逐层展开，我们会得到：</p>
 
 <pre class="expand">
 tail_reverse([1,2,3,4]) = tail_reverse([2,3,4], [1])
@@ -341,7 +341,10 @@ tail_reverse([1,2,3,4]) = tail_reverse([2,3,4], [1])
                         = [4,3,2,1]   
 </pre>
 
-<p>Which shows that the number of elements visited to reverse our list is now linear: not only do we avoid growing the stack, we also do our operations in a much more efficient manner!</p>
+<p>
+    从这里我们可以看出来，我们现在是线性的遍历列表：
+    我们不单单避免了操作的入栈操作，我们更有效的完成了我们的操作！
+</p>
 
 <p>Another function to implement could be <code>sublist/2</code>, which takes a list <var>L</var> and an integer <var>N</var>, and returns the <var>N</var> first elements of the list. As an example, <code>sublist([1,2,3,4,5,6],3)</code> would return <samp>[1,2,3]</samp>. Again, the base case is trying to obtain 0 elements from a list. Take care however, because <code>sublist/2</code> is a bit different. You've got a second base case when the list passed is empty! If we do not check for empty lists, an error would be thrown when calling <code>recursive:sublist([1],2).</code> while we want <code>[1]</code> instead. Once this is defined, the recursive part of the function only has to cycle through the list, keeping elements as it goes, until it hits one of the base cases:</p>
 
