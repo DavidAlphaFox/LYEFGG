@@ -306,7 +306,9 @@ reverse([]) -&gt; [];
 reverse([H|T]) -&gt; reverse(T)++[H].
 </pre>
 
-<p>On long lists, this will be a true nightmare: not only will we stack up all our append operations, but we will need to traverse the whole list for every single of these appends until the last one! For visual readers, the many checks can be represented as:</p>
+<p> 在非常长的列表上,这将是一个可怕的噩梦:
+    不但这会让所有的列表增加操作入栈,同时我们需要回朔整个列表中所有的列表增加操作,知道我们列表最后的一个元素!
+    对于那些喜欢视觉效果的读者,我们可以看下下面的代码例子:</p>
 
 <pre class="expand">
 reverse([1,2,3,4]) = [4]++[3]++[2]++[1]
