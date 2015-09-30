@@ -346,7 +346,18 @@ tail_reverse([1,2,3,4]) = tail_reverse([2,3,4], [1])
     我们不单单避免了操作的入栈操作，我们更有效的完成了我们的操作！
 </p>
 
-<p>Another function to implement could be <code>sublist/2</code>, which takes a list <var>L</var> and an integer <var>N</var>, and returns the <var>N</var> first elements of the list. As an example, <code>sublist([1,2,3,4,5,6],3)</code> would return <samp>[1,2,3]</samp>. Again, the base case is trying to obtain 0 elements from a list. Take care however, because <code>sublist/2</code> is a bit different. You've got a second base case when the list passed is empty! If we do not check for empty lists, an error would be thrown when calling <code>recursive:sublist([1],2).</code> while we want <code>[1]</code> instead. Once this is defined, the recursive part of the function only has to cycle through the list, keeping elements as it goes, until it hits one of the base cases:</p>
+<p> 另一个我们将要实现的函数是 <code>sublist/2</code>,
+    一个接收一个列表<var>L</var>和一个整形<var>N</var>,
+    然后返回列表中前<var>N</var>个元素。
+    举个列子，<code>sublist([1,2,3,4,5,6],3)</code>将会返回<samp>[1,2,3]</samp>。
+    再次，这个基础情况是我们尝试从一个列表中取前N个元素。
+    但是请注意，因为<code>sublist/2</code>还是和前面的函数有些不同的。
+    这个函数还有第二个基础情况，就是当列表为空的情况！
+    如果你不检查列表是否为空，当你调用<code>recursive:sublist([1],2).</code>会出现错误，
+    此时我们希望获得<code>[1]</code>这个结果。
+    一旦我们定义好了这些，剩下函数的递归部分只是遍历整个列表，
+    就这样我们只要遍历整个列表，直到我们调用到两个基本状况中的之一：
+</p>
 
 <pre class="brush:erl">
 sublist(_,0) -&gt; [];
