@@ -365,7 +365,7 @@ sublist([],_) -&gt; [];
 sublist([H|T],N) when N &gt; 0 -&gt; [H|sublist(T,N-1)].
 </pre>
 
-<p>Which can then be transformed to a tail recursive form in the same manner as before:</p>
+<p> 我们同样可以将这个函数像以前那样转换成尾递归：</p>
 
 <pre class="brush:erl">
 tail_sublist(L, N) -&gt; tail_sublist(L, N, []).
@@ -376,7 +376,13 @@ tail_sublist([H|T], N, SubList) when N &gt; 0 -&gt;
     tail_sublist(T, N-1, [H|SubList]).
 </pre>
 
-<p>There's a flaw in this function. <em>A fatal flaw!</em> We use a list as an accumulator in exactly the same manner we did to reverse our list. If you compile this function as is, <code>sublist([1,2,3,4,5,6],3)</code> would not return <samp>[1,2,3]</samp>, but <samp>[3,2,1]</samp>. The only thing we can do is take the final result and reverse it ourselves. Just change the <code>tail_sublist/2</code> call and leave all our recursive logic intact:</p>
+<p> 这个函数是有瑕疵。
+    <em>一个非常严重的瑕疵！</em>我们使用列表当累加器的时候，
+    这个累加器会和我们在翻转函数中的效果一样。
+    如果你编译并执行这个函数<code>sublist([1,2,3,4,5,6],3)</code>，你会发现
+    返回的是<samp>[3,2,1]</samp>而非<samp>[1,2,3]</samp>。
+    我们唯一能做的就是将这个结果进行一次翻转。
+    只要将<code>tail_sublist/2</code>改成下面的这个样子，剩下的逻辑保持不变：</p>
 
 <pre class="brush:erl">
 tail_sublist(L, N) -&gt; reverse(tail_sublist(L, N, [])).
