@@ -404,21 +404,26 @@ tail_sublist(L, N) -&gt; reverse(tail_sublist(L, N, [])).
         而不是我们自己的版本。</p>
 </div>
 
-<p>To push things a bit further, we'll write a zipping function. A zipping function will take two lists of same length as parameters and will join them as a list of tuples which all hold two terms. Our own <code>zip/2</code> function will behave this way:</p>
+<p> 让我们走的更远一些吧，我们来写一个<code>zip/2</code>函数。
+    这个函数将接受两个列表当作参数，并将他们联合起来作为每个元组包含两个元素的列表。
+    我们自己的<code>zip/2</code>函数将像下面这样：</p>
 
 <pre class="brush:eshell">
 1&gt; recursive:zip([a,b,c],[1,2,3]).
 [{a,1},{b,2},{c,3}]
 </pre>
 
-<p>Given we want our parameters to both have the same length, the base case will be zipping two empty lists:</p>
+<p> 我们希望两个参数的长度是相同的，
+    所以最基本的情况是我们的参数是两个空列表：</p>
 
 <pre class="brush:erl">
 zip([],[]) -&gt; [];
 zip([X|Xs],[Y|Ys]) -&gt; [{X,Y}|zip(Xs,Ys)].
 </pre>
 
-<p>However, if you wanted a more lenient zip function, you could decide to have it finish whenever one of the two list is done. In this scenario, you therefore have two base cases:</p>
+<p> 但是，如果你想把条件放的宽松些，
+    例如你决定两个列表中任何一个列表为空时便结束。
+    在这个场景下，你会有两个基本情况：</p>
 
 <pre class="brush:erl">
 lenient_zip([],_) -&gt; [];
@@ -427,9 +432,16 @@ lenient_zip([X|Xs],[Y|Ys]) -&gt; [{X,Y}|lenient_zip(Xs,Ys)].
 </pre>
 
 
-<p>Notice that no matter what our base cases are, the recursive part of the function remains the same. I would suggest you try and make your own tail recursive versions of <code>zip/2</code> and <code>lenient_zip/2</code>, just to make sure you fully understand how to make tail recursive functions: they'll be one of the central concepts of larger applications where our main loops will be made that way.</p>
+<p> 不过请注意，无论哪种基本情况，
+    函数的递归部分都是一样的。
+    我强烈建议你尝试写下这两个函数<code>zip/2</code>和<code>lenient_zip/2</code>，
+    从而确定你确实明白了怎么写尾递归函数：
+    它们将是很多大型应用的核心概念，因为这些应用的主循环都是这么做的。
+</p>
 
-<p>If you want to check your answers, take a look at my implementation of <a class="source" href="static/erlang/recursive.erl">recursive.erl</a>, more precisely the <code>tail_zip/2</code> and <code>tail_lenient_zip/3</code> functions.</p>
+<p> 如果你想检查下你的答案，
+    可以看下我的实现 <a class="source" href="static/erlang/recursive.erl">recursive.erl</a>，
+    其中包含的不仅仅是<code>tail_zip/2</code>和<code>tail_lenient_zip/3</code>函数。</p>
 
 <div class="note">
 	<p><strong>Note:</strong> tail recursion as seen here is not making the memory grow because when the virtual machine sees a function calling itself in a tail position (the last expression to be evaluated in a function), it eliminates the current stack frame. This is called tail-call optimisation (TCO) and it is a special case of a more general optimisation named <em>Last Call Optimisation</em> (LCO).</p>
