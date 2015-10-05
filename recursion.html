@@ -388,10 +388,20 @@ tail_sublist([H|T], N, SubList) when N &gt; 0 -&gt;
 tail_sublist(L, N) -&gt; reverse(tail_sublist(L, N, [])).
 </pre>
 
-<p>The final result will be ordered correctly. It might seem like reversing our list after a tail recursive call is a waste of time and you would be partially right (we still save memory doing this). On shorter lists, you might find your code is running faster with normal recursive calls than with tail recursive calls for this reason, but as your data sets grow, reversing the list will be comparatively lighter.</p>
+<p>
+    最终结果将会是正确的排序。
+    从某种意义上来说，在尾递归后再进行翻转是浪费时间的，但是你只说对了一部分（我们还是节省了很多内存的）。
+    在比较短的列表上，因为上面那个原因，
+    你也许会看到你的普通递归的代码运行的速度比尾递归的代码速度要快，但是随着数据量的增长，
+    翻转列表消耗的时间相对分割列表消耗的时间还是少。</p>
 
 <div class="note">
-    <p><strong>Note:</strong> instead of writing your own <code>reverse/1</code> function, you should use <code>lists:reverse/1</code>. It's been used so much for tail recursive calls that the maintainers and developers of Erlang decided to turn it into a BIF. Your lists can now benefit from extremely fast reversal (thanks to functions written in C) which will make the reversal disadvantage a lot less obvious. The rest of the code in this chapter will make use of our own reversal function, but after that you should not use it ever again.</p>
+    <p><strong>注意：</strong>
+        你应当使用<code>lists:reverse/1</code>代替你自己编写的<code>reverse/1</code>函数。
+        因为它经常被用于尾递归中，所以Erlang的开发者和维护者，将这个函数作为BIF实现了。
+        你可以快速的进行列表翻转（我们应该感谢这些用C实现的函数），这样我们会让列表翻转的劣势不那么明显。
+        本节中剩下的代码还会使用我们自己的翻转函数，但是再这之后你应当使用<code>lists:reverse/1</code>，
+        而不是我们自己的版本。</p>
 </div>
 
 <p>To push things a bit further, we'll write a zipping function. A zipping function will take two lists of same length as parameters and will join them as a list of tuples which all hold two terms. Our own <code>zip/2</code> function will behave this way:</p>
