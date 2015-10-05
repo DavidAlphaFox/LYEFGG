@@ -444,9 +444,18 @@ lenient_zip([X|Xs],[Y|Ys]) -&gt; [{X,Y}|lenient_zip(Xs,Ys)].
     其中包含的不仅仅是<code>tail_zip/2</code>和<code>tail_lenient_zip/3</code>函数。</p>
 
 <div class="note">
-	<p><strong>Note:</strong> tail recursion as seen here is not making the memory grow because when the virtual machine sees a function calling itself in a tail position (the last expression to be evaluated in a function), it eliminates the current stack frame. This is called tail-call optimisation (TCO) and it is a special case of a more general optimisation named <em>Last Call Optimisation</em> (LCO).</p>
+	<p><strong>注意：</strong>
+        我们这里看到尾递归并没有让内存增长，是因为当虚拟机看到某个函数在函数的最后
+        调用了自己（函数中最后一条语句），它会消除当前的栈帧。
+        这个被成为尾调用优化(TCO)并且它是更通用优化技术<em>最后调用优化</em>(LCO)的特例。
+    </p>
 
-	<p>LCO is done whenever the last expression to be evaluated in a function body is another function call. When that happens, as with TCO, the Erlang VM avoids storing the stack frame. As such tail recursion is also possible between multiple functions. As an example, the chain of functions <code>a() -&gt; b().  b() -&gt; c(). c() -&gt; a().</code> will effectively create an infinite loop that won't go out of memory as LCO avoids overflowing the stack. This principle, combined with our use of accumulators is what makes tail recursion useful.</p>
+	<p> 只要函数最后一句是调用其它函数，LCO都会被用来进行优化。
+        当这发生了，像TCO优化一样，Erlang虚拟机全力的避免堆栈的增长。
+        举个例子，函数链<code>a() -&gt; b().  b() -&gt; c(). c() -&gt; a().</code>
+        将会高效的无限循环下去，因为LCO的优化这不会产生堆栈溢出而造成内存耗尽。
+        基于这个原则，配合累加器的使用让尾递归真正的有用。
+    </p>
 </div>
 
 
