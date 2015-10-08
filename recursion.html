@@ -466,13 +466,12 @@ lenient_zip([X|Xs],[Y|Ys]) -&gt; [{X,Y}|lenient_zip(Xs,Ys)].
     我想现在你对递归和尾递归有一定的感觉了，但是为了更好的让你理解这些，
     我们将写以一个更复杂的例子，快速排序。
     是的，传统来说“嘿，看我能写更短的函数”，这是个经典的例子。
-    一个简单的快排一般都是取列表的第一个元素作为<em>哨位</em>
-    然后将所有的小于等于哨位的元素放入新的列表中，剩下的大于哨位的元素放在另一个列表中。
-    We then take each of these lists and do the same thing on them until each list gets smaller and smaller.
-    This goes on until you have nothing but an empty list to sort, which will be our base case.
-    This implementation is said to be naive because smarter versions of
-    quicksort will try to pick optimal pivots to be faster.
-    We don't really care about that for our example though.</p>
+    一个简单的快排一般都是取列表的第一个元素作为<em>中枢</em>
+    然后将所有的小于等于中枢的元素放入新的列表中，剩下的大于中枢的元素放在另一个列表中。
+    我们将会在两个列表中做相同的事情，直到每个列表越来越短。
+    直到我们得到空列表为止，这就是我们的基本情况。
+    这个版本的实现之所以说是比较简单的，是因为更好的快排版本会选择更好的中枢，
+    从而能更快一些。实际上，我们并不是很关心我们这个例子是否是更好的。</p>
 
 <p>We will need two functions for this one: a first function to partition the list into smaller and larger parts and a second function to apply the partition function on each of the new lists and to glue them together. First of all, we'll write the glue function:</p>
 
