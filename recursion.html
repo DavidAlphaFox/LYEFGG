@@ -465,10 +465,9 @@ lenient_zip([X|Xs],[Y|Ys]) -&gt; [{X,Y}|lenient_zip(Xs,Ys)].
 <p>
     我想现在你对递归和尾递归有一定的感觉了，但是为了更好的让你理解这些，
     我们将写以一个更复杂的例子，快速排序。
-    是的，传统来说“嘿，看我能写更短的函数”，这是个典型的例子。
-    A naive implementation of quicksort works by taking the first element of a list,
-    the <em>pivot</em>, and then putting all the elements smaller or equal to the pivot in a new list,
-    and all those larger in another list.
+    是的，传统来说“嘿，看我能写更短的函数”，这是个经典的例子。
+    一个简单的快排一般都是取列表的第一个元素作为<em>哨位</em>
+    然后将所有的小于等于哨位的元素放入新的列表中，剩下的大于哨位的元素放在另一个列表中。
     We then take each of these lists and do the same thing on them until each list gets smaller and smaller.
     This goes on until you have nothing but an empty list to sort, which will be our base case.
     This implementation is said to be naive because smarter versions of
