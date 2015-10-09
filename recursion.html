@@ -473,7 +473,11 @@ lenient_zip([X|Xs],[Y|Ys]) -&gt; [{X,Y}|lenient_zip(Xs,Ys)].
     这个版本的实现之所以说是比较简单的，是因为更好的快排版本会选择更好的中枢，
     从而能更快一些。实际上，我们并不是很关心我们这个例子是否是更好的。</p>
 
-<p>We will need two functions for this one: a first function to partition the list into smaller and larger parts and a second function to apply the partition function on each of the new lists and to glue them together. First of all, we'll write the glue function:</p>
+<p>
+    我们需要两个函数来完成这件事情：
+    第一个函数完成列表的分割，将列表分割成较小的一部分和较大的一部分
+    ，第二个函数是不断在生成的部分上调用第一个函数，并将最终结果整合到一起。
+    首先我们要写合并函数：</p>
 
 <pre class="brush:erl">
 quicksort([]) -&gt; [];
@@ -482,7 +486,11 @@ quicksort([Pivot|Rest]) -&gt;
     quicksort(Smaller) ++ [Pivot] ++ quicksort(Larger).
 </pre>
 
-<p>This shows the base case, a list already partitioned in larger and smaller parts by another function, the use of a pivot with both lists quicksorted appended before and after it. So this should take care of assembling lists. Now the partitioning function:</p>
+<p>
+    上面的函数向我们展示了基本的情况，列表已经被另一个函数分成了较大的部分和较小的部分
+    ，其中中枢的作用就是将两个已经通过快速排序的列表分别放在它前面和后面。
+    所以这个需要关注如何合并。现在我们需要编写分区函数：
+</p>
 
 <pre class="brush:erl">
 partition(_,[], Smaller, Larger) -&gt; {Smaller, Larger};
@@ -492,7 +500,12 @@ partition(Pivot, [H|T], Smaller, Larger) -&gt;
     end. 
 </pre>
 
-<p>And you can now run your quicksort function. If you've looked for Erlang examples on the Internet before, you might have seen another implementation of quicksort, one that is simpler and easier to read, but makes use of list comprehensions. The easy to replace parts are the ones that create new lists, the <code>partition/4</code> function:</p>
+<p>
+    现在你就可以执行你自己的快速排序函数了。
+    如果你以前在网络上看过Erlang的代码事例，
+    你也许可能看到另一个版本的快排实现，但是它使用了列表推导式。
+    其中最容易替换的部分是创建新列表的部分，<code>partition/4</code>函数：
+</p>
 
 <pre class="brush:erl">
 lc_quicksort([]) -&gt; [];
@@ -502,15 +515,31 @@ lc_quicksort([Pivot|Rest]) -&gt;
     lc_quicksort([Larger || Larger &lt;- Rest, Larger &gt; Pivot]).
 </pre>
 
-<p>The main differences are that this version is much easier to read, but in exchange, it has to traverse the list twice to partition it in two parts. This is a fight of clarity against performance, but the real loser here is you, because a function <code>lists:sort/1</code> already exists. Use that one instead.</p>
+<p>
+    这两个版本最大不同是，这个版本的快排更容易阅读，
+    但是等同的，它需要翻转列表两次来将他们分割成两部分。
+    这是一个代码整洁和性能的抉择，但是真正的失败者是你，因为函数<code>lists:sort/1</code>
+    已经存在。你应当使用现有的函数，而不是自己写。</p>
 
 <div class="note koolaid">
-	<p><strong>Don't drink too much Kool-Aid:</strong><br />
-       All this conciseness is good for educational purposes, but not for performance. Many functional programming tutorials never mention this! First of all, both implementations here need to process values that are equal to the pivot more than once. We could have decided to instead return 3 lists: elements smaller, larger and equal to the pivot in order to make this more efficient.</p>
+	<p><strong>不要盲从：</strong><br />
+        所有这些代码都是处于教育目的，但是性能并不好。
+        好多函数语言的教程从来没有提及这些！
+        首先，这里所有的实现，都需要处理等于中枢的值多于一次。
+        我们可以返回三个列表：较小的元素，较大的元素和等于中枢的元素，这样会更有效些。
+    </p>
 
-    <p>Another problem relates to how we need to traverse all the partitioned lists more than once when attaching them to the pivot. It is possible to reduce the overhead a little by doing the concatenation while partitioning the lists in three parts. If you're curious about this, look at the last function (<code>bestest_qsort/1</code>) of <a class="source" href="static/erlang/recursive.erl">recursive.erl</a> for an example.</p>
+    <p>
+        另一个问题是，当我们将被分割的列表和中枢合并的时候，
+        我们翻转所有被分割的列表多于一次。
+        当我们将列表分割为三部分，也许能通过执行级联操作稍微减少开销
+        如果你对这个很感兴趣，可以参考本例子<a class="source" href="static/erlang/recursive.erl">recursive.erl</a>中的最后一个版本
+        (<code>bestest_qsort/1</code>)。</p>
 
-    <p>A nice point about all of these quicksorts is that they will work on lists of any data type you've got, even tuples of lists and whatnot. Try them, they work!</p>
+    <p>
+        不过值得欣慰的是，所有这些快速排序函数可以作用在包含任何类型的列表上，
+        即使是元组和列表。去尝试他们，他们是可以工作的！
+    </p>
 </div>
 
 <h3><a class="section" name="more-than-lists">More than lists</a></h3>
