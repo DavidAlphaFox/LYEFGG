@@ -542,13 +542,26 @@ lc_quicksort([Pivot|Rest]) -&gt;
     </p>
 </div>
 
-<h3><a class="section" name="more-than-lists">More than lists</a></h3>
+<h3><a class="section" name="more-than-lists">超越列表</a></h3>
 
-<p>By reading this chapter, you might be starting to think recursion in Erlang is mainly a thing concerning lists. While lists are a good example of a data structure that can be defined recursively, there's certainly more than that. For the sake of diversity, we'll see how to build binary trees, and then read data from them.</p>
+<p>
+    通过阅读这章，
+    你也许会认为Erlang的递归主要关注列表。
+    当然对于递归而言，列表是作为例子最好的数据结构，但是不止这些。
+    为了展现递归的多样性，我们将展示如何构建二叉数，并从其中读取数据。
+</p>
 
 <img class="left" src="static/img/tree.png" width="167" height="250" alt="An angry tree with an axe" title="How do you like trees now, hippie?" />
 
-<p>First of all, it's important to define what a tree is. In our case, it's nodes all the way down. Nodes are tuples that contain a key, a value associated to the key, and then two other nodes. Of these two nodes, we need one that has a smaller and one that has a larger key than the node holding them. So here's recursion! A tree is a node containing nodes, each of which contains nodes, which in turn also contain nodes. This can't keep going forever (we don't have infinite data to store), so we'll say that our nodes can also contain empty nodes.</p>
+<p>
+    首先，定义什么是树是非常重要的。
+    在我们的例子中，所有的节点都是一直向下展开的。
+    节点是一个包含键和值还有其它两个节点的元组。
+    当然，这两个节点中，我们需要其中的节点的键比当前节点键小，
+    另一个节点的键要比当前节点的键大。
+    所以，这就是递归！树就是，一个节点包含另外的节点，另外的节点又包含了更多的节点。
+    但是这不会一直保持下去（我们当然没有无限的数据要保存），所以我想说，我们的节点中
+    同样存在空节点。</p>
 
 <p>To represent nodes, tuples are an appropriate data structure. For our implementation, we can then define these tuples as <code>{node, {Key, Value, Smaller, Larger}}</code> (a tagged tuple!), where <var>Smaller</var> and <var>Larger</var> can be another similar node or an empty node (<code>{node, nil}</code>). We won't actually need a concept more complex than that.</p>
 
