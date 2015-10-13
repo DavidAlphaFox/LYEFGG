@@ -621,9 +621,26 @@ insert(Key, Val, {node, {Key, _, Smaller, Larger}}) -&gt;
     {node, {Key, Val, Smaller, Larger}}.
 </pre>
 
-<p>Note here that the function returns a completely new tree. This is typical of functional languages having only single assignment. While this can be seen as inefficient, most of the underlying structures of two versions of a tree sometimes happen to be the same and are thus shared, copied by the VM only when needed.</p>
+<p>
+    请注意，这个函数会返回一个全新的树。
+    这就是一般函数式语言只有一次赋值。
+    虽然这看起来是很低效率，
+    不过大多数情况下两个版本的树，下层结构是相同的，
+    所以她们完全是共享的，当需要的时候VM会进行复制。
+</p>
 
-<p>What's left to do on this example tree implementation is creating a <code>lookup/2</code> function that will let you find a value from a tree by giving its key. The logic needed is extremely similar to the one used to add new content to the tree: we step through the nodes, checking if the lookup key is equal, smaller or larger than the current node's key. We have two base cases: one when the node is empty (the key isn't in the tree) and one when the key is found. Because we don't want our program to crash each time we look for a key that doesn't exist, we'll return the atom <samp>'undefined'</samp>. Otherwise, we'll return <samp>{ok, Value}</samp>. The reason for this is that if we only returned <var>Value</var> and the node contained the atom <samp>'undefined'</samp>, we would have no way to know if the tree did return the right value or failed to find it. By wrapping successful cases in such a tuple, we make it easy to understand which is which. Here's the implemented function:</p>
+<p>
+    在这个树实现的例子中，剩下我们需要做的就是创建一个<code>lookup/2</code>函数，
+    该函数可以让你通过一个键在树中找出对应的值。
+    其中的逻辑和我们向树中添加新内容的逻辑非常像：
+    我们遍历节点，检查给定键和某个节点的键是否相同，或比当前节点大还是小。
+    我们会有两个基本场景：一个是当节点是空（键一定不会在树中）另一个是该键被找到。
+    因为我们不希望当我们找一个键不存在的时候，我们的程序就崩溃，我们将在键不存在的时候
+    返回原子<samp>'undefined'</samp>。否则，我们将会返回<samp>{ok, Value}</samp>。
+    我们之所以这么做是有原因的，如果我们只返回<var>Value</var>，并且一个节点的值正好是
+    原子<samp>'undefined'</samp>，我们将没办法知道，查找这个树返回的是正确的结果，还是查找失败了。
+    通过将成功的结果用元组进行包装，我们很容易就能区分这两种情况。
+    下面是这个函数的具体实现：</p>
 
 <pre class="brush:erl">
 lookup(_, {node, 'nil'}) -&gt;
@@ -636,7 +653,9 @@ lookup(Key, {node, {_, _, _, Larger}}) -&gt;
     lookup(Key, Larger).
 </pre>
 
-<p>And we're done. Let's test it with by making a little email address book. Compile the file and start the shell: </p>
+<p> 好了我们完成了。
+    让我通过建立一个小的电子邮件地址簿来测试它吧。
+    让我们开启个shell并编译这个文件吧：</p>
 
 <pre class="brush:eshell">
 1&gt; T1 = tree:insert("Jim Woodland", "jim.woodland@gmail.com", tree:empty()).
@@ -663,7 +682,7 @@ lookup(Key, {node, {_, _, _, Larger}}) -&gt;
                      {node,nil}}}}}}}
 </pre>
 
-<p>And now you can lookup email addresses with it:</p>
+<p>同样，你可以用过这样来查找邮件地址簿：</p>
 
 <pre class="brush:eshell">
 4&gt; tree:lookup("Anita Bath", Addresses).
@@ -672,10 +691,19 @@ lookup(Key, {node, {_, _, _, Larger}}) -&gt;
 undefined
 </pre>
 
-<p>That concludes our functional address book example built from a recursive data structure other than a list! <em>Anita Bath</em> now...</p>
+<p>
+    从这个电子邮件地址簿中我们可以得到这样的结论，我们可以使用列表以外的数据结构进行递归！
+</p>
 
 <div class="note">
-    <p><strong>Note: </strong> Our tree implementation is very naive: we do not support common operations such as deleting nodes or rebalancing the tree to make the following lookups faster. If you're interested in implementing and/or exploring these, studying the implementation of Erlang's <code>gb_trees</code> module (<code>otp_src_R&lt;version&gt;B&lt;revision&gt;/lib/stdlib/src/gb_trees.erl</code>) is a good idea. This is also the module you should use when dealing with trees in your code, rather than reinventing your own wheel.</p>
+    <p><strong>注意：</strong>
+        我们实现的树是非常不实用的：
+        我们没有支持常见的操作，例如删除节点或为了查找更快而重新平衡树。
+        如果你对树的实现非常感兴趣，并且想深度探索下，最好的方法是学习下<code>gb_trees</code>
+        中的代码实现
+        (<code>otp_src_R&lt;version&gt;B&lt;revision&gt;/lib/stdlib/src/gb_trees.erl</code>)。
+        同时这也应该是你在生产中用来处理树型结构的模块，而不是重新再搞一个。
+    </p>
 </div>
 
 <h3><a class="section" name="thinking-recursively">Thinking recursively</a></h3>
