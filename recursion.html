@@ -563,9 +563,18 @@ lc_quicksort([Pivot|Rest]) -&gt;
     但是这不会一直保持下去（我们当然没有无限的数据要保存），所以我想说，我们的节点中
     同样存在空节点。</p>
 
-<p>To represent nodes, tuples are an appropriate data structure. For our implementation, we can then define these tuples as <code>{node, {Key, Value, Smaller, Larger}}</code> (a tagged tuple!), where <var>Smaller</var> and <var>Larger</var> can be another similar node or an empty node (<code>{node, nil}</code>). We won't actually need a concept more complex than that.</p>
+<p>
+    为了表示树的节点，元组是最适合的数据结构。
+    对于我们当前设计，我们可以将元组这样定义
+    <code>{node, {Key, Value, Smaller, Larger}}</code> （一个带有标签元组！）,
+    其中<var>Smaller</var>和<var>Larger</var>是另外类似的节点或者空节点（<code>{node, nil}</code>）。
+    事实上，我们并不需要比这更复杂的定义。
+</p>
 
-<p>Let's start building a module for our <a class="source" href="static/erlang/tree.erl" title="tree.erl module">very basic tree implementation</a>. The first function, <code>empty/0</code>, returns an empty node. The empty node is the starting point of a new tree, also called the <em>root</em>:</p>
+<p>让我们构建<a class="source" href="static/erlang/tree.erl" title="tree.erl module">最基础的树实现</a>模块。
+    第一个函数，<code>empty/0</code>，返回一个树的空节点。
+    一个空节点是一个树的开始的基本节点，我们称为<em>根</em>：
+</p>
 
 <pre class="brush:erl">
 -module(tree).
@@ -574,11 +583,32 @@ lc_quicksort([Pivot|Rest]) -&gt;
 empty() -&gt; {node, 'nil'}.
 </pre>
 
-<p>By using that function and then encapsulating all representations of nodes the same way, we hide the implementation of the tree so people don't need to know how it's built. All that information can be contained by the module alone. If you ever decide to change the representation of a node, you can then do it without breaking external code.</p>
+<p>
+    通过使用这类函数封装所有树节点的表示，我们可以将我们的树的实现隐藏起来，
+    这样人们就不知道它是如何构建的。
+    这个模块可以包含所有的信息。如果你以后决定更改节点的表示方式，
+    你可以在不影响外部代码的情况下完成。
+</p>
 
-<p>To add content to a tree, we must first understand how to recursively navigate through it. Let's proceed in the same way as we did for every other recursion example by trying to find the base case. Given that an empty tree is an empty node, our base case is thus logically an empty node. So whenever we'll hit an empty node, that's where we can add our new key/value. The rest of the time, our code has to go through the tree trying to find an empty node where to put content.</p>
+<p> 为了给树添加内容，
+    我们必须线理解如何回朔浏览整棵树。
+    我们像以前写递归一样处理这个问题，让我们先找出最基本的场景。
+    假设一个空树，就是一个空节点，那么我们最基本的逻辑就是一个空节点。
+    所以无论何时，我们找到了一个空节点，我们就可以添加新的键和值。
+    剩下的事情就是，需要写出代码来遍历整棵树，尝试找出空节点来存放我们的内容。
+</p>
 
-<p>To find an empty node starting from the root, we must use the fact that the presence of <var>Smaller</var> and <var>Larger</var> nodes let us navigate by comparing the new key we have to insert to the current node's key. If the new key is smaller than the current node's key, we try to find the empty node inside <var>Smaller</var>, and if it's larger, inside <var>Larger</var>. There is one last case, though: what if the new key is equal to the current node's key? We have two options there: let the program fail or replace the value with the new one. This is the option we'll take here. Put into a function all this logic works the following way:</p>
+<p>
+    为了从根节点开始找到一个空节点，
+    我们必须使用<var>Smaller</var>和<var>Larger</var>节点的内容。
+    我们为了知道选择Larger还是Smaller，就需要不断比较新的键和当前节点键。
+    如果新的键比当前节点的键要小，我们就尝试在<var>Smaller</var>中寻找空节点，
+    但如果正好相反，我们则在<var>Larger</var>中寻找空节点。
+    当然这还有最后一种情况：如果我们新的键和当前节点的键相等该如何？
+    我们有两个选择：让程序失败或将当前值替换成新值。
+    此处我们的选择是用新的值替换当前值。
+    将这些逻辑都放入一个函数中就是这样的：
+</p>
 
 <pre class="brush:erl">
 insert(Key, Val, {node, 'nil'}) -&gt;
