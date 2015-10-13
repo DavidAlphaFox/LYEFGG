@@ -706,29 +706,76 @@ undefined
     </p>
 </div>
 
-<h3><a class="section" name="thinking-recursively">Thinking recursively</a></h3>
+<h3><a class="section" name="thinking-recursively">递归性思维</a></h3>
 
-<p>If you've understood everything in this chapter, thinking recursively is probably becoming more intuitive. A different aspect of recursive definitions when compared to their imperative counterparts (usually in while or for loops) is that instead of taking a step-by-step approach ("do this, then that, then this, then you're done"), our approach is more declarative ("if you get this input, do that, this otherwise"). This property is made more obvious with the help of pattern matching in function heads.</p>
+<p>
+    如果你对本章已经非常理解，你也许会发现递归性的思维是更直观的。
+    当我们和递归想类似的结构（一般是while语句或for语句）相比较，
+    递归的做法是更清晰的（“如果我们的输入是这个，就做哪个，否则就做别的”），
+    而循环结构需要一步一步的逼近这个结果（“先做这个，然后再做哪个，再然后。。。，最后我们完成了”）。
+    这个特性在函数的匹配模式的帮助下显得非常明显。</p>
 
-<p>If you still haven't grasped how recursion works, maybe reading <a class="chapter" href="recursion.html">this</a> will help you.</p>
+<p>
+    如果你还没有掌握递归是如何工作的，
+    你也许需要再读下<a class="chapter" href="recursion.html">这章</a>，这会对你有很大好处。
+</p>
 
-<p>Joking aside, recursion coupled with pattern matching is sometimes an optimal solution to the problem of writing concise algorithms that are easy to understand. By subdividing each part of a problem into separate functions until they can no longer be simplified, the algorithm becomes nothing but assembling a bunch of correct answers coming from short routines (that's a bit similar to what we did with quicksort). This kind of mental abstraction is also possible with your everyday loops, but I believe the practice is easier with recursion. Your mileage may vary.</p>
+<p>
+    玩笑归玩笑，递归加之模式匹配有时是能写出简洁且容易理解的算法的最佳解决方案。
+    通过将问题的各个部分拆分成不同的函数，直到所有函数不能再简化了，
+    这样算法就变成了一堆能给出正确答案的短例程（这是一个有点类似于我们写快速排序的做法）的组合体。
+    这种高层次的抽象也可以用于你平日中使用的循环体，
+    但我认为用递归实践起来更容易。可能你的情况会有所不同。</p>
 
-<p><strong>And now ladies and gentlemen, a discussion: <em>the author vs. himself</em></strong></p>
+<p><strong>好了，女士们，先生们，让我们进行一次讨论： <em>作者的自言自语</em></strong></p>
 
 <ul class="dialogue">
-	<li>&mdash; Okay, I think I understand recursion. I get the declarative aspect of it. I get it has mathematical roots, like with invariable variables. I get that you find it easier in some cases. What else?</li>
-	<li>&mdash; It respects a regular pattern. Find the base cases, write them down, then every other cases should try to converge to these base cases to get your answer. It makes writing functions pretty easy.</li>
-	<li>&mdash; Yeah, I got that, you repeated it a bunch of times already. My loops can do the same.</li>
-	<li>&mdash; Yes they can. Can't deny that!</li>
-	<li>&mdash; Right. A thing I don't get is why you bothered writing all these non-tail recursive versions if they're not as good as tail recursive ones.</li>
-	<li>&mdash; Oh it's simply to make things easier to grasp. Moving from regular recursion, which is prettier and easier to understand, to tail recursion, which is theoretically more efficient, sounded like a good way to show all options.</li>
-	<li>&mdash; Right, so they're useless except for educational purposes, I get it.</li>
-	<li>&mdash; Not exactly. In practice you'll see little difference in the performance between tail recursive and normal recursive calls. The areas to take care of are in functions that are supposed to loop infinitely, like main loops. There's also a type of functions that will always generate very large stacks, be slow and possibly crash early if you don't make them tail recursive. The best example of this is the <a class="external" href="http://en.wikipedia.org/wiki/Fibonacci_number" title="Wikipedia entry for the Fibonacci sequence">Fibonacci function</a>, which grows exponentially if it's not iterative or tail recursive. <img class="right explanation" src="static/img/fib.png" width="254" height="144" alt="Function calls expanded to create the sequence '0,1,1,2,3,5,8...'" /> You should profile your code (I'll show how to do that at a later point, I promise), see what slows it down, and fix it.</li>
-	<li>&mdash; But loops are always iterative and make this a non-issue.</li>
-	<li>&mdash; Yes, but... but... my beautiful Erlang...</li>
-	<li>&mdash; Well isn't that great? All that learning because there is no 'while' or 'for' in Erlang. Thank you very much I'm going back to programming my toaster in C!</li>
-	<li>&mdash; Not so fast there! Functional programming languages have other assets! If we've found some base case patterns to make our life easier when writing recursive functions, a bunch of smart people have found many more to the point where you will need to write very few recursive functions yourself. If you stay around, I'll show you how such abstractions can be built. But for this we will need more power. Let me tell you about higher order functions...</li>
+	<li>&mdash; 好的，我想我已经理解递归了。我懂得了它的定义。
+        我也知道了它的数学定义，就像不变的变量一样。
+        我也确定你发现在某些场景下，它非常简单。那还有什么呢？</li>
+	<li>&mdash; 它遵循一些常见的模式。找到最基本的情况，写下它们，
+        然后写出其它所有向基本情况不断转化的情况，这样你就得到了答案。
+        它将函数编写变的非常简单。
+    </li>
+	<li>&mdash; 是的，我已经了解了，你已经重复它很多次了。
+        我使用循环也可以达到同样的效果
+    </li>
+	<li>&mdash; 是的，它们确实能做。这不可否认！</li>
+	<li>&mdash; 完全正确。一件事，我不明白的是你费心编写这些非尾递归版本，
+        即便它们不如尾递归版本好。
+    </li>
+	<li>&mdash; 哦，这是为了让事情更容易掌握。
+        从常规的美观且简单的递归版本改写到在理论上有效的尾递归版本，
+        这听起来是一个不错的方法去展示所有可能性。
+    </li>
+	<li>&mdash; 好的，我明白了，它们除了教育目没有其它作用。</li>
+	<li>&mdash; 不完全是。在实际应用中，你会看到尾递归和正常递归调用之间的性能差别不大。
+        像主循环函数，这种需要无限循环的函数，是我们主要关注的领域。
+        这里还有一类函数，它们永远都会产生大量的堆栈，并且非常缓慢，甚至如果你不将它们写成尾递归
+        甚至很容易产生崩溃。
+        最好的例子就是 <a class="external" href="http://en.wikipedia.org/wiki/Fibonacci_number" title="Wikipedia entry for the Fibonacci sequence">斐波那契函数</a>，
+        如果不使用迭代或尾递归，就会指数级的增长。
+        <img class="right explanation" src="static/img/fib.png" width="254" height="144" alt="Function calls expanded to create the sequence '0,1,1,2,3,5,8...'" />
+        你应当分析你的代码（我稍后会向你介绍如何做，我保证）看看你的代码是否缓慢并修改它。
+    </li>
+	<li>&mdash;
+        但是循环总是迭代的，所以是没有问题的。
+    </li>
+	<li>&mdash;
+        是的，不过。。。不过。。。我美丽Erlang。。。
+    </li>
+	<li>&mdash;
+        那么是不是很好？
+        因为Erlang中没有'while'或'for'，所以我们要学习这些。
+        十分感谢你，我还是回去写我最喜欢的C吧！
+    </li>
+	<li>&mdash;
+        不要这没心急！函数语言还有其它非常有趣的地方！
+        当我们写递归函数的时候，如果我们发现一些基本模式可以让我们的生活更轻松，
+        并且一群聪明的人发现更重要的是使用函数语言你只需写很少的递归函数。
+        如果你继续跟随我，我将向你展示这种抽象是如何构建的。
+        但是到目前为止，我们将需要更多强有力的工具。让我为你介绍高阶函数。。。
+    </li>
 </ul>
 				<ul class="navigation">
 											<li><a href="types-or-lack-thereof.html" title="Previous chapter">&lt; Previous</a></li>
