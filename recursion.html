@@ -601,7 +601,7 @@ empty() -&gt; {node, 'nil'}.
 <p>
     为了从根节点开始找到一个空节点，
     我们必须使用<var>Smaller</var>和<var>Larger</var>节点的内容。
-    我们为了知道选择Larger还是Smaller，就需要不断比较新的键和当前节点键。
+    我们为了知道选择<var>Larger</var>还是<var>Smaller</var>，就需要不断比较新的键和当前节点键。
     如果新的键比当前节点的键要小，我们就尝试在<var>Smaller</var>中寻找空节点，
     但如果正好相反，我们则在<var>Larger</var>中寻找空节点。
     当然这还有最后一种情况：如果我们新的键和当前节点的键相等该如何？
