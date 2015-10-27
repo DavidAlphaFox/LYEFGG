@@ -48,11 +48,12 @@
 
 <p>
     再一次，这也是一个植根于数学的概念，主要是 <a class="external" href="http://en.wikipedia.org/wiki/Lambda_calculus" title="Wikipedia to the rescue!">lambda演算</a>。
-    Again, this a concept rooted in mathematics,
-    mainly <a class="external" href="http://en.wikipedia.org/wiki/Lambda_calculus" title="Wikipedia to the rescue!">lambda calculus</a>.
-    I won't go into much detail about lambda calculus because some people have a hard time grasping it and it's a bit out of scope. However, I'll define it briefly as a system where everything is a function, even numbers. Because everything is a function, functions must accept other functions as parameters and can operate on them with even more functions!</p>
+    我不会介绍lambda演算非常多的细节，因为很多然需要花费很多时间理解它并且它有点超出本章的范围。
+    尽管如此，我会简单的定义它：一个系统中所有的东西都是函数，即便是数字。
+    因为所有东西都是函数，函数必须接受另一个函数作为参数并且可以用更多函数操作这个参数！
+</p>
 
-<p>Alright, this might be a little bit weird, so let's start with an example:</p>
+<p> 好了，这听起来有点奇怪，所以让我们用一个例子来展示它们：</p>
 
 <pre class="brush:erl">
 -module(hhfuns).
@@ -64,7 +65,7 @@ two() -&gt; 2.
 add(X,Y) -&gt; X() + Y().
 </pre>
 
-<p>Now open the Erlang shell, compile the module and get going:</p>
+<p>现在打开Erlang的shell，编译这个模块并进行一些尝试：</p>
 
 <pre class="brush:eshell">
 1&gt; c(hhfuns).
