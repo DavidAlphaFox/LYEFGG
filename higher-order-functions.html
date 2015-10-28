@@ -80,7 +80,15 @@ add(X,Y) -&gt; X() + Y().
 3
 </pre>
 
-<p>Confusing? Not so much, once you know how it works (isn't that always the case?) In command 2, the atoms <code>one</code> and <code>two</code> are passed to <code>add/2</code>, which then uses both atoms as function names (<code>X() + Y()</code>). If function names are written without a parameter list then those names are interpreted as atoms, and atoms can not be functions, so the call fails. This is the reason why expression 3 also fails: the values 1 and 2 can not be called as functions either, and functions are what we need!</p>
+<p>
+    感到迷惑？并非如此，一旦你知道在第二个命令中这是怎么工作的（难道不是显而易见的吗？），你就不会迷惑。
+    在第二个命令中原子<code>one</code>和<code>two</code>被传入到<code>add/2</code>中，
+    然后在第三个命令中将两个原子当作函数的名字(<code>X() + Y()</code>)。
+    Confusing? Not so much,
+    once you know how it works (isn't that always the case?) In command 2,
+    the atoms <code>one</code> and <code>two</code> are passed to <code>add/2</code>,
+    which then uses both atoms as function names (<code>X() + Y()</code>).
+    If function names are written without a parameter list then those names are interpreted as atoms, and atoms can not be functions, so the call fails. This is the reason why expression 3 also fails: the values 1 and 2 can not be called as functions either, and functions are what we need!</p>
 
 <p>This is why a new notation has to be added to the language in order to let you pass functions from outside a module. This is what <code>fun Module:Function/Arity</code> is: it tells the VM to use that specific function, and then bind it to a variable.</p>
 
