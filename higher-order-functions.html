@@ -88,7 +88,9 @@ add(X,Y) -&gt; X() + Y().
     这就是为什么第三个表达式也会失败：因为值1和2也不能被当作函数调用，并且我们只需要函数做参数！
 </p>
 
-<p>This is why a new notation has to be added to the language in order to let you pass functions from outside a module. This is what <code>fun Module:Function/Arity</code> is: it tells the VM to use that specific function, and then bind it to a variable.</p>
+<p> 这是一个新的语法，为了让你把模块外的函数传入进去。
+    This is why a new notation has to be added to the language in order to let you pass functions from outside a module.
+    This is what <code>fun Module:Function/Arity</code> is: it tells the VM to use that specific function, and then bind it to a variable.</p>
 
 <p>So what are the gains of using functions in that manner? Well a little example might be needed in order to understand it. We'll add a few functions to <code><a class="source" href="static/erlang/hhfuns.erl" title="final implementation">hhfuns</a></code> that work recursively over a list to add or subtract one from each integer of a list:</p>
 
