@@ -91,7 +91,10 @@ add(X,Y) -&gt; X() + Y().
 <p> 这是一个新的语法，为了让你把模块外的函数传入进去。它是这样写的<code>fun Module:Function/Arity</code>：
     这个语法告诉VM，使用那个特殊的函数并将它绑定到一个变量上。</p>
 
-<p>So what are the gains of using functions in that manner? Well a little example might be needed in order to understand it. We'll add a few functions to <code><a class="source" href="static/erlang/hhfuns.erl" title="final implementation">hhfuns</a></code> that work recursively over a list to add or subtract one from each integer of a list:</p>
+<p> 那么我们这样使用函数能获得什么好处呢？
+    让我展示下面的小例子，这也许回让你明白它的好处。
+    我们将向<code><a class="source" href="static/erlang/hhfuns.erl" title="final implementation">hhfuns</a></code>文件中
+    添加一些新的函数，这些函数递归整个列表，并将整个列表中的整数加1或减1：</p>
 
 <pre class="brush:erl">
 increment([]) -&gt; [];
@@ -101,7 +104,11 @@ decrement([]) -&gt; [];
 decrement([H|T]) -&gt; [H-1|decrement(T)].
 </pre>
 
-<p>See how similar these functions are? They basically do the same thing: they cycle through a list, apply a function on each element (<code>+</code> or <code>-</code>) and then call themselves again. There is almost nothing changing in that code: only the applied function and the recursive call are different. The core of a recursive call on a list like that is always the same. We'll abstract all the similar parts in a single function (<code>map/2</code>) that will take another function as an argument:</p>
+<p> 我们可以看出这些函数是多么的相似？它们都做了相同的事情：
+    遍历整个列表，在每个元素上执行相同的函数（<code>+</code>或<code>-</code>），然后再次调用自己。
+    代码中基本上没什么变化：只是被执行的函数和递归调用有些不同。但是做为核心的链表上的递归调用都是相同的。
+    我将抽象这些相同的部分到一个函数（<code>map/2</code>）中，它将接受另一个函数作为参数：
+</p>
 
 <pre class="brush:erl">
 map(_, []) -&gt; [];
@@ -111,7 +118,7 @@ incr(X) -&gt; X + 1.
 decr(X) -&gt; X - 1.
 </pre>
 
-<p>Which can then be tested in the shell:</p>
+<p>我们可以在shell中进行一些测试：</p>
 
 <pre class="brush:eshell">
 1&gt; c(hhfuns).
@@ -128,7 +135,11 @@ decr(X) -&gt; X - 1.
 [0,1,2,3,4]
 </pre>
 
-<p>Here the results are the same, but you have just created a very smart abstraction! Every time you will want to apply a function to each element of a list, you only have to call <code>map/2</code> with your function as a parameter. However, it is a bit annoying to have to put every function we want to pass as a parameter to <code>map/2</code> in a module, name it, export it, then compile it, etc. In fact it's plainly unpractical. What we need are functions that can be declared on the fly...</p>
+<p>
+    我们可以看出结果是相同的，但是我们创建了一个更好的抽象！
+    每次我们想在列表上的每个元素上执行一个函数的时候，我们只需要调用 <code>map/2</code>，并将要执行的函数作为参数传入。
+    但是，有一点烦人的地方，我们每次都需要将放在<code>map/2</code>中作为参数的函数放到一个模块中，对它进行命名和导出，
+    最后还要编译等。这显然不现实，我们需要动态的声明这些函数。。。</p>
 
 
 <h3><a class="section" name="anonymous-functions">Anonymous functions</a></h3>
