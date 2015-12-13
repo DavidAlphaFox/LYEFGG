@@ -143,9 +143,12 @@ decr(X) -&gt; X - 1.
     最后还要编译等。这显然不现实，我们需要动态的声明这些函数。。。</p>
 
 
-<h3><a class="section" name="anonymous-functions">Anonymous functions</a></h3>
+<h3><a class="section" name="anonymous-functions">匿名函数</a></h3>
 
-<p>Anonymous functions, or <em>funs</em>, address that problem by letting you declare a special kind of function inline, without naming them. They can do pretty much everything normal functions can do, except calling themselves recursively (how could they do it if they are anonymous?) Their syntax is:</p>
+<p>
+    匿名函数，或<em>funs</em>，是用来解决让我们声明特殊的内连函数而不想去命名这个函数的这个问题。
+    它们可以完成很多普通函数能完成的事情，但是它们不能递归调用自己（因为为没有名字，它们怎么知道怎么调用自己呢？）
+    它们的语法如下：</p>
 
 <pre class="brush:erl">
 fun(Args1) -&gt;
