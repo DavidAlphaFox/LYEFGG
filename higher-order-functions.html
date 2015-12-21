@@ -178,7 +178,9 @@ a
     抽象所有低级别的代码的能力。基本的概念，如循环都可以被忽略，让你专注于你所要做的事情，而不是你要怎么做它。
 </p>
 
-<p>Anonymous functions are already pretty dandy for such abstractions but they still have more hidden powers:</p>
+<p>
+    匿名函数已经可以非常完美的完成这样的抽象了，但是它们还有很多隐藏的能力等待我们发掘：
+</p>
 
 <pre class="brush:eshell">
 11&gt; PrepareAlarm = fun(Room) -&gt;
@@ -195,7 +197,14 @@ ok
 </pre>
 
 
-<p>Hold the phone Batman! What's going on here? Well, first of all, we declare an anonymous function assigned to <var>PrepareAlarm</var>. This function has not run yet: it only gets executed when <code>PrepareAlarm("bathroom").</code> is called. <img class="left" src="static/img/batman.png" width="137" height="224" alt="Batman with a manly mustache" title="le batman" /> At that point, the call to <code>io:format/2</code> is evaluated and the "Alarm set" text is output. The second expression (another anonymous function) is returned to the caller and then assigned to <var>AlarmReady</var>. Note that in this function, the variable <var>Room</var>'s value is taken from the 'parent' function (<var>PrepareAlarm</var>). This is related to a concept called <em>closures</em>.</p>
+<p>
+    请接电话蝙蝠侠！这里发生了什么？首先，我们先声明了一个匿名函数，并将它赋值给<var>PrepareAlarm</var>。
+    但是这个函数还没有触发：只有在执行<code>PrepareAlarm("bathroom").</code>的时候，它才被真正的调用了。
+    <img class="left" src="static/img/batman.png" width="137" height="224" alt="Batman with a manly mustache" title="le batman" />
+    此时，它会调用<code>io:format/2</code>来输出"Alarm set"。
+    并且使用第二个表达式（另一个匿名函数）作为返回值，返回给调用者，调用者将这个匿名函数赋值给<var>AlarmReady</var>。
+    不过请注意，在这个函数中，变量<var>Room</var>的值是从它的‘父’函数(<var>PrepareAlarm</var>)进行绑定。
+    和这个相关的概念叫做<em>闭包</em>。</p>
 
 <p>To understand closures, one must first understand scope. A function's scope can be imagined as the place where all the variables and their values are stored. In the function <code>base(A) -&gt; B = A + 1.</code>, <var>A</var> and <var>B</var> are both defined to be part of <code>base/1</code>'s scope. This means that anywhere inside <code>base/1</code>, you can refer to <var>A</var> and <var>B</var> and expect a value to be bound to them. And when I say 'anywhere', I ain't kidding, kid; this includes anonymous functions too:</p>
 
