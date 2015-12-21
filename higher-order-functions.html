@@ -206,7 +206,13 @@ ok
     不过请注意，在这个函数中，变量<var>Room</var>的值是从它的‘父’函数(<var>PrepareAlarm</var>)进行绑定。
     和这个相关的概念叫做<em>闭包</em>。</p>
 
-<p>To understand closures, one must first understand scope. A function's scope can be imagined as the place where all the variables and their values are stored. In the function <code>base(A) -&gt; B = A + 1.</code>, <var>A</var> and <var>B</var> are both defined to be part of <code>base/1</code>'s scope. This means that anywhere inside <code>base/1</code>, you can refer to <var>A</var> and <var>B</var> and expect a value to be bound to them. And when I say 'anywhere', I ain't kidding, kid; this includes anonymous functions too:</p>
+<p>
+    为了理解闭包，首先就需要理解作用域。
+    函数作用域可以被想象为一个存放所有变量和它们值的地方。
+    在函数<code>base(A) -&gt; B = A + 1.</code>中<var>A</var>和<var>B</var>
+    都是被定义在<code>base/1</code>的作用域中。这代表着在<code>base/1</code>函数中任何东西都可以引用
+    <var>A</var>和<var>B</var>并且得到相应值。并且当我说‘任何地方’，我并不是在开玩笑，亲；这同样包含匿名函数：
+</p>
 
 <pre class="brush:erl">
 base(A) -&gt;
