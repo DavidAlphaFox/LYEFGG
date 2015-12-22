@@ -221,7 +221,9 @@ base(A) -&gt;
     F().
 </pre>
 
-<p><var>B</var> and <var>A</var> are still bound to <code>base/1</code>'s scope, so the function <var>F</var> can still access them. This is because <var>F</var> inherits <code>base/1</code>'s scope. Like most kinds of real-life inheritance, the parents can't get what the children have:</p>
+<p><var>B</var>和<var>A</var>始终被绑定在<code>base/1</code>函数作用域中，
+    所以函数<var>F</var>能访问它们。这是因为函数<var>F</var>继承了<code>base/1</code>的作用域。
+    像所有真是世界中的继承一样，父函数无法使用子函数作用域内的变量：</p>
 
 <pre class="brush:erl">
 base(A) -&gt;
