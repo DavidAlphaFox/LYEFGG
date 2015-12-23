@@ -233,7 +233,8 @@ base(A) -&gt;
     C.
 </pre>
 
-<p>In this version of the function, <var>B</var> is still equal to <code>A + 1</code> and <var>F</var> will still execute fine. However, the variable <var>C</var> is only in the scope of the anonymous function in <var>F</var>. When <code>base/1</code> tries to access <var>C</var>'s value on the last line, it only finds an unbound variable. In fact, had you tried to compile this function, the compiler would have thrown a fit. Inheritance only goes one way.</p>
+<p> 在这个版本的函数中，
+    In this version of the function, <var>B</var> is still equal to <code>A + 1</code> and <var>F</var> will still execute fine. However, the variable <var>C</var> is only in the scope of the anonymous function in <var>F</var>. When <code>base/1</code> tries to access <var>C</var>'s value on the last line, it only finds an unbound variable. In fact, had you tried to compile this function, the compiler would have thrown a fit. Inheritance only goes one way.</p>
 
 <p>It is important to note that the inherited scope follows the anonymous function wherever it is, even when it is passed to another function:</p>
 
