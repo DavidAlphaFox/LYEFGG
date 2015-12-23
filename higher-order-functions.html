@@ -233,10 +233,15 @@ base(A) -&gt;
     C.
 </pre>
 
-<p> 在这个版本的函数中，
-    In this version of the function, <var>B</var> is still equal to <code>A + 1</code> and <var>F</var> will still execute fine. However, the variable <var>C</var> is only in the scope of the anonymous function in <var>F</var>. When <code>base/1</code> tries to access <var>C</var>'s value on the last line, it only finds an unbound variable. In fact, had you tried to compile this function, the compiler would have thrown a fit. Inheritance only goes one way.</p>
+<p> 在这个版本的函数中，<var>B</var>还是等于<code>A + 1</code>并且<var>F</var>还是能执行的非常好。
+    但是，变量<var>C</var>只包含在匿名函数<var>F</var>的作用域当中。
+    当函数<code>base/1</code>在最后一行，想去访问<var>C</var>的值的时候，它只能得到一个非绑定的变量。
+    事实上，当你编译这个函数的时候，编译器就会丢出一个异常给你。所以继承是单向的。
+</p>
 
-<p>It is important to note that the inherited scope follows the anonymous function wherever it is, even when it is passed to another function:</p>
+<p>
+    这个是非常重要的，我们需要记住匿名函数继承的作用域，不管这个匿名函数是在内部使用，还是把它穿入到另一个函数中：
+</p>
 
 <pre class="brush:erl">
 a() -&gt;
