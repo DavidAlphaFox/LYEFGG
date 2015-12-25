@@ -292,9 +292,9 @@ b(F) -&gt;
     有些秘密被隐藏起来了，只有那些阅读了本指南的html文件的人才会发现！（原作者在html中隐藏了一段，我将它一同翻译出来。）
 </p>
 <p>
-    In fact, this [closure] principle alone is enough to let you implement basic classes and simple object-oriented programming.
-    Take this <a class="source" href="http://learnyousomeerlang.com/static/erlang/oop.erl" title="final implementation">oop.erl</a>
-    module as an overused 'dog is an animal' example:
+    事实上，独自使用［闭包］原则就足可以让你实现基本的类和实现简单的面向对象及继承方式的编程。
+    让我使用<a class="source" href="http://learnyousomeerlang.com/static/erlang/oop.erl" title="final implementation">oop.erl</a>
+    模块，并且重用下‘狗是一个动物的’例子：
 </p>
 
 <pre class="brush:erl">
@@ -328,7 +328,7 @@ cat(Name) -&gt;
     end.
 </pre>
 
-<p>And to use it:</p>
+<p>并且我们这样使用它：</p>
 
 <pre class="brush:eshell">
 16&gt; c(oop).
@@ -357,8 +357,16 @@ cat(Name) -&gt;
 
 <img class="right" src="http://learnyousomeerlang.com/static/img/raptor-dog.png" width="240" height="191" alt="A dog and a raptor: raptor-dog, the best kind of dog." />
 
-<p>Alright, this is not very impressive when we compare it to real OOP languages, but we still managed to cover concepts such as class inheritance, method overriding and constructors (albeit in a terribly basic manner). The important lesson here is that closures can be used to carry state around from function to function. <strong>Note that you should <em>not</em> write new Erlang programs based on that OOP example; nobody does that.</strong> It's an example and nothing more.</p>
-                <!--Secret for you crazy people who read the html comments! Just copy/paste this or something!-->
+<p>
+    好了，当我们和真正的OOP类型的语言相比，这不会让我们感到印象深刻，但是我们依然完成了类继承、
+    方法重载和构建函数（虽然看起来有点奇怪）。
+    当然，我们从这里学到的最重要的一课是，闭包可以将上下文从一个函数传递到另一个函数中。
+    <strong>注意了，你<em>不应当</em>这样编写任何Erlang的代码，因为没人愿意这么做。</strong>
+    这里面仅仅是一个例子，用来展示闭包的能力，不要太当真。如果你很想在Erts平台上使用OOP那么请使用Elixir，
+    Elixir是一个Erts平台上和Ruby／Scala语法非常类似的语言。
+</p>
+
+<!--Secret for you crazy people who read the html comments! Just copy/paste this or something!-->
 <!-- 
 <p>In fact, this [closure] principle alone is enough to let you implement basic classes and simple object-oriented programming. Take this <a class="source" href="http://learnyousomeerlang.com/static/erlang/oop.erl" title="final implementation">oop.erl</a> module as an overused 'dog is an animal' example:</p>
 
@@ -424,7 +432,7 @@ cat(Name) -&gt;
 
 <p>Alright, this is not very impressive when we compare it to real OOP languages, but we still managed to cover concepts such as class inheritance, method overriding and constructors (albeit in a terribly basic manner). The important lesson here is that closures can be used to carry state around from function to function. <strong>Note that you should <em>not</em> write new Erlang programs based on that OOP example; nobody does that.</strong> It's an example and nothing more.</p> -->
 
-<p>A little trap you might fall into when writing anonymous functions is when you try to redefine the scope:</p>
+<p> 当你编写匿名函数的时候，这里还剩一个你也许会陷入的陷阱，就是你重新定义了作用域：</p>
 
 <pre class="brush:erl">
 base() -&gt;
@@ -432,7 +440,12 @@ base() -&gt;
     (fun() -&gt; A = 2 end)().
 </pre>
 
-<p>This will declare an anonymous function and then run it. As the anonymous function inherits <code>base/0</code>'s scope, trying to use the <code>=</code> operator compares 2 with the variable <var>A</var> (bound to 1). This is guaranteed to fail. However it is possible to redefine the variable if it's done in the nested function's head:</p>
+<p>
+    这将声明一个匿名函数并执行它。
+    因为匿名函数继承了<code>base/0</code>的作用域，
+    当我们使用<code>=</code>操作符号去比较变量<var>A</var>（绑定到1上）和2的时候，这一定会失败。
+    然后，这里面可以重新定义变量的，如果我们在内嵌函数头中声明相同的变量，我们就可以重新定义它：
+</p>
 
 <pre class="brush:erl">
 base() -&gt;
@@ -440,7 +453,10 @@ base() -&gt;
     (fun(A) -&gt; A = 2 end)(2).
 </pre>
 
-<p>And this works. If you try to compile it, you'll get a warning about <em>shadowing</em> (<em>"Warning: variable 'A' shadowed in 'fun'"</em>). Shadowing is the term used to describe the act of defining a new variable that has the same name as one that was in the parent scope. This is there to prevent some mistakes (usually rightly so), so you might want to consider renaming your variables in these circumstances.</p>
+<p> 你看到它可以正常的工作。如果你尝试编译这段代码，你会等到一个关于<em>覆盖</em>的警告(<em>"Warning: variable 'A' shadowed in 'fun'"</em>)。
+    覆盖是一个用来描述一个重定义了一个和父作用域同名的新变量。
+    这个提示就是为了防止出现一些错误（通常是正确的行为），但是你会依然希望编译器提示你覆盖了一个变量这种情况。
+</p>
 
 <div class="note update">
     <p><strong>Update:</strong><br />
