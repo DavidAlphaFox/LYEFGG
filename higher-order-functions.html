@@ -459,9 +459,14 @@ base() -&gt;
 </p>
 
 <div class="note update">
-    <p><strong>Update:</strong><br />
-    Starting with version 17.0, the language supports using anonymous functions with an internal name. That's right, <em>anonymous but named functions</em>.</p>
-    <p>The trick is that the name is visible only within the function's scope, not outside of it. The main advantage of this is that it makes it possible to define anonymous recursive functions. For example, we could make an anonymous function that keeps being loud forever:</p>
+    <p><strong>更新：</strong><br />
+        从R17这个版本开始，Erlang开始支持匿名函数的命名。
+        是的，就是你所想的<em>命名的匿名函数</em>。（译者在这里想说，闭包本身就不一定是匿名的，
+        Erlang在此处完善了自身的闭包实现，这样就可以解决匿名函数无法进行尾递归的问题。）
+    </p>
+    <p> 这个技巧是这样的，名字只能在匿名函数的作用内使用，不能在匿名函数的作用域外使用。
+        这样做带来的好处就是，我们可以定义匿名的递归函数。
+        例如，我们可以定一个匿名函数，一直呼叫蝙蝠侠：</p>
 
     <pre class="brush:eshell">
 18&gt; f(PrepareAlarm), f(AlarmReady).
