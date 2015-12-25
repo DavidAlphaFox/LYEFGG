@@ -3,7 +3,7 @@
 	<head>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 		<meta http-equiv="Content-Style-Type" content="text/css" />
-		<meta name="keywords" content="Erlang, 高阶函数,函数,匿名,闭包,作用域,过滤器
+		<meta name="keywords" content="Erlang, 高阶函数,函数,匿名,闭包,作用域,过滤器,OOP,面向对象,
 		function, higher order, anonymous, closure, funs, map, fold, filter, scope" />
 		<meta name="description" content="Higher order functions: how to pass functions as parameters to other functions, declare anonymous functions (funs), understanding scopes and the concept of closures." />
         <meta name="google-site-verification" content="mi1UCmFD_2pMLt2jsYHzi_0b6Go9xja8TGllOSoQPVU" />
@@ -464,7 +464,7 @@ base() -&gt;
         是的，就是你所想的<em>命名的匿名函数</em>。（译者在这里想说，闭包本身就不一定是匿名的，
         Erlang在此处完善了自身的闭包实现，这样就可以解决匿名函数无法进行尾递归的问题。）
     </p>
-    <p> 这个技巧是这样的，名字只能在匿名函数的作用内使用，不能在匿名函数的作用域外使用。
+    <p> 这个技巧是这样的，名字只能在匿名函数的作用域内使用，不能在匿名函数的作用域外使用。
         这样做带来的好处就是，我们可以定义匿名的递归函数。
         例如，我们可以定一个匿名函数，一直呼叫蝙蝠侠：</p>
 
@@ -490,10 +490,14 @@ Alarm tripped in bathroom! Call Batman!
 ...
 </pre>
 
-<p>The <var>Loop</var> variable refers to the anonymous function itself, and within that scope, will be usable as any other similar variable pointing to an anonymous function. This should generally make a lot of operations in the shell a lot less painful moving on forward.</p>
+<p> 变量<var>Loop</var>指向匿名函数自身并且在匿名函数作用域内有效，这个和我们使用相似的变量指向这个匿名函数的时候的效果是一样的。
+    这将会使我们在Shell中的操作不那么痛苦了。</p>
 </div>
 
-<p>We'll set the anonymous function theory aside a bit and we'll explore more common abstractions to avoid having to write more recursive functions, like I promised at the end of the previous chapter.</p>
+<p>
+    就像我之前那章结尾保证的一样，我们了解了很多关于匿名函数的理论，
+    并且探索了更多常见的抽象概念，从而让我们避免编写很多递归函数。
+</p>
 
 
 <img class="right" src="static/img/erland.png" width="267" height="238" alt="A map of Erland, the mystic Erlang island!" />
