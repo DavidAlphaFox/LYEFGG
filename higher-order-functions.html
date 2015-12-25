@@ -268,7 +268,10 @@ b(F) -&gt;
     这是非常有用的，它可以让我们将变量和内容带离原来的上下文，此后就不再需要上下文本身了（这个我们先前的蝙蝠侠的例子一样）。
 </p>
 
-<p>You're most likely to use anonymous functions to carry state around when you have functions defined that take many arguments, but you have a constant one:</p>
+<p>
+    当你有一个函数需要很多参数，但是其中有一个是常量，
+    你也许喜欢使用匿名函数来携带这些变量以及上下文：
+</p>
 
 <pre class="brush:eshell">
 16&gt; math:pow(5,2).
@@ -281,9 +284,81 @@ b(F) -&gt;
 [2.0,4.0,8.0,16.0]
 </pre>
 
-<p>By wrapping the call to <code>math:pow/2</code> inside an anonymous function with the <var>Base</var> variable bound in its scope, we made it possible to have each of the calls to <var>PowerOfTwo</var> in <code>hhfuns:map/2</code> use the integers from the list as the exponents of our base.</p>
+<p> 通过将调用<code>math:pow/2</code>函数和变量<var>Base</var>绑定且封装在一个匿名函数中，
+    我们将<var>PowerOfTwo</var>传入<code>hhfuns:map/2</code>进行多次的固定指数的函数调用变成了可能。
+</p>
 
-<!-- Secret for you crazy people who read the html comments! Just copy/paste this or something! -->
+<p>
+    有些秘密被隐藏起来了，只有那些阅读了本指南的html文件的人才会发现！（原作者在html中隐藏了一段，我将它一同翻译出来。）
+</p>
+<p>
+    In fact, this [closure] principle alone is enough to let you implement basic classes and simple object-oriented programming.
+    Take this <a class="source" href="http://learnyousomeerlang.com/static/erlang/oop.erl" title="final implementation">oop.erl</a>
+    module as an overused 'dog is an animal' example:
+</p>
+
+<pre class="brush:erl">
+-module(oop).
+-export([animal/1, dog/1, cat/1]).
+
+%% all the method calls need to be in tuples when they have more than
+%% one argument so we can use functions of arity 1 for every call we make.
+
+animal(Name) -&gt;
+    fun(type) -&gt; "living thing";
+       (name) -&gt; Name;
+       (move) -&gt; Name++" moves around...";
+       ({eat, Item}) -&gt; Name++" eats "++Item;
+       (_) -&gt; "I'm sorry Dave, I can't do that."
+    end.
+
+dog(Name) -&gt;
+    Parent = animal(Name),
+    fun(talk) -&gt; Name++" says: Woof!";
+       ({chase, Animal}) when is_function(Animal) -&gt;
+            Name++" chases a "++Animal(type)++" named "++Animal(name)++" around";
+       (X) -&gt; Parent(X)
+    end.
+
+cat(Name) -&gt;
+    Parent = animal(Name),
+    fun(type) -&gt; "cat";
+       (talk) -&gt; Name++" says: Meow!";
+       (X) -&gt; Parent(X)
+    end.
+</pre>
+
+<p>And to use it:</p>
+
+<pre class="brush:eshell">
+16&gt; c(oop).
+{ok, oop}
+17&gt; Bird = oop:animal("Bird").
+#Fun&lt;oop.0.88943279&gt;
+18&gt; Bird(type).
+"living thing"
+19&gt; Bird({eat, worm}).
+"Bird eats worm"
+20&gt; Dog = oop:dog("Raptor-Dog").
+#Fun&lt;oop.1.133772145&gt;
+21&gt; Dog(talk).
+"Raptor-Dog says: Woof!"
+22&gt; Dog(name).
+"Raptor-Dog"
+23&gt; Cat = oop:cat("Sgt. McMittens").
+#Fun&lt;oop.2.66956814&gt;
+24&gt; Cat(type).
+"cat"
+25&gt; Dog({chase, Cat}).
+"Raptor-Dog chases a cat named Sgt. McMittens around"
+26&gt; Cat({play, "yarn"}).
+"I'm sorry Dave, I can't do that."
+</pre>
+
+<img class="right" src="http://learnyousomeerlang.com/static/img/raptor-dog.png" width="240" height="191" alt="A dog and a raptor: raptor-dog, the best kind of dog." />
+
+<p>Alright, this is not very impressive when we compare it to real OOP languages, but we still managed to cover concepts such as class inheritance, method overriding and constructors (albeit in a terribly basic manner). The important lesson here is that closures can be used to carry state around from function to function. <strong>Note that you should <em>not</em> write new Erlang programs based on that OOP example; nobody does that.</strong> It's an example and nothing more.</p>
+                <!--Secret for you crazy people who read the html comments! Just copy/paste this or something!-->
 <!-- 
 <p>In fact, this [closure] principle alone is enough to let you implement basic classes and simple object-oriented programming. Take this <a class="source" href="http://learnyousomeerlang.com/static/erlang/oop.erl" title="final implementation">oop.erl</a> module as an overused 'dog is an animal' example:</p>
 
