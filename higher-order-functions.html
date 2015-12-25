@@ -261,7 +261,12 @@ b(F) -&gt;
 "a/0's password is pony"
 </pre>
 
-<p>Who told <code>a/0</code>'s password? Well, <code>a/0</code> did. While the anonymous function has <code>a/0</code>'s scope when it's declared in there, it can still carry it when executed in <code>b/1</code>, as explained above. This is very useful because it lets us carry around parameters and content out of its original context, where the whole context itself are not needed anymore (exactly like we did with Batman in a previous example).</p>
+<p>
+    是谁泄漏了<code>a/0</code>中的密码呢？当然是<code>a/0</code>自己。
+    因为匿名函数在<code>a/0</code>中被声明，所以匿名函数可以访问<code>a/0</code>的作用域，
+    所以它在<code>b/1</code>中实行的时候，就像前面所有的那样，匿名函数依然可以访问的到<code>a/0</code>中的变量。
+    这是非常有用的，它可以让我们将变量和内容带离原来的上下文，此后就不再需要上下文本身了（这个我们先前的蝙蝠侠的例子一样）。
+</p>
 
 <p>You're most likely to use anonymous functions to carry state around when you have functions defined that take many arguments, but you have a constant one:</p>
 
