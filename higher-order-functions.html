@@ -3,7 +3,7 @@
 	<head>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 		<meta http-equiv="Content-Style-Type" content="text/css" />
-		<meta name="keywords" content="Erlang, 高阶函数,函数,匿名,闭包,作用域,过滤器,OOP,面向对象,
+		<meta name="keywords" content="Erlang, 高阶函数,函数,匿名,闭包,作用域,过滤器,OOP,面向对象,隐藏章节,秘密,
 		function, higher order, anonymous, closure, funs, map, fold, filter, scope" />
 		<meta name="description" content="Higher order functions: how to pass functions as parameters to other functions, declare anonymous functions (funs), understanding scopes and the concept of closures." />
         <meta name="google-site-verification" content="mi1UCmFD_2pMLt2jsYHzi_0b6Go9xja8TGllOSoQPVU" />
@@ -502,16 +502,24 @@ Alarm tripped in bathroom! Call Batman!
 
 <img class="right" src="static/img/erland.png" width="267" height="238" alt="A map of Erland, the mystic Erlang island!" />
 
-<h3><a class="section" name="maps-filters-folds">Maps, filters, folds and more</a></h3>
+<h3><a class="section" name="maps-filters-folds">Maps，filters，folds和其它</a></h3>
 
-<p>At the beginning of this chapter, I briefly showed how to abstract away two similar functions to get a <code>map/2</code> function. I also affirmed that such a function could be used for any list where we want to act on each element. The function was the following:</p>
+<p>
+    在本章开始的时候，
+    我简单的展示了如何使用抽象的方式创建了两个和<code>map/2</code>相似的函数。
+    我也非常肯定的说这类函数可以用在我们想对每个元素进行操作的任意列表上。
+    我们可以这样定义这种函数：
+</p>
 
 <pre class="brush:erl">
 map(_, []) -&gt; [];
 map(F, [H|T]) -&gt; [F(H)|map(F,T)].
 </pre>
 
-<p>However, there are many other similar abstractions to build from commonly occurring recursive functions. Let's first take a look at these two functions:</p>
+<p>
+    然而，这里有非常多的类似的抽象函数去替代常见的递归函数。
+    让我们先来看看下面这个两个函数吧：
+</p>
 
 <pre class="brush:erl">
 %% only keep even numbers
@@ -533,7 +541,13 @@ old_men([_|People], Acc) -&gt;
     old_men(People, Acc).
 </pre>
 
-<p>The first one takes a list of numbers and returns only those that are even. The second one goes through a list of people of the form <code>{Gender, Age}</code> and only keeps those that are males over 60. The similarities are a bit harder to find here, but we've got some common points. Both functions operate on lists and have the same objective of keeping elements that succeed some test (also a <em>predicate</em>) and then drop the others. From this generalization we can extract all the useful information we need and abstract them away:</p>
+<p> 第一个函数接受一个整数列表，并且只返回那些是奇数的。
+    第二个函数接受一个元素为<code>{Gender, Age}</code>类型的人员列表，
+    并且只返回那些超过60岁的男性的元素。
+    这里我们很难找到任何相似之处，但是我们依然可以找到一些相同的点。
+    两个函数都操作一个列表，并且以保留通过测试（一种<em>断言</em>）的元素并剔除其它元素为目标。
+    通过这两个概括，我们可以得到抽象这种行为的所有信息：
+</p>
 
 <pre class="brush:erl">
 filter(Pred, L) -&gt; lists:reverse(filter(Pred, L,[])).
@@ -546,7 +560,11 @@ filter(Pred, [H|T], Acc) -&gt;
     end.
 </pre>
 
-<p>To use the filtering function we now only need to get the test outside of the function. Compile the <code><a class="source" href="static/erlang/hhfuns.erl" title="final implementation">hhfuns</a></code> module and try it:</p>
+<p>
+    为了使用过滤函数，我们只能在将函数保存到文件中，在函数以为进行测试。
+    编译 <code><a class="source" href="static/erlang/hhfuns.erl" title="final implementation">hhfuns</a></code>
+    模块并尝试执行它：
+</p>
 
 <pre class="brush:eshell">
 1&gt; c(hhfuns).
@@ -561,9 +579,18 @@ filter(Pred, [H|T], Acc) -&gt;
 [{male,66},{male,74}]
 </pre>
 
-<p>These two examples show that with the use of the <code>filter/2</code> function, the programmer only has to worry about producing the predicate and the list. The act of cycling through the list to throw out unwanted items is no longer necessary to think about. This is one important thing about abstracting functional code: try to get rid of what's always the same and let the programmer supply in the parts that change.</p>
+<p>
+    这两个例子展示了如何使用<code>filter/2</code>函数，
+    程序员们只需要关注想要的结果，如何编写断言和使用哪个列表。
+    整个循环操作丢弃我们所不需要的项，我们就不需要再关心了。
+    其中关于抽象函数最重要的一条：
+    尝试让程序员远离那些一成不变的重复，让程序员更专注那些需要改变的部分。
+</p>
 
-<p>In the previous chapter, another kind of recursive manipulation we applied on lists was to look at every element of a list one after the other and reduce them to a single answer. This is called a <em>fold</em> and can be used on the following functions:</p>
+<p>
+    在前面的章节中，我们介绍了另一中递归操作，我们逐一遍历列表中的每一个元素，并将它们汇总成一个结果。
+    这个我们称为<em>fold</em>，我们可以将这个函数用在下面这些函数上：
+</p>
 
 <pre class="brush:erl">
 %% find the maximum of a list
@@ -589,16 +616,34 @@ sum([H|T], Sum) -&gt; sum(T, H+Sum).
 
 <img class="right" src="static/img/foldr.png" width="172" height="248" alt="A playing card with 'Joker' replaced by 'Foldr'. The joker has huge glasses, a hook and hairy legs" title="Terrrrrible puns, ladies and gentlemen!" />
 
-<p>To find how the fold should behave, we've got to find all the common points of these actions and then what is different. As mentioned above, we always have a reduction from a list to a single value. Consequently, our fold should only consider iterating while keeping a single item, no list-building needed. Then we need to ignore the guards, because they're not always there: these need to be in the user's function. In this regard, our folding function will probably look a lot like sum.</p>
+<p>
+    为了发现fold该如何进行抽象，
+    我们需要找出这些函数的所有共同点，然后再找出它们的不同点。
+    就像我们前面所提到的，这些函数都是将一个列表转化为一个单值。
+    显然，我们的fold应当考虑迭代的同时，还要考虑保存单值，但是我们并不需要重新构建一个列表。
+    接着我们需要忽略哨位，因为并不是所有函数都会有：
+    因为这些都需要放到程序员所定义的函数中。从这个角度来看，我们的fold函数和sum函数是非常像的。
 
-<p>A subtle element of all three functions that wasn't mentioned yet is that every function needs to have an initial value to start counting with. In the case of <code>sum/2</code>, we use 0 as we're doing addition and given <code>X = X + 0</code>, the value is neutral and we can't mess up the calculation by starting there. If we were doing multiplication we'd use 1 given <code>X = X * 1</code>. The functions <code>min/1</code> and <code>max/1</code> can't have a default starting value: if the list was only negative numbers and we started at 0, the answer would be wrong. As such, we need to use the first element of the list as a starting point. Sadly, we can't always decide this way, so we'll leave that decision to the programmer. By taking all these elements, we can build the following abstraction:</p>
+</p>
+
+<p>
+    这三个函数都有一个微妙的元素，虽然我们没有提及，但是每一个函数都需要有一个初始值才能进行计算。
+    在<code>sum/2</code>这个例子中，我们使用0作为初始值，这样我们就可以进行<code>X = X + 0</code>计算，
+    由于0是一个中性值，因此用0作为初始值我们就不会搞乱我们的计算过程。
+    如果我们进行乘法操作，我们需要使用1作为初始值进行<code>X = X * 1</code>计算。
+    然而函数<code>min/1</code>和<code>max/1</code>却不能使用任何初始值：
+    如果一个列表只有负数，我们使用0作为初始值，那么返回的结果将是错误的。
+    因此，我们需要使用列表的第一个元组作为初始值。
+    很可惜的是，我们不能总是这样作出决策，所以我们将这个决策权交给了程序员。
+    通过这些讨论，我们可以构建这样的抽象：
+</p>
 
 <pre class="brush:erl">
 fold(_, Start, []) -&gt; Start;
 fold(F, Start, [H|T]) -&gt; fold(F, F(H,Start), T).
 </pre>
 
-<p>And when tried:</p>
+<p>接着我们要做一些尝试：</p>
 
 <pre class="brush:eshell">
 6&gt; c(hhfuns).
@@ -613,9 +658,13 @@ fold(F, Start, [H|T]) -&gt; fold(F, F(H,Start), T).
 21
 </pre>
 
-<p>Pretty much any function you can think of that reduces lists to 1 element can be expressed as a fold.</p>
+<p> 不错吧，任何想将列表归并成1个元素的函数，都可以使用fold函数。</p>
 
-<p>What's funny there is that you can represent an accumulator as a single element (or a single variable), and an accumulator can be a list. Therefore, we can use a fold to build a list. This means fold is universal in the sense that you can implement pretty much any other recursive function on lists with a fold, even map and filter:</p>
+<p>
+    非常好，此刻我们可以将累加器作为一个单独的元素（或者单独的值），同时累加器也可以是一个列表。
+    因此，我们可以fold去构建一个列表。
+    从中我们看到fold是一个非常全面的函数，你可以使用fold来实现其它的在列表上使用的递归函数，其中包括map和filer：
+</p>
 
 <pre class="brush:erl">
 reverse(L) -&gt;
@@ -634,11 +683,39 @@ filter2(Pred, L) -&gt;
     reverse(fold(F, [], L)).
 </pre>
 
-<p>And they all work the same as those written by hand before. How's that for powerful abstractions?</p>
+<p>
+    好了，这些函数都像我们手写的函数一样得到正确的结果。足可见抽象的强大。
+</p>
 
-<p>Map, filters and folds are only one of many abstractions over lists provided by the Erlang standard library (see <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#map/2" title="unofficial, but cleaner doc">lists:map/2</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#filter/2" title="unofficial, but cleaner doc">lists:filter/2</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#foldl/3" title="unofficial, but cleaner doc">lists:foldl/3</a></code> and <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#foldr/3" title="unofficial, but cleaner doc">lists:foldr/3</a></code>). Other functions include <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#all/2" title="unofficial, but cleaner doc">all/2</a></code> and <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#any/2" title="unofficial, but cleaner doc">any/2</a></code> which both take a predicate and test if all the elements return true or if at least one of them returns true, respectively. Then you have <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#dropwhile/2" title="unofficial, but cleaner doc">dropwhile/2</a></code> that will ignore elements of a list until it finds one that fit a certain predicate, its opposite, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#takewhile/2" title="same doc, still cleaner!">takewhile/2</a></code>, that will keep all elements until there is one that doesn't return true to the predicate. A complimentary function to the two previous ones is <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#partition/2" title="not worth adding more of these">partition/2</a></code>, which will take a list and return two: one that has the terms which satisfy a given predicate, and one list for the others. Other frequently used lists functions include <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#flatten/1" title="here it goes again">flatten/1</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#flatlength/1" title="more function description">flatlength/1</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#flatmap/2" title="flatten &lt;3 map">flatmap/2</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#merge/1" title="Gotta merge em' all, pokelists!">merge/1</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#nth/2" title="woop de bop, still the same as other doc links in this paragraph">nth/2</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#nthtail/2" title="it's nth/2 but not really">nthtail/2</a></code>, <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#split/2" title="thank the lord it's over!">split/2</a></code> and a bunch of others.</p>
+<p>
+    Map，filter和fold只是Erlang标准库lists操作抽象的一部分
+    (可以查看<code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#map/2" title="unofficial, but cleaner doc">lists:map/2</a></code>,
+    <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#filter/2" title="unofficial, but cleaner doc">lists:filter/2</a></code>,
+    <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#foldl/3" title="unofficial, but cleaner doc">lists:foldl/3</a></code>
+    和<code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#foldr/3" title="unofficial, but cleaner doc">lists:foldr/3</a></code>）。
 
-<p>You'll also find other functions such as zippers (as seen in last chapter), unzippers, combinations of maps and folds, etc. I encourage you to read the <a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html">documentation on lists</a> to see what can be done. You'll find yourself rarely needing to write recursive functions by using what's already been abstracted away by smart people.</p>
+    其它函数包括 <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#all/2" title="unofficial, but cleaner doc">all/2</a>
+    </code> 和
+    <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#any/2" title="unofficial, but cleaner doc">any/2</a></code>
+    这两个函数分别接受一个断言，并且测试是否所有的元素都符合断言的条件或者其中至少一个元素符合断言的条件。
+    还有<code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#dropwhile/2" title="unofficial, but cleaner doc">dropwhile/2</a></code>
+    函数，它将忽略列表中的元素，直到它找到一个符合断言条件的元素，和它相反的是
+    <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#takewhile/2" title="same doc, still cleaner!">takewhile/2</a></code>函数，
+    它将保留所有的元素直到找到一个符合断言条件的元素。同时跟随前两个函数附赠了一个<code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#partition/2" title="not worth adding more of these">partition/2</a></code>函数，
+    该函数将返回两个部分：一部分是符合断言条件的元素，另一部分是不符合断言的元素。另一些在列表上常用的函数包括
+    <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#flatten/1" title="here it goes again">flatten/1</a></code>，
+    <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#flatlength/1" title="more function description">flatlength/1</a></code>，
+    <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#flatmap/2" title="flatten &lt;3 map">flatmap/2</a></code>，
+    <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#merge/1" title="Gotta merge em' all, pokelists!">merge/1</a></code>，
+    <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#nth/2" title="woop de bop, still the same as other doc links in this paragraph">nth/2</a></code>，
+    <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#nthtail/2" title="it's nth/2 but not really">nthtail/2</a></code>，
+    <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#split/2" title="thank the lord it's over!">split/2</a></code>和其它的函数。
+</p>
+
+<p>
+    你还会碰到其它类似zippers，unzippers，maps和folds的组合等。
+    我强烈建议你去阅读下 <a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html">documentation on lists</a>这个文档，从而直到我们都能做什么。
+    你会发现，你自己很少需要去写递归函数，因为你可以使用这些非常好的抽象函数。</p>
 
 				<ul class="navigation">
 											<li><a href="recursion.html" title="Previous chapter">&lt; Previous</a></li>
