@@ -503,14 +503,15 @@ Alarm tripped in bathroom! Call Batman!
 <img class="right" src="static/img/erland.png" width="267" height="238" alt="A map of Erland, the mystic Erlang island!" />
 
 <h3><a class="section" name="maps-filters-folds">Maps，filters，folds和其它</a></h3>
-
+<br>
 <p>
     在本章开始的时候，
     我简单的展示了如何使用抽象的方式创建了两个和<code>map/2</code>相似的函数。
     我也非常肯定的说这类函数可以用在我们想对每个元素进行操作的任意列表上。
     我们可以这样定义这种函数：
 </p>
-
+<br>
+<br>
 <pre class="brush:erl">
 map(_, []) -&gt; [];
 map(F, [H|T]) -&gt; [F(H)|map(F,T)].
