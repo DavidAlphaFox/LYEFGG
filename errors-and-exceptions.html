@@ -3,7 +3,8 @@
 	<head>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 		<meta http-equiv="Content-Style-Type" content="text/css" />
-		<meta name="keywords" content="Erlang, exception, error, exit, throw, try, catch, crash, runtime, process" />
+		<meta name="keywords" content="异常处理,运行时,
+		Erlang, exception, error, exit, throw, try, catch, crash, runtime, process" />
 		<meta name="description" content="A list of compile-time errors and warnings, runtime errors in Erlang. Also errors, exits and throws then how to handle them with try ... catch and other constructs." />
         <meta name="google-site-verification" content="mi1UCmFD_2pMLt2jsYHzi_0b6Go9xja8TGllOSoQPVU" />
 		<link rel="stylesheet" type="text/css" href="static/css/screen.css" media="screen" />
@@ -33,12 +34,19 @@
 			</div><!-- menu -->
 			<div id="content">
             <div class="noscript"><noscript>Hey there, it appears your Javascript is disabled. That's fine, the site works without it. However, you might prefer reading it with syntax highlighting, which requires Javascript!</noscript></div>
-<h2>Errors and Exceptions</h2>
-<h3><a class="section" name="not-so-fast">Not so fast!</a></h3>
+<h2>错误和异常</h2>
+<h3><a class="section" name="not-so-fast">不要那么着急！</a></h3>
 
 <img class="left" src="static/img/cyclist.png" width="268" height="252" alt="A green man with a huge head and tiny body on a bicycle" title="I don't know why I drew that" />
 
-<p>There's no right place for a chapter like this one. By now, you've learned enough that you're probably running into errors, but not yet enough to know how to handle them. In fact we won't be able to see all the error-handling mechanisms within this chapter. That's a bit because Erlang has two main paradigms: functional and concurrent. The functional subset is the one I've been explaining since the beginning of the book: referential transparency, recursion, higher order functions, etc. The concurrent subset is the one that makes Erlang famous: actors, thousands and thousands of concurrent processes, supervision trees, etc.</p>
+<p>
+    没有什么好的地方可以放置这章这种内容。
+    到目前为止，你已经经历了很多执行异常的场景，但是你还不知道该怎么去处理它们。
+    事实上，在这个章节内，我们不会看到所有的异常处理的技术。
+    这是因为Erlang存在两种主要的范式：函数和并发。
+    关于的函数部分，我们从这本书的开头就已经在介绍了：
+    透明参考，递归，高阶函数等。
+    关于并发的部分，也是Erlang非常的出名的部分：Actor，成百上千的进程，监控树等。</p>
 
 <p>Because I judge the functional part essential to know before moving on to the concurrent part, I'll only cover the functional subset of the language in this chapter. If we are to manage errors, we must first understand them.</p>
 
