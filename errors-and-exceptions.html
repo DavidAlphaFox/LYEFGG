@@ -114,7 +114,9 @@
    <dd>You're using a variable declared within one of the branches of a <code>case ... of</code> outside of it. This is considered unsafe. If you want to use such variables, you'd be better of doing <code>MyVar = case ... of</code>...</dd>
 </dl>
 
-<p>This should cover most errors you get at compile-time at this point. There aren't too many and most of the time the hardest part is finding which error caused a huge cascade of errors listed against other functions. 
+<p>
+    这里应该包含了编译时期绝大部分的错误。
+    This should cover most errors you get at compile-time at this point. There aren't too many and most of the time the hardest part is finding which error caused a huge cascade of errors listed against other functions.
 It is better to resolve compiler errors in the order they were reported to avoid being misled by errors which may not actually be errors at all. Other kinds of errors sometimes appear and if you've got one I haven't included, send me an email and I'll add it along with an explanation as soon as possible.</p>
 
 
