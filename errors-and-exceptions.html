@@ -131,7 +131,20 @@
     这类错误，不会让你的程序崩溃，只是会返回你没见过的坏数据或者让你的程序做出非你预想的结果。
 </p>
 
-<p>You're most likely on your own when it comes to this, but Erlang has many facilities to help you there, including test frameworks, TypEr and Dialyzer (as described in the <a class="chapter" href="types-or-lack-thereof.html#for-type-junkies">types chapter</a>), a <a class="docs" href="http://www.erlang.org/doc/apps/debugger/debugger_chapter.html" title="official documentation">debugger</a> and <a class="docs" href="http://erldocs.com/17.3/runtime_tools/dbg.html" title="link to non-official documentation">tracing module</a>, etc. Testing your code is likely your best defense. Sadly, there are enough of these kinds of errors in every programmer's career to write a few dozen books about so I'll avoid spending too much time here. It's easier to focus on those that make your programs crash, because it happens right there and won't bubble up 50 levels from now. Note that this is pretty much the origin of the 'let it crash' ideal I mentioned a few times already.</p>
+<p>
+    很多时候你希望是自己发现这些问题，
+    不过Erlang有很多工具可以帮助自己发现这些问题，其中包括测试框架，
+    TypEr和Dialyzer（将在章节<a class="chapter" href="types-or-lack-thereof.html#for-type-junkies">类型</a>中出现），
+    还有一个好用的
+    <a class="docs" href="http://www.erlang.org/doc/apps/debugger/debugger_chapter.html"
+       title="official documentation">调试器</a>和
+   <a class="docs" href="http://erldocs.com/17.3/runtime_tools/dbg.html"
+      title="link to non-official documentation">追踪单元</a>等等。
+    Testing your code is likely your best defense. Sadly, there are enough of these kinds of errors in every programmer's
+    career to write a few dozen books about so I'll avoid spending too much time here.
+    It's easier to focus on those that make your programs crash,
+    because it happens right there and won't bubble up 50 levels from now.
+    Note that this is pretty much the origin of the 'let it crash' ideal I mentioned a few times already.</p>
 
 
 <h3><a class="section" name="run-time-errors">Run-time Errors</a></h3>
