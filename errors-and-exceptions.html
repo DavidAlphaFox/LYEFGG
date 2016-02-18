@@ -124,7 +124,12 @@
 
 <img class="right" src="static/img/exam.png" width="232" height="224" alt="An exam with the grade 'F'" title="This is the worst essay on underwater breakdancing I have ever read!" />
 
-<p>Logical errors are the hardest kind of errors to find and debug. They're most likely errors coming from the programmer: branches of conditional statements such as 'if's and 'case's that don't consider all the cases, mixing up a multiplication for a division, etc. They do not make your programs crash but just end up giving you unseen bad data or having your program work in an unintended manner.</p>
+<p>
+    逻辑错误是非常难发现和调试的错误。
+    这类错误绝大部分都是出自程序员自己：
+    一般来讲，都是'if'或者'case'的选择分支中没有考虑全面，将应当使用除法的地方和使用乘法的地方混淆了，等等。
+    这类错误，不会让你的程序崩溃，只是会返回你没见过的坏数据或者让你的程序做出非你预想的结果。
+</p>
 
 <p>You're most likely on your own when it comes to this, but Erlang has many facilities to help you there, including test frameworks, TypEr and Dialyzer (as described in the <a class="chapter" href="types-or-lack-thereof.html#for-type-junkies">types chapter</a>), a <a class="docs" href="http://www.erlang.org/doc/apps/debugger/debugger_chapter.html" title="official documentation">debugger</a> and <a class="docs" href="http://erldocs.com/17.3/runtime_tools/dbg.html" title="link to non-official documentation">tracing module</a>, etc. Testing your code is likely your best defense. Sadly, there are enough of these kinds of errors in every programmer's career to write a few dozen books about so I'll avoid spending too much time here. It's easier to focus on those that make your programs crash, because it happens right there and won't bubble up 50 levels from now. Note that this is pretty much the origin of the 'let it crash' ideal I mentioned a few times already.</p>
 
