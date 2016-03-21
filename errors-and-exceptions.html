@@ -162,7 +162,7 @@
 ** exception error: no function clause matching lists:sort(fffffff)
         </pre>
     </dd>
-    <dd>All the guard clauses of a function failed, or none of the function clauses' patterns matched.</dd>
+    <dd> 当所有函数的哨位都失败了，或者没有任何一个函数模式匹配，我们就会看到这个错误。</dd>
 
     <dt>case_clause</dt>
     <dd>
@@ -174,7 +174,8 @@
 ** exception error: no case clause matching "Unexpected Value"
         </pre>
     </dd>
-    <dd>Looks like someone has forgotten a specific pattern in their <code>case</code>, sent in the wrong kind of data, or needed a catch-all clause!</dd>
+    <dd> 这个看起来更像某人忘记<code>case</code>中的一些特殊情况，或者发送了错误的数据，
+        或者需要一个捕获所有的分支！</dd>
 
     <dt>if_clause</dt>
     <dd>
