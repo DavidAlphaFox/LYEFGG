@@ -186,7 +186,9 @@
 ** exception error: no true branch found when evaluating an if expression
         </pre>
     </dd>
-    <dd>This is pretty similar to <code>case_clause</code> errors: it can not find a branch that evaluates to <code>true</code>. Ensuring you consider all cases or add the catch-all <code>true</code> clause might be what you need.</dd>
+    <dd>这个和<code>case_clause</code>错误很像：
+        因为它没有办法找到一个可以判定是<code>true</code>的分支。
+        所以你需要重新审视所有的分支或者添加一个默认的<code>true</code>分支，这样才能保证你的代码没问题。</dd>
 
     <dt>badmatch</dt>
     <dd>
@@ -195,7 +197,13 @@
 ** exception error: no match of right hand side value {4,5}
         </pre>
     </dd>
-    <dd>Badmatch errors happen whenever pattern matching fails. This most likely means you're trying to do impossible pattern matches (such as above), trying to bind a variable for the second time, or just anything that isn't equal on both sides of the <code>=</code> operator (which is pretty much what makes rebinding a variable fail!). Note that this error sometimes happens because the programmer believes that a variable of the form <var>_MyVar</var> is the same as <code>_</code>. Variables with an underscore are normal variables, except the compiler won't complain if they're not used. It is not possible to bind them more than once.</dd>
+    <dd>
+        错误匹配这个错误，是在任何发生匹配失败的时候就会产生的。
+        这个绝大部分情况都是，你尝试一个不可能的模式匹配（就像上面那样），活着尝试绑定变量两次，
+        或者像<code>=</code>操作符两边不想等（这经常造成重新绑定变量失败！）。
+        请注意，出现这样的错误是因为，很多开发人员认为<var>_MyVar</var>和<code>_</code>具有相同的性质。
+        以下划线开头的变量是普通变量，除了当你不使用的时候，编译器不会向你抱怨说该变量没使用。它是不能被绑定多于一次的。
+    </dd>
 
     <dt>badarg</dt>
     <dd>
@@ -206,7 +214,10 @@
         called as binary_to_list("heh, already a list")
         </pre>
     </dd>
-    <dd>This one is really similar to <code>function_clause</code> as it's about calling functions with incorrect arguments. The main difference here is that this error is usually triggered by the programmer after validating the arguments from within the function, outside of the guard clauses. I'll show how to throw such errors later in this chapter.</dd>
+    <dd>
+        这个和<code>function_clause</code>错误非常像，因为都是用不正确的参数调用了函数。其中主要的不同是
+        这个错误经常是因为开发人员在函数哨位外的函数内进行参数的验证。我将在后面的章节中，告诉你怎么主动throw这个错误信息。
+    </dd>
 
     <dt>undef</dt>
     <dd>
@@ -215,7 +226,16 @@
 ** exception error: undefined function lists:random/1
         </pre>
     </dd>
-    <dd>This happens when you call a function that doesn't exist. Make sure the function is exported from the module with the right arity (if you're calling it from outside the module) and double check that you did type the name of the function and the name of the module correctly. Another reason to get the message is when the module is not in Erlang's search path. By default, Erlang's search path is set to be in the current directory. You can add paths by using <code><a class="docs" href="http://erldocs.com/17.3/kernel/code.html#add_patha/1" title="I'll kill my brain finding new titles for the unofficial doc site">code:add_patha/1</a></code> or <code><a class="docs" href="http://erldocs.com/17.3/kernel/code.html#add_pathz/1" title="It's becoming hard to have new ideas">code:add_pathz/1</a></code>. If this still doesn't work, make sure you compiled the module to begin with!</dd>
+    <dd>
+        这个错误主要是当调用一个函数时，该函数不存在。
+        情确保函数和函数的变量数量已经从模块中正确的导出（如果你是从模块外部调用）并且
+        再检查下你的模块和函数名拼写是否正确。
+        还有一种情况下，我们会看到这个错误，就是模块并不在Erlang的搜索路径下。
+        默认情况下，Erlang的搜索路径是当前文件夹。当然你可以通过<code><a class="docs" href="http://erldocs.com/17.3/kernel/code.html#add_patha/1"
+                                                title="I'll kill my brain finding new titles for the unofficial doc site">code:add_patha/1</a></code>
+        或 <code><a class="docs" href="http://erldocs.com/17.3/kernel/code.html#add_pathz/1" title="It's becoming hard to have new ideas">code:add_pathz/1</a></code>。
+        如果依然无法使用，请确保你已经编译了这个模块！
+    </dd>
 
     <dt>badarith</dt>
     <dd>
@@ -226,7 +246,9 @@
         called as 5 + llama
         </pre>
     </dd>
-    <dd>This happens when you try to do arithmetic that doesn't exist, like divisions by zero or between atoms and numbers.</dd>
+    <dd>
+        这个一般都是当你进行了错误的数学运算的时候，才会看到，像除以0或者将数字和原子混在了一起。
+    </dd>
 
     <dt>badfun</dt>
     <dd>
@@ -236,8 +258,10 @@
 in function  hhfuns:add/2
         </pre>
     </dd>
-    <dd>The most frequent reason why this error occurs is when you use variables as functions, but the variable's value is not a function. In the example above, I'm using the <code>hhfuns</code> function from the <a class="chapter local" href="higher-order-functions.html">previous chapter</a> and using two atoms as functions. This doesn't work and <code>badfun</code> is thrown.</dd>
-
+    <dd>
+        这个错误经常发生的原因是你将变量当作函数，但是这个变量的值并不是一个函数。
+        就像例子中那样我使用了<a class="chapter local" href="higher-order-functions.html">前一章</a>
+        中的函数<code>hhfuns</code>并且用两个原子当作函数。然后这是不会工作的，然后我们就看到了<code>badfun</code>错误。
     <dt>badarity</dt>
     <dd>
         <pre class="brush:eshell">
@@ -247,10 +271,18 @@ in function  hhfuns:add/2
 ** exception error: interpreted function with arity 1 called with two arguments
         </pre>
     </dd>
-    <dd>The <code>badarity</code> error is a specific case of <code>badfun</code>: it happens when you use higher order functions, but you pass them more (or fewer) arguments than they can handle.</dd>
+    <dd>
+        <code>badarity</code>是<code>badfun</code>错误的一个特殊情况：
+        当你使用高阶函数的时候，但是你传给它们过多的（或过少）的参数。
+     </dd>
 
     <dt>system_limit</dt>
-    <dd>There are many reasons why a <code>system_limit</code> error can be thrown: too many processes (we'll get there), atoms that are too long, too many arguments in a function, number of atoms too large, too many nodes connected, etc. To get a full list in details, read the <a class="docs" href="http://www.erlang.org/doc/efficiency_guide/advanced.html#id2265856">Erlang Efficiency Guide</a> on system limits. Note that some of these errors are serious enough to crash the whole VM.</dd>
+    <dd>
+        这里有很多原因会引起<code>system_limit</code>这个错误：
+        太多的进程（我们已经看到过了），原子太长了，函数的参数量太多了，
+        原子的数量太多了，连接太多的节点等。如果想得到完整的详细信息列表，
+        请阅读<a class="docs" href="http://www.erlang.org/doc/efficiency_guide/advanced.html#id2265856">Erlang Efficiency Guide</a>
+        有关系统限制的章节。注意了，这里面有些错误是完全可以引起整个VM崩溃的。</dd>
 </dl>
 
 <h3><a class="section" name="raising-exceptions">Raising Exceptions</a></h3>
